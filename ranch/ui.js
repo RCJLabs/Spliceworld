@@ -16,7 +16,6 @@ import {
   pairingForecast, expressedTraits,
 } from './breeding.js';
 import { onboardingSteps, onboardingActive, guideForScreen, pathOwnsScreen } from './onboarding.js';
-import * as sfx from '../audio/sfx.js';
 import { pickerField, bindPickers } from '../ui/picker.js';
 import { scannerGrants, stableRoom, pensToStall } from '../splice/facility.js';
 import { speciesOf } from '../data/catalog.js';
@@ -121,6 +120,13 @@ function eggSVG(palette) {
     `</svg>`
   );
 }
+
+// R176 — the synth is fetched at the moment a sound is wanted, not compiled
+// on every boot. Written as a direct dynamic import with a destructured
+// `then`, which is the shape the orphan gate scans for (see the note beside
+// `stopAmbience` in audio/sfx.js); the catch is the module's own contract —
+// audio must never break the game.
+const cue = (name) => { import('../audio/sfx.js').then(({ play }) => play(name)).catch(() => {}); };
 
 export function renderRanchScreen(root, ctx) {
   const { state, content, now } = ctx;
@@ -646,7 +652,7 @@ export function renderRanchScreen(root, ctx) {
   // that branch out without adding this left a live-looking button that did
   // nothing, on the one screen where the upgrade had always worked.
   bindFacility(root, ctx, again, (r) => {
-    if (r.ok) sfx.play('splice');
+    if (r.ok) cue('splice');
     lastMsg = r.msg;
   });
   bindRush(root, ctx, (m) => { lastMsg = m; }, again);
@@ -721,7 +727,7 @@ export function renderRanchScreen(root, ctx) {
       } else if (btn.dataset.act === 'hatch') {
         result = hatchEgg(ctx.state, btn.dataset.egg, content, t2);
         if (result.ok) {
-          sfx.play(result.firstOfItsKind ? 'graduate' : 'hatch');
+          cue(result.firstOfItsKind ? 'graduate' : 'hatch');
           if (result.variant) {
             lastMsg = result.msg;
             ctx.save();

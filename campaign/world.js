@@ -99,6 +99,48 @@ export function tickWorld(state, content, now) {
 
 // Scalars only, every one something a player would notice: a count rather
 // than an array, so reordering a list is not a change. See ROADMAP R104.
+// R176 — MOVED HERE FROM `audio/sfx.js`, and the move is what let that module
+// leave the eager graph. These two are pure functions over state scalars:
+// they touch no AudioContext, no mute, no stinger table. They were the ONLY
+// thing main.js needed from the synth synchronously, so while they lived
+// beside it, 9.5 KB of oscillators was compiled on every boot to supply
+// twenty lines of arithmetic.
+//
+// This is also where they belonged. `worldSnapshot`/`changesBetween` below
+// are the same shape — snapshot the world, diff two snapshots — and the
+// module that decides the order systems advance in is the one that can see
+// what moved. A sound module should not own state-diffing. (The two pairs
+// are now visibly redundant; collapsing them is a milestone of its own and
+// is NOT this one.)
+//
+// THE RULE these four share: a sound marks a change in your POSITION —
+// something arrived, completed, or was taken from you. Navigation and taps
+// are not events. R111's `buzz` reads the same cues for the same reason; the
+// story of what was silent before either is in `data/notes/voice.md`.
+export function watchSignals(state) {
+  return {
+    nodes: state?.campaign?.heldNodes?.length ?? 0,
+    contested: state?.campaign?.contested?.length ?? 0,
+    report: state?.campaign?.opReport ? 1 : 0,
+    stock: state?.ranch?.stock?.length ?? 0,
+    resequencing: state?.resequencer ? 1 : 0,
+  };
+}
+
+export function cuesFor(before, after) {
+  if (!before || !after) return [];
+  const cues = [];
+  // The alarm comes first because it is the only one with a deadline: a
+  // contested node is lost if it is not defended in its window.
+  if (after.contested > before.contested) cues.push('alarm');
+  if (after.nodes > before.nodes) cues.push('conquest');
+  if (after.report > before.report) cues.push('report');
+  // A run that ended WITH an animal arriving decanted; one that ended
+  // without is an abort, which the player did on purpose and already saw.
+  if (before.resequencing && !after.resequencing && after.stock > before.stock) cues.push('decant');
+  return cues;
+}
+
 export function worldSnapshot(state, now = state?.lastTickAt ?? 0) {
   const c = state?.campaign ?? {};
   const r = state?.ranch ?? {};

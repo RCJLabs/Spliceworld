@@ -15869,7 +15869,11 @@ if (inShard('voice')) {
 // because the grep matching stinger names used `[a-z]+` and the capital I
 // hid it. All fifteen fire; the problem was only ever where.)
 {
-  const { watchSignals, cuesFor } = await import('../audio/sfx.js');
+  // R176 — these two moved to campaign/world.js, and audio/sfx.js left the
+  // eager graph as a result. The rules below are unchanged: what they assert
+  // is which changes deserve a sound, and that is the same question wherever
+  // the arithmetic lives.
+  const { watchSignals, cuesFor } = await import('../campaign/world.js');
   const sfxSrc = readFileSync(join(root, 'audio/sfx.js'), 'utf8');
   const defined = [...sfxSrc.slice(sfxSrc.indexOf('const STINGERS'), sfxSrc.indexOf('export function play'))
     .matchAll(/^  ([a-zA-Z]+):/gm)].map((m) => m[1]);
@@ -15925,7 +15929,15 @@ if (inShard('voice')) {
     assert.notEqual(at, -1, 'tick exists');
     const body = shell.slice(at, shell.indexOf('\n}', at));
     assert.ok(/watchSignals\(state\)/.test(body), 'tick snapshots before the systems advance');
-    assert.ok(/cuesFor\(/.test(body) && /sfx\.play\(cue\)/.test(body), 'and plays what changed');
+    // R176 — the shape moved from `sfx.play(cue)` to a dynamic import,
+    // because the synth is no longer compiled on every boot. The RULE is
+    // unchanged and so is what it is worth: the shell must still reach the
+    // player with what changed. Anchored on `m?.play(cue)` — the destructure
+    // that the module actually calls — rather than on the import specifier,
+    // so moving the file again does not silently stop this from asserting.
+    assert.ok(/cuesFor\(/.test(body) && /m\?\.play\(cue\)/.test(body), 'and plays what changed');
+    assert.ok(/m\?\.buzz\(cue, content\)/.test(body),
+      'and buzzes the phone for the same cue, which is the half that works before any gesture');
     assert.equal((body.match(/watchSignals\(state\)/g) ?? []).length, 2,
       'snapshotting both sides of the tick, not just one');
   }
@@ -16244,12 +16256,34 @@ if (inShard('timbre')) {
       assert.ok(/sfx\.applyAudioSettings\(state\.settings\)/.test(handler),
         `and ${field} reaches the synth through the one call`);
     }
-    // And the shell applies the persisted set on boot, or a preference is
-    // honoured until the panel is next opened and not before.
+    // And the shell applies the persisted set, or a preference is honoured
+    // until the panel is next opened and not before.
+    //
+    // R176 — "on boot" became "on the first use of the synth", because the
+    // synth is no longer compiled on boot. The rule is unchanged and so is
+    // the defect it catches: main.js must hand over the WHOLE settings
+    // object, not the mute. What moved is only when — and the first moment
+    // any of the four can be observed is the moment the module arrives, so
+    // applying them on its way in is the same guarantee, not a weaker one.
+    //
+    // ASSERTED INSIDE THE LOADER, not anywhere in the file: a bare
+    // `applyAudioSettings(state.settings)` sitting in some unrelated handler
+    // would satisfy a whole-file match while leaving every boot preference
+    // unapplied, which is exactly the shape this rule exists to refuse.
     const shell = readFileSync(join(root, 'main.js'), 'utf8');
-    assert.ok(/sfx\.applyAudioSettings\(state\.settings\)/.test(shell),
-      'the boot applies every audio preference, not just the mute');
-    assert.ok(/sfx\.startAmbience\(/.test(shell), 'and the shell is what starts the room');
+    const loadAt = shell.indexOf('const audio = ()');
+    assert.notEqual(loadAt, -1, 'the shell loads the synth through one named door');
+    const loader = shell.slice(loadAt, shell.indexOf(';\n', shell.indexOf('.catch(', loadAt)));
+    assert.ok(/applyAudioSettings\(state\.settings\)/.test(loader),
+      'the synth is handed every audio preference as it arrives, not just the mute');
+    // R176 — same rule, new call shape: the room is started through the
+    // loader rather than through a module-level `sfx`. Both sites still have
+    // to be there — the gesture that opens the context, and the navigation
+    // that follows the player from screen to screen.
+    assert.ok(/m\.startAmbience\(state\.activeScreen, content\)/.test(shell),
+      'the first gesture starts the room the player is already in');
+    assert.ok(/m\?\.startAmbience\(name, content\)/.test(shell),
+      'and the shell is what starts the room on every navigation after it');
 
     // The defaults exist in a new game AND arrive by migration, which is the
     // rule that keeps one save shape rather than two.
@@ -23087,15 +23121,37 @@ if (inShard('wire')) {
   // worth a module.
   //
   // THE BILL, so this does not become a settled account (R153's rule for
-  // `RUNS_NOTHING_BUT_BELONGS`, which applies to this number too): the
-  // eviction candidate is `campaign/monologue.js`, 4.0 KB and IDLE. It is
-  // eager only because `campaign.js`, `rehab.js` and `rivals.js` import
-  // `playerLine` and `rivalLine` at module level, and those are called during
-  // BATTLE RESOLUTION, not during boot. That is exactly R153's director shape
-  // — seven dependency-free lines holding 11.9 KB in the graph — and if it
-  // works the count goes back to 49. It is a milestone, not a paragraph, so it
-  // is queued rather than half-done here.
-  const MODULE_CAP = 50;
+  // `RUNS_NOTHING_BUT_BELONGS`, which applies to this number too).
+  //
+  // R176 — 50 -> 49, PAID. `audio/sfx.js` left the eager graph: 9.5 KB of
+  // oscillators that cannot make a noise until `initAudio()` runs, and that
+  // is behind a gesture. It was eager for one reason — main.js imported
+  // `watchSignals` and `cuesFor` from it — and those two are pure functions
+  // over state scalars that touch no context, no mute and no stinger table.
+  // They moved to `campaign/world.js`, beside the snapshot/diff pair that
+  // already lived there, and the synth is fetched the first time the game has
+  // something to say. 581.7 KB -> 576.7 KB eager, 326.4 -> 321.5 of code.
+  //
+  // AND THE CANDIDATE THIS COMMENT USED TO NAME WAS NEVER EVICTABLE. It said
+  // `campaign/monologue.js` was "eager only because campaign.js, rehab.js and
+  // rivals.js import playerLine and rivalLine, and those are called during
+  // BATTLE RESOLUTION, not during boot". Both halves are true and the
+  // conclusion does not follow. `campaign/wire.js` is eager at 37ms, in the
+  // first wave before first paint, and imports three DIFFERENT exports —
+  // `fill`, `pickPooled`, `DEFAULT_PHILOSOPHY`. Six eager modules read five
+  // of the seven exports. Delete playerLine and rivalLine outright and the
+  // module does not move. The call sites are synchronous besides
+  // (`tickCampaign`, `resolveBattle`, `announceDominion`), so there is no
+  // `await import()` to reach for without making the battle path async and
+  // breaking the DOM-free harness rule.
+  //
+  // R169 FOUND THIS FIRST and wrote it into `campaign/identity.js`: "moving
+  // it anywhere eager would save nothing at all." The exemption list in
+  // tools/boot.js has carried the correct reason — wire.js included — the
+  // whole time. This comment and ROADMAP R176 both read past it, which is how
+  // one impossible move got proposed three times. The bill is not owed; it is
+  // unpayable, and that is now written where the next session will look.
+  const MODULE_CAP = 49;
   // R131: 548 -> 553, measured at 550.3. `ui/pager.js` and the two screens
   // that use it; see the FIRST_PAINT_KB note in tools/boot.js.
   // R135: 553 -> 557, measured at 555.2, and the raise has to argue.
