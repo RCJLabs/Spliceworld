@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**5 entries queued.** R179, R180, R181, R182, R184.
+**5 entries queued.** R180, R181, R182, R184, R186.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -6693,6 +6693,29 @@ triangle working, and each region genuinely asks a different question)*.
   and say why the data-key option could only ever have paid half.
 
 
+- **R186 — The rare, the unique, and the run that remembers one.** R179
+  shipped the machinery and one uncommon; this is the content the machinery
+  was built to carry. **Rare**: a second tier behind a longer, fuller trip,
+  with its own `rarityFloor` row and the hours to reach it — the R179 gate
+  refuses a floor no trip can meet, so the hours and the tier ship together
+  or neither does. **Unique**: one per run, carrying a NAME rather than a
+  species, which is the obvious thing to hand R102's run boundary — a lab
+  that relocates should be able to take the story of the one it found.
+  Every part arrives through `tools/gen-parts.js` (R127 made the generator
+  the authority) and therefore brings new combos against the 28 that exist
+  and new keywords against the 29.
+  *The trap is the one R179 wrote its own gate for:* a rare that is simply
+  better is power creep wearing a costume, and smoke already asserts no
+  expedition-only part sits above the best common in its slot. A rare has to
+  earn its rarity by making a build possible, the way the Manta's wings make
+  an Airborne Aquatic one.
+  *Done when: a rare and a unique are each reachable only by a trip that
+  meets their own floor; the unique carries a name that survives a
+  relocation and can be spoken about afterwards; every new part reaches the
+  Dex on the reach census; at least one new combo and one new keyword ship
+  with them; and no tier's win rate at equal grade beats a common's by more
+  than the noise floor.*
+
 ### 9.31 A vault full of treasure has no exit (R182) — found closing R116
 
 - **R182 — The Vault's only button refuses to help when it is most needed.**
@@ -6734,35 +6757,65 @@ one of them was the same decision. These three phases add verbs that are
 *not* a fight and not a splice, and each is written so that the thing it
 adds is a CHOICE rather than another button that is always available.
 
-- **R179 — Expeditions, and the first creature money cannot buy.** Today the
-  catalogue is the whole world: **all 41 species carry a `mailOrderPrice`**,
-  so there is nothing alive in this game a player cannot simply order, and
-  the only scarcity is cash. That is why R95 had to build a content-reach
-  gate — a campaign settles on four species and never learns the rest exists.
-  Proposed, LARGE, and it wants splitting across sessions:
-  **(1)** species gain a **rarity tier** in data — common (the 41 that ship,
-  orderable), uncommon, rare, unique — and everything above common has NO
-  `mailOrderPrice`; **(2)** an **expedition engine**: send crew to a region
-  for real-world hours, seeded roll against that region's own table, results
-  computed on the elapsed clock like every other timer here; **(3)** the
-  content itself — new species, whose parts arrive through
-  `tools/gen-parts.js` (R127 made the generator the authority, so this is
-  JSON rather than an engine edit) and therefore bring new parts, new
-  **combos** against the 27 that exist, and new keywords against the 29.
-  A **unique** is one per run, carries a name rather than a species, and is
-  the obvious thing to hand R102's run boundary.
-  *The decision this has to create:* which of 5 regions, for how long, and
-  with whom — and the crew is unavailable for jobs and fights the whole
-  time, so an expedition is paid for in the things R116 just made scarce.
-  *The trap to avoid:* a rare that is simply BETTER is power creep wearing a
-  costume. R6 made every variant a sidegrade by contract and asserted it in
-  smoke; a rare should buy a build that was previously impossible rather
-  than a bigger number.
-  *Done when: an uncommon is reachable only by expedition and a campaign
-  that never runs one never sees it; every shipped tier's parts reach the
-  Dex and at least one new combo; no rare's win rate at equal grade beats a
-  common's by more than the noise floor; and the walker runs expeditions as
-  a policy rather than a tap.*
+- **R179 — Expeditions, and the first creature money cannot buy.** ✅
+  *Shipped.* Every one of the 41 species that came before carried a
+  `mailOrderPrice`, so nothing alive in this game was more than a cash
+  problem and the only scarcity was the balance. There are 42 now and the
+  forty-second is not for sale at any price.
+  **What shipped.** Rarity is declared in `data/species.json` rather than
+  inferred from a missing price, and the two facts are asserted in BOTH
+  directions — nothing above common carries a price, every common does.
+  `campaign/expedition.js` holds the judgement the shell needs on the first
+  frame (who is abroad, whether anything is running, the elapsed settle) and
+  `campaign/outfit.js` holds the composer — the table, the odds, the launch —
+  lazily, because only the War Room and the harness ever ask what is on a
+  region's table. One party at a time; `expeditionReadyAt` is the van
+  unpacking, the same shape `sparRefillAt` has held since R43. Tables and
+  tuning are in `data/regions.json` beside the regions they belong to;
+  SAVE_VERSION 60 migrates the slot in empty and ready.
+  **The decision the tuning actually creates.** Five regions the campaign has
+  opened, three lengths, up to three crew — and `rarityFloor` is what makes
+  those three questions one question: anything above common needs 24h and two
+  crew, so a short solo trip to the Drowned Quarter cannot roll a Manta
+  however many times it is run. Money is deliberately the wrong reason to go:
+  9 a crew-hour against a board paying about 35 at half odds, so an
+  expedition is a loss on cash and the animal is the point. The crew are
+  unavailable for jobs and fights for the whole trip, enforced at all FIVE
+  readers that decide who is available, from one predicate — and in the
+  walker too, whose `isFit` read injuries only and would have fielded a
+  creature that was in the Drowned Quarter.
+  **The Manta**, Water on the Kite frame, five parts, no price. Its wings are
+  `membrane` and vote Air, so it is a Water creature carrying **Tidewalker** —
+  the only Airborne-and-Aquatic move in the county, and the softest punch on
+  a 28-combo list. That is the entry's own anti-power-creep test passed by
+  construction rather than by hope: smoke asserts no part of an
+  expedition-only species sits above the best common in its slot, and that at
+  least one sits below the common median.
+  **What the verb cost elsewhere, measured.** An animal every other day is a
+  faucet: `tools/vault.js` caught seed 2026 finishing on 182 head against 28
+  pens, and `tools/diet.js` caught the Gauntlet going unwon for 180 days —
+  the same defect, because 150 extra animals is upkeep and a campaign that
+  cannot afford its roster does not clear stages. One fix closed both: the
+  walker stops at the herd limit its shopping already stops at.
+  **Five gates were re-derived rather than re-typed**, each with its A/B in
+  the commit that moved it: two hardcoded species counts became floors (the
+  exact count is gated, derived, by `tools/roadmap.js`); the marginal-empire
+  away-month branch was a false dichotomy with a dead zone at 4% margin; the
+  rival scouting gate compared a read against a BLIND pack, which is a coin
+  flip; `tools/tierbench.js` drew a fixed 300 and now draws until every band
+  holds eight; and R142's splice floor asserted a twelve-seed design number
+  against a five-seed mean, passing by 0.2 before this milestone and failing
+  by 0.2 after a reshuffle that moved one seed +4 and another −6.
+  *Done when — all four met:* the Manta is on exactly one region's table and
+  on no other mechanism, and cannot be rolled below the floor; its five parts
+  reach the Dex on 12 of 13 census seeds and unlock a combo; its anatomy is a
+  sidegrade by assertion; and the walker runs expeditions as a policy — bench
+  only, scored by what it has never held, and only when there is somewhere to
+  put what comes back.
+  **What is left is R186**, below: the rare and the unique tiers. Only
+  `uncommon` has a floor today, deliberately — a floor for a tier nothing
+  carries would be a rule no trip this game offers can satisfy, which is the
+  dead-content failure one level up from the one `tools/reach.js` exists for.
 
 - **R180 — Espionage, sabotage, and unscheduled urban renewal.** The rival
   ladder is five labs the player can only ever FIGHT. Three escalating
