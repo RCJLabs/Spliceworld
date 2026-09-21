@@ -46,6 +46,13 @@
           "sub": "Contracts taken off the Jobs board"
         },
         {
+          "id": "expeditions",
+          "label": "Expeditions",
+          "from": "campaign.expeditionCount",
+          "fmt": "count",
+          "sub": "Parties sent into a region to look for something"
+        },
+        {
           "id": "sent",
           "label": "Sent, not watched",
           "from": "sentCount",

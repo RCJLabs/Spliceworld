@@ -55,6 +55,33 @@ const BUILD = {
   moth:         B(['moth',{eyeR:16}], ['membrane',{span:108}], ['hindwing',{span:86}], ['streamer',{len:66}], 'down', '#e8c8a0', 'cloud'),
   otter:        B(['mammal',{snout:20,ear:'small',skull:25,eyeR:12,teeth:true}], ['paddle',{len:42}], ['paddle',{len:46}], ['rudder',{len:60}], 'slick', '#9fd6ef', 'wave'),
   jellyfish:    B(['bell',{eyeR:15}], ['tentacle',{len:66}], ['tentacle',{len:72}], ['drift',{len:60}], 'jelly', '#dcd0ff', 'drip'),
+  // R179 — THE FIRST SPECIES MONEY CANNOT BUY *AND* BREEDING CANNOT REACH.
+  // Water on the Kite frame, which had two species before this and both were
+  // cobra: every A-frame build in the game was Ground and Venomous. Drawn
+  // entirely from families that already existed — a ray is a fish head, two
+  // membranes and a streamer — so this is a roster entry, not shape code.
+  // manta: NO HINDLIMBS, like the cobra above it and for the same reason —
+  // it rides the A/Kite frame, which has no hindlimb socket, and a part a
+  // frame cannot hold is a part the species silently loses. Five parts.
+  //
+  // AND THE TAIL IS A FIN RATHER THAN A STREAMER, which two gates decided
+  // between them. Dropping the hindfin took the water column to one and left
+  // the wings and a streamer voting Air 2-1, so a declared Water animal read
+  // as Air out of its own body. `finTail` votes Water and fixes that.
+  //
+  // AND THE HIDE IS COUNTERSHADING, not slick, for R23's rule that no animal
+  // carries the same active twice: a slick hide and a fin tail both give
+  // `evasionUp: 1` and one of them would have been a dead button. `camo`
+  // gives `evasionUp: 2` at a higher cost, which is the chameleon's shape —
+  // a cheap top-up under a stronger layer — and is what a manta's dark back
+  // and white belly are actually for. Density 0.9 against slick's 0.85, so
+  // the flight arithmetic below barely moves.
+  //
+  // The interesting half survives all of it: the WINGS are `membrane` and
+  // still vote Air, so the manta is a Water creature carrying the only
+  // Airborne-and-Aquatic move in the county — which is the build this
+  // species exists to make possible.
+  manta:        B(['fish',{teeth:false,gills:true,eyeR:13}], ['membrane',{span:104}], null, ['finTail',{len:64}], 'camo', '#9fd0ff', 'wave'),
   pufferfish:   B(['fish',{teeth:true,gills:true,eyeR:14}], ['fin',{len:40}], ['fin',{len:42}], ['finTail',{len:50}], 'spine', '#ffe86b', 'drip'),
   armadillo:    B(['mammal',{snout:26,ear:'pointed',skull:24,eyeR:9}], ['paw',{mass:15,len:44,claws:3}], ['paw',{mass:16,len:42,claws:2}], ['scute',{len:56}], 'band', '#d8b98a', 'howl'),
 };
@@ -94,6 +121,12 @@ const SIGNATURE = {
   moth:         ['organ', 'Scale Powder', 'Powder Burst', M(28, 20, 100, ['Gas'], { accDown: 1, evasionUp: 1 })],
   otter:        ['forelimbs', 'Otter Paws', 'Rock Trick', M(56, 24, 96, [], { ignoreArmor: true })],
   jellyfish:    ['tail', 'Stinging Threads', 'Drift Net', M(32, 18, 100, ['Venomous', 'Aimed'], { venom: 2, slow: 1 })],
+  // A GLIDE, NOT A BIGGER NUMBER. The Kite is the fastest, lightest frame in
+  // the game (speed 6, mass 18) and until now nothing Water could sit on it.
+  // `Airborne` so the tag chart treats it as the wing it is; the cost is that
+  // 44 power is under every other forelimb signature in the file, and it buys
+  // position rather than damage.
+  manta:        ['forelimbs', 'Manta Wings', 'Wingover', M(44, 22, 100, ['Airborne'], { evasionUp: 1, slow: 1 })],
   pufferfish:   ['hide', 'Inflation Reflex', 'Inflate', M(0, 16, 100, [], { guard: true, thorns: 0.3 })],
   armadillo:    ['organ', 'Scream Bladder', 'Screaming Fit', M(30, 18, 100, ['Sonic'], { powerDown: 1, accDown: 1 })],
 };
@@ -198,6 +231,7 @@ const ORGAN_NAMES = {
   moth: ['Scale Powder', 'Powder Burst'], otter: ['Play Drive', 'Never Still'],
   jellyfish: ['Nerve Net', 'No Central Anything'], pufferfish: ['Inflation Sac', 'Puff Up'],
   armadillo: ['Scream Bladder', 'Screaming Fit'],
+  manta: ['Gill Rake', 'Filter Feed'],
 };
 
 // R20 wired the dead keywords onto specific parts by hand, straight into
@@ -350,6 +384,7 @@ const ACTIVES = {
   goat:         ['bristles', 'gut'],       chameleon:    ['vanish', 'spike'],
   skunk:        ['screen', null],          porcupine:    ['bristles', 'spike'],
   mantis:       ['bristles', 'spike'],     cobra:        ['bristles', 'leech'],
+  manta:        ['vanish', 'knit'],
   scorpion:     ['bristles', 'slowMend'],
   // A3
   heron:        ['slipskin', 'focus'],     falcon:       ['slipskin', 'focus'],

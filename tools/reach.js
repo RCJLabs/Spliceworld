@@ -80,6 +80,16 @@ const unlockingNodes = (id) => {
   return found;
 };
 const partsOf = (id) => Object.values(content.parts).filter((p) => p.species === id);
+// R179 — read off the shipped tables, never a list typed here. The rule R95
+// set is that a table of ids goes stale the day somebody adds the next
+// animal, which is the failure this gate exists to prevent.
+const expeditionRegions = (id) => Object.values(content.regions)
+  .filter((r) => (r.expedition?.finds ?? []).some((f) => f.species === id))
+  .map((r) => r.id);
+const expTune = () => content.campaignMeta?.expeditions ?? {};
+const expeditionFloor = (rarity) => expTune().rarityFloor?.[rarity] ?? null;
+const expeditionHourOptions = () => expTune().hourOptions ?? [];
+const expeditionCrewMax = () => expTune().crewMax ?? 0;
 const droppedBy = (partId) => Object.values(content.enemies)
   .filter((e) => (e.salvage ?? []).includes(partId)).map((e) => e.id);
 
@@ -114,6 +124,32 @@ const ROUTES = [
     by: 'the Mail-Order catalog, open from the first day',
     when: (s) => !!s.mailOrderPrice,
     resolves: () => null,
+  },
+  {
+    // R179 — THE ONLY ROUTE THAT IS NOT A PURCHASE. Everything above
+    // `common` has no `mailOrderPrice` by contract (tools/smoke.js asserts
+    // it), so the catalog can never deliver one and the region's expedition
+    // table is the whole supply.
+    //
+    // LAST, NOT FIRST, and the first draft had it first. A common that is
+    // also on a table is reached by the CATALOG — the shop is open from day
+    // one and asks nobody to go anywhere — so an order that answered
+    // "expedition" for all 35 of them read `catalog 0 species` and hid the
+    // thing this report exists to show. A route is the way a player gets
+    // one, and the cheapest way wins.
+    id: 'expedition',
+    by: 'an expedition into a region whose table carries it',
+    when: (s) => expeditionRegions(s.id).length > 0,
+    resolves: (s) => {
+      const floor = expeditionFloor(s.rarity ?? 'common');
+      if (!floor) return null;
+      const reachable = expeditionRegions(s.id)
+        .filter(() => (expeditionHourOptions().some((h) => h >= (floor.hours ?? 0))
+          && (expeditionCrewMax() >= (floor.crew ?? 0))));
+      return reachable.length
+        ? null
+        : `its rarity floor asks for ${floor.hours}h and ${floor.crew} crew, which no trip this game offers can meet`;
+    },
   },
 ];
 
@@ -233,7 +269,13 @@ const TOTAL_PARTS = Object.keys(content.parts).length;
     const held = new Set(save.dex.parts ?? []);
     const worn = new Set(save.dex.worn ?? []);
     const species = new Set([...held].map((p) => content.parts[p]?.species).filter(Boolean));
-    per.push({ seed, parts: held.size, species: species.size, held, worn });
+    per.push({
+      seed, parts: held.size, species: species.size, held, worn,
+      // R179 — how many expeditions this campaign actually mounted. A walker
+      // that never mounts one is not a policy, and the species below would
+      // then be unreachable for a reason no other number here would show.
+      trips: save.campaign?.expeditionCount ?? 0,
+    });
   }
   // The average campaign, not the middle one — see `REACH_FLOOR`.
   const mean = (xs) => xs.reduce((n, x) => n + x, 0) / xs.length;
@@ -257,6 +299,39 @@ const TOTAL_PARTS = Object.keys(content.parts).length;
       console.log(`    ${sp.padEnd(16)} ${String(ps.length).padStart(2)} parts unreached  (${route?.id ?? 'no route'})`);
     }
   }
+  // R179 — THE VERB, AND THE THING ONLY THAT VERB REACHES. Two claims, and
+  // they have to be checked together: a species whose only route is an
+  // expedition is unreachable unless campaigns actually run expeditions, and
+  // a walker that runs them at a tap rather than as a policy would satisfy
+  // the first claim while telling you nothing about the second.
+  //
+  // The floor is ONE PER CAMPAIGN on the mean, deliberately low. The policy
+  // sends only the bench (`tools/sim.js`), so a campaign that never grows
+  // past a fighting three legitimately mounts none — the gate is here to
+  // catch a walker that CANNOT, not to insist every seed collects.
+  {
+    const meanTrips = mean(per.map((r) => r.trips));
+    if (REPORT) {
+      console.log(`  expeditions: ${per.map((r) => `${r.seed}: ${r.trips}`).join(', ')}`);
+      console.log(`  mean ${meanTrips.toFixed(2)} per campaign`);
+    }
+    if (meanTrips < 1) {
+      fails.push(`expeditions: the average campaign mounts ${meanTrips.toFixed(2)} of them`
+        + ' — the walker is not running the verb, so anything behind it is unreachable content');
+    }
+    const onlyByTrip = Object.values(content.species)
+      .filter((sp) => !sp.synthetic && !sp.variantOf && !sp.mailOrderPrice);
+    for (const sp of onlyByTrip) {
+      const mine = Object.values(content.parts).filter((p) => p.species === sp.id).map((p) => p.id);
+      const seen = per.filter((r) => mine.some((id) => r.held.has(id))).length;
+      if (REPORT) console.log(`  ${sp.id}: held by ${seen} of ${per.length} campaigns`);
+      if (!seen) {
+        fails.push(`\`${sp.id}\` is reachable only by expedition and NO campaign in`
+          + ` ${per.length} seeds ever held one of its ${mine.length} parts`);
+      }
+    }
+  }
+
   // R140 — worn, on the same walks and the same statistic, so the two numbers
   // are about one campaign and can be read side by side. R157 moved both to
   // the mean, and for worn the reason is break 245 rather than the sample.

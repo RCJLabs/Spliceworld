@@ -41,6 +41,7 @@ import {
   contractList, activeContract, contractPerDay,
 } from '../campaign/operations.js';
 import { reachableEncounterIds, regionStates } from '../campaign/map.js';
+import { expeditionRegions, expeditionReady, expeditionCandidates } from '../campaign/expedition.js';
 import { enemyOf, speciesOf } from '../data/catalog.js';
 import { contestRemainingMs } from '../campaign/contest.js';
 import { isInjured, fitToFight } from '../battle/statblock.js';
@@ -351,6 +352,20 @@ export const AGENDA = [
       return fill(content.copy?.board?.agenda_hint, { best: fmtMoney(Math.round(best)) });
     },
     ready: (state, content) => !activeContract(state) && contractList(content).length > 0,
+  },
+  {
+    // R179 — THE VERB THAT IS NOT A FIGHT AND NOT A SPLICE. It shows only
+    // when there is somewhere open to go and somebody free to send, because
+    // the price of an expedition is the crew being unavailable for jobs and
+    // fights — a row that offered one with the stable already committed
+    // would be offering the player a choice they cannot pay for.
+    id: 'expedition', kind: 'campaign', screen: 'battle', subtab: 'jobs',
+    label: (state, content) => fill(content.copy?.expedition?.agenda_label, {}),
+    hint: (state, content, now) => fill(content.copy?.expedition?.agenda_hint,
+      { regions: expeditionRegions(state, content).length }),
+    ready: (state, content, now) => expeditionReady(state, now)
+      && expeditionRegions(state, content).length > 0
+      && expeditionCandidates(state, now, new Set(activeOps(state).map((r) => r.chimeraId))).length > 0,
   },
   {
     id: 'assault', kind: 'campaign', screen: 'battle', label: 'Take a node',

@@ -73,7 +73,11 @@ function vatCard(state, content, t) {
     return `
       <section class="card vat-card">
         <h3>${renderIcon('test-tube')} The Chaos Vat</h3>
-        <p class="ranch-msg">${running.parentNames.join(' × ')}</p>
+        ${/* R114 — a save is untrusted input, and a vat is a slot a
+             hand-edited file can put anything in. Both of these read a list
+             that may not be one; an absent pair is a line the card skips,
+             not a screen that will not paint. */ ''}
+        <p class="ranch-msg">${(running.parentNames ?? []).join(' × ')}</p>
         <p class="settle">Gestating… <strong class="countdown">${fmtDuration(vatRemainingMs(state, t))}</strong> remaining. The vat is making decisions and will not be taking questions.</p>
         <button type="button" id="vat-cancel" class="care-train">Drain the vat</button>
         ${rushButton(rushQuote(state, 'vat', 'vat', content, t))}
@@ -462,7 +466,8 @@ export function renderPensScreen(root, ctx) {
             </div>
             ${'<!--R89:ALERTS-->'}
             ${isExhausted(ch, t) ? `<p class="settle">${renderIcon('test-tube')} Recovering from the vat — ${fmtDuration(ch.exhaustedUntil - t)} left.</p>` : ''}
-            ${ch.vatBorn ? `<p class="fine-print">Decanted from ${ch.vatBorn.parents.join(' × ')}.</p>` : ''}
+            ${ch.vatBorn?.parents?.length
+    ? `<p class="fine-print">Decanted from ${ch.vatBorn.parents.join(' × ')}.</p>` : ''}
             <p class="settle ${settled ? 'settled' : ''}">${
               settled
                 ? 'Settled ✓ — cleared for deployment'

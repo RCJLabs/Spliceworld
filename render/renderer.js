@@ -177,8 +177,12 @@ export function indexContent(raw) {
           rescueEncounters: raw.regions.rescueEncounters
             ?? (raw.regions.rescueEncounter ? [raw.regions.rescueEncounter] : []),
           contestation: raw.regions.contestation ?? null,
+          // R179 — the expedition tuning. The TABLES are on the regions
+          // themselves, where `byId` already puts them; this is the half
+          // that is one decision for the whole county.
+          expeditions: raw.regions.expeditions ?? null,
         }
-      : { threatGens: null, threatGen2At: Infinity, rescueEncounters: [], contestation: null },
+      : { threatGens: null, threatGen2At: Infinity, rescueEncounters: [], contestation: null, expeditions: null },
   };
   // R81: present for a Node tool that read every file off disk, absent in
   // the browser until the first paint is over. Same merge either way.

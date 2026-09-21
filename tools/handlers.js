@@ -251,6 +251,12 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
       outcome: { success: true, funds: 120, species: null, injuryRoll: 0.9 } }];
     s.campaign.opReport = { opId: op.id, success: true, funds: 120, species: null,
       chimeraName: null, injured: false };
+    // R179 — and an unread expedition report, so the card paints its OK. The
+    // party itself is NOT set here: the surface below reaches the in-field
+    // state by pressing Send, which is the only door a player has and the
+    // only one worth walking.
+    s.campaign.expeditionReport = { regionId: 'greenfield', region: 'Greenfield County',
+      hours: 4, crew: 1, success: true, funds: 36, animal: null, overCapacity: false };
     return s;
   };
 
@@ -285,6 +291,15 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   // Hunt button nothing can press is a fight nobody can have.
   SURFACES.push({ name: 'battle:loose-briefing', file: 'campaign/ui.js', fn: 'renderWarRoomScreen',
     subtab: 'labs', path: [{ sel: '[data-breakout]' }] });
+  // R179 — THE EXPEDITION CARD HAS TWO FACES and only one of them is the
+  // launcher. `Call them home` exists exclusively while a party is in the
+  // field, which is a state no fixture can be handed without writing
+  // `campaign.expedition` by hand — and a hand-written one keeps passing
+  // after a rename, which is how a fixture stops testing what it is named
+  // for (see the visitor above). So this walks there: pick a crew, press
+  // Send, and the card repaints as the field report with the recall on it.
+  SURFACES.push({ name: 'battle:in-the-field', file: 'campaign/ui.js', fn: 'renderWarRoomScreen',
+    subtab: 'jobs', path: [{ sel: '[data-exp-crew]' }, { sel: '[data-exp-go]' }] });
   // R89 — the creature card's four tabs. The card is shut until pressed and
   // its Moves and Anatomy tabs are shut behind the bar inside it, so
   // `data-moves` and `data-dossier` are painted on a surface no earlier

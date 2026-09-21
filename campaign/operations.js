@@ -15,6 +15,7 @@ import { isSettled } from '../splice/chimera.js';
 import { createAnimal } from '../ranch/ranch.js';
 import { infirmaryGrants } from '../splice/facility.js';
 import { applyInjury } from '../battle/statblock.js';
+import { expeditionCrew } from './expedition.js';
 
 const HOUR = 3600000;
 const DAY = 24 * HOUR;
@@ -175,7 +176,12 @@ export function activeOp(state) {
 // was not runnable.
 export function jobSlots(state, content, now) {
   const t = opTuning(content);
-  const fit = state.chimeras.filter((c) => !(c.injury && now < c.injury.until)).length;
+  // R179 — ABROAD IS NOT FIT. A party in the field is unavailable for jobs
+  // and fights for the whole trip, which is what an expedition is paid in;
+  // counting them here would have let the board spend the same creature
+  // twice and made the price imaginary.
+  const away = expeditionCrew(state);
+  const fit = state.chimeras.filter((c) => !away.has(c.id) && !(c.injury && now < c.injury.until)).length;
   return Math.min(t.maxJobs, fit);
 }
 
@@ -204,18 +210,14 @@ export function laneFree(state, content, now, op, chimera) {
 // The creatures who could crew a NEW job right now.
 export function freeCrew(state, now) {
   const busy = new Set(activeOps(state).map((r) => r.chimeraId).filter(Boolean));
-  return state.chimeras.filter((c) => !busy.has(c.id) && !(c.injury && now < c.injury.until));
+  const away = expeditionCrew(state);
+  return state.chimeras.filter((c) => !busy.has(c.id) && !away.has(c.id) && !(c.injury && now < c.injury.until));
 }
 
-// How twitchy the county is right now. Stored as a value plus the moment
-// it was measured, so it decays on load like every other timer instead of
-// needing anything to run in the background.
-//
-// The decay is EXPONENTIAL on purpose. Linear decay is bang-bang: heat
-// either drains to zero or pins at the cap depending on whether your job
-// rate happens to sit above or below the drain rate, with no useful middle.
-// A half-life gives a smooth equilibrium that scales with how hard you are
-// pushing, which is the whole point of the mechanic.
+// How twitchy the county is right now. A value plus the moment it was
+// measured, so it decays on load like every other timer here. WHY the decay
+// is exponential rather than linear: data/notes/operations.md, `tuning` —
+// which already made that argument in full, beside the half-life it is about.
 export function heatNow(state, content, now) {
   const t = opTuning(content);
   const heat = state.campaign.heat ?? 0;
@@ -434,16 +436,10 @@ export function startOperation(state, opId, chimeraId, content, now) {
 }
 
 // R65 — one cooldown rule, in one place: it starts when the crew comes home.
-//
-// The two paths used to disagree about that moment. A resolved job started
-// its cooldown at the TICK, so a job that ended while you were away locked
-// for a fresh six hours the moment you looked — the schedule measured your
-// habits rather than the job's clock, which is the thing R9 spent a whole
-// phase forbidding for counter-offensives. An aborted job started its
-// cooldown at `startedAt`, so calling off a six-hour job one minute in
-// left it ready sooner than letting it run. Now: `endedAt` is `run.until`
-// for a job that finished and `now` for one you called off, because that is
-// when the crew is actually back through the door.
+// `endedAt` is `run.until` for a job that finished and `now` for one you
+// called off, because that is when the crew is actually back through the
+// door. The two ways the pair used to disagree, and what each cost a player,
+// are in data/notes/operations.md, `operations[]`.
 function startCooldown(state, content, opId, endedAt) {
   const op = content.operations?.[opId];
   state.campaign.opCooldowns ??= {};

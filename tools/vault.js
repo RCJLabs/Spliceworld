@@ -143,6 +143,11 @@ const BOUNDS = {
                                                  c.breakoutMeta?.release?.maxLoose ?? 9),
                             by: 'maxLoose in data/breakout.json, before and after the release' },
   'gauntletBeaten':       { max: (c) => (c.gauntlet ?? []).length || 8, by: 'the Gauntlet has as many stages as it has' },
+  // R179 — an unread expedition report holds the animal that came back, and
+  // it is the same animal `ranch.stock` holds, built by the same
+  // `createAnimal`. So it carries the bound that list already states, rather
+  // than a second number that could drift away from it.
+  'campaign.expeditionReport.animal.traits': { max: 4, by: 'an animal carries at most a handful (as ranch.stock[].traits)' },
   'discoveredCombos':     { max: (c) => Object.keys(c.combos).length, by: 'the combo list' },
   'guidesSeen':           { max: (c) => (c.guides ?? []).length || 64, by: 'the guide list' },
   'dex.parts':            { max: (c) => Object.keys(c.parts).length, by: 'the part list' },

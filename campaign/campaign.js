@@ -18,6 +18,7 @@ import { tickContests, resolveContest, isContested } from './contest.js';
 import { resolveBreakout } from './breakout.js';
 import { playerLine, rivalLine } from './monologue.js';
 import { tickOperations } from './operations.js';
+import { tickExpeditions } from './expedition.js';
 import {
   regionList, allNodes, nodeById, regionOfNode,
   threatGen as mapThreatGen, threatLadder, nextThreatRung,
@@ -263,6 +264,19 @@ export function tickCampaign(state, content, now, since = state.lastTickAt ?? no
           { op: extra.name, funds: extra.funds, creature: extra.animal.name });
       } else emitNews(state, content, 'op_paid', { op: extra.name, funds: extra.funds });
     }
+  }
+
+  // R179 — the party in the field, settled on the elapsed clock like
+  // everything else here. One at a time, so there is one result rather than
+  // a list, and it goes through the shared emitter so its two headlines can
+  // be pooled like every other thing the county says.
+  const trip = tickExpeditions(state, content, now);
+  if (trip.result) {
+    if (!state.campaign.expeditionReport) state.campaign.expeditionReport = trip.result;
+    if (trip.result.animal) {
+      emitNews(state, content, 'expedition_found',
+        { region: trip.result.region, creature: trip.result.animal.name });
+    } else emitNews(state, content, 'expedition_empty', { region: trip.result.region });
   }
 
   const rehabbed = tickRehab(state, content, now);

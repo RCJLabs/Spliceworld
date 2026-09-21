@@ -11593,6 +11593,194 @@
         "opacity": 0.6
       }
     ],
+    "manta_head": [
+      {
+        "type": "path",
+        "d": "M -6 -10 C -2 -52 44 -66 72 -40 C 86 -26 86 -2 72 12 C 44 36 -2 26 -6 -10 Z",
+        "fill": "@primary"
+      },
+      {
+        "type": "ellipse",
+        "cx": 24,
+        "cy": -26,
+        "rx": 20,
+        "ry": 10,
+        "fill": "@white",
+        "stroke": "none",
+        "opacity": 0.16
+      },
+      {
+        "type": "ellipse",
+        "cx": 40,
+        "cy": 8,
+        "rx": 34,
+        "ry": 12,
+        "fill": "@secondary",
+        "stroke": "none",
+        "opacity": 0.75
+      },
+      {
+        "type": "path",
+        "d": "M 26 -22 q -5 16 1 30 M 36 -24 q -5 17 1 32 M 46 -25 q -5 18 1 33",
+        "fill": "none",
+        "stroke": "@outline",
+        "strokeWidth": 3.5,
+        "opacity": 0.55
+      },
+      {
+        "type": "circle",
+        "cx": 38,
+        "cy": -22,
+        "r": 13,
+        "fill": "@white",
+        "strokeWidth": 5.46
+      },
+      {
+        "type": "circle",
+        "cx": 42.16,
+        "cy": -20.7,
+        "r": 5.72,
+        "fill": "@outline",
+        "stroke": "none"
+      },
+      {
+        "type": "circle",
+        "cx": 39.76,
+        "cy": -23.85,
+        "r": 1.94,
+        "fill": "@white",
+        "stroke": "none"
+      }
+    ],
+    "manta_forelimbs": [
+      {
+        "type": "path",
+        "d": "M 2 8 C -8 -12 -40 -40 -104 -56 C -112 -58 -116 -50 -108 -44 Q -88 -24 -70 -20 Q -52 0 -28 2 Q -14 12 2 12 Z",
+        "fill": "@primary",
+        "transform": "translate(4 -18) rotate(-6)",
+        "opacity": 0.92
+      },
+      {
+        "type": "path",
+        "d": "M -6 2 C -34 -14 -62 -32 -106 -50",
+        "fill": "none",
+        "stroke": "@outline",
+        "strokeWidth": 3,
+        "opacity": 0.5,
+        "transform": "translate(4 -18) rotate(-6)"
+      },
+      {
+        "type": "path",
+        "d": "M -6 4 C -30 -4 -54 -14 -88 -26",
+        "fill": "none",
+        "stroke": "@outline",
+        "strokeWidth": 3,
+        "opacity": 0.4,
+        "transform": "translate(4 -18) rotate(-6)"
+      },
+      {
+        "type": "ellipse",
+        "cx": 0,
+        "cy": -2,
+        "rx": 13,
+        "ry": 13,
+        "fill": "@primary"
+      }
+    ],
+    "manta_tail": [
+      {
+        "type": "path",
+        "d": "M 0 -8 C -24 -13 -44.8 -22 -64 -42 C -52.48 -18 -55.04 -6 -44.8 0 C -55.04 6 -52.48 18 -64 42 C -44.8 22 -24 13 0 8 Z",
+        "fill": "@primary",
+        "strokeWidth": 4.5
+      },
+      {
+        "type": "path",
+        "d": "M -46.08 -30 L -19.2 -8 M -46.08 30 L -19.2 8",
+        "fill": "none",
+        "stroke": "@outline",
+        "strokeWidth": 3,
+        "opacity": 0.4
+      },
+      {
+        "type": "ellipse",
+        "cx": -18,
+        "cy": -2,
+        "rx": 12,
+        "ry": 5,
+        "fill": "@white",
+        "stroke": "none",
+        "opacity": 0.14
+      }
+    ],
+    "manta_hide": [
+      {
+        "type": "path",
+        "d": "M -60 -20 q 18 -16 34 -2 q 10 14 -6 20 q -22 6 -28 -18 z",
+        "fill": "@secondary",
+        "stroke": "none",
+        "opacity": 0.45
+      },
+      {
+        "type": "path",
+        "d": "M 6 -34 q 22 -12 34 4 q 6 16 -12 18 q -24 0 -22 -22 z",
+        "fill": "@secondary",
+        "stroke": "none",
+        "opacity": 0.4
+      },
+      {
+        "type": "path",
+        "d": "M -26 14 q 20 -8 32 6 q 4 14 -14 14 q -20 -2 -18 -20 z",
+        "fill": "@accent",
+        "stroke": "none",
+        "opacity": 0.35
+      },
+      {
+        "type": "path",
+        "d": "M 34 18 q 16 -6 22 8 q 0 10 -12 10 q -14 -2 -10 -18 z",
+        "fill": "@accent",
+        "stroke": "none",
+        "opacity": 0.3
+      }
+    ],
+    "manta_organ": [
+      {
+        "type": "ellipse",
+        "cx": 0,
+        "cy": 0,
+        "rx": 26,
+        "ry": 16,
+        "fill": "#9fd0ff",
+        "stroke": "none",
+        "opacity": 0.28
+      },
+      {
+        "type": "ellipse",
+        "cx": 0,
+        "cy": 0,
+        "rx": 13,
+        "ry": 9,
+        "fill": "#9fd0ff",
+        "stroke": "none",
+        "opacity": 0.45
+      },
+      {
+        "type": "path",
+        "d": "M -16 -2 q 8 -8 16 0 q 8 8 16 0",
+        "fill": "none",
+        "stroke": "#9fd0ff",
+        "strokeWidth": 3,
+        "opacity": 0.8
+      },
+      {
+        "type": "path",
+        "d": "M -16 8 q 8 -8 16 0 q 8 8 16 0",
+        "fill": "none",
+        "stroke": "#9fd0ff",
+        "strokeWidth": 3,
+        "opacity": 0.6
+      }
+    ],
     "riot_plating": [
       {
         "type": "rect",

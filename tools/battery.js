@@ -4847,7 +4847,13 @@ const BREAKS = [
   {
     n: 120, gate: SQUAD, name: 'the suggestion fields creatures who are in the Infirmary',
     file: 'campaign/warroom.js',
-    anchor: '  const fit = (state.chimeras ?? []).filter((c) => !isInjured(c, now) && isSettled(c, now));',
+    // R179 — re-aimed. `!isInjured(c, now)` became `here(state, c, now)`, the
+    // one predicate the three War Room readers share, because a party in the
+    // field has to be excluded everywhere a bruise is. The break is the same
+    // defect it always was: drop the fitness half and the suggestion fields
+    // creatures the Infirmary is holding — and now also creatures who are in
+    // the Drowned Quarter.
+    anchor: '  const fit = (state.chimeras ?? []).filter((c) => here(state, c, now) && isSettled(c, now));',
     to: '  const fit = (state.chimeras ?? []).filter((c) => isSettled(c, now));',
   },
   {
@@ -6198,6 +6204,82 @@ const BREAKS = [
     file: 'main.js',
     anchor: "  .then((m) => { m.applyAudioSettings(state.settings); return m; })",
     to: "  .then((m) => m)",
+  },
+  // --- gate: expeditions, and the tier money cannot buy (R179) -----------
+  {
+    // THE WHOLE MILESTONE, UNDONE BY ONE JSON EDIT. An uncommon with a price
+    // is orderable from the catalog on day one, and the expedition becomes a
+    // slower way to get something the shop already sells. The tier and the
+    // price are one fact and smoke asserts it in BOTH directions, which is
+    // why this patch — a number where a null was — goes red rather than
+    // quietly making the Manta a goat.
+    n: 408, gate: SHARD_D, name: 'an uncommon is given a catalog price, and the only unbuyable animal goes on sale',
+    file: 'data/species.json',
+    anchor: `      "archetype": "ray",
+      "diet": "Plankton, by the cubic metre",
+      "feedCost": 7,
+      "upkeepPerDay": 7,
+      "mailOrderPrice": null,`,
+    to: `      "archetype": "ray",
+      "diet": "Plankton, by the cubic metre",
+      "feedCost": 7,
+      "upkeepPerDay": 7,
+      "mailOrderPrice": 900,`,
+  },
+  {
+    // THE DECISION EVAPORATES. `rarityFloor` is the only thing that makes
+    // "which region, how long, with whom" a question: without it the
+    // shortest one-crew trip can roll everything the longest full-crew one
+    // can, so the answer is always the cheapest trip repeated. That is the
+    // jobs-board defect R116 spent a milestone undoing, rebuilt at the other
+    // end of the county — and it looks like a tidy-up in the diff.
+    n: 409, gate: SHARD_D, name: 'the rarity floor is emptied, and the shortest trip reaches everything the longest does',
+    file: 'data/regions.json',
+    anchor: `    "rarityFloor": {
+      "uncommon": {
+        "hours": 24,
+        "crew": 2
+      }
+    }`,
+    to: `    "rarityFloor": {}`,
+  },
+  {
+    // THE PRICE BECOMES IMAGINARY. An expedition is paid for in crew, and
+    // the board is one of the five readers that has to agree they are gone.
+    // Drop the exclusion here and the same creature is counted abroad by the
+    // War Room and available by the Jobs board, so a player sends three
+    // creatures into the Drowned Quarter and loses nothing at all.
+    n: 410, gate: SHARD_D, name: 'the board counts the party in the field as crew, and an expedition costs nothing',
+    file: 'campaign/operations.js',
+    anchor: '  const away = expeditionCrew(state);\n  const fit = state.chimeras.filter((c) => !away.has(c.id) && !(c.injury && now < c.injury.until)).length;',
+    to: '  const fit = state.chimeras.filter((c) => !(c.injury && now < c.injury.until)).length;',
+  },
+  {
+    // A RECALL BECOMES FREE. The cooldown is the van unpacking, and it is
+    // what stops a player calling a party home the moment the odds look
+    // wrong and re-rolling immediately — which would make the sealed outcome
+    // pointless, because you would simply relaunch until you liked it.
+    // Deleting one line leaves a recall that looks correct: the field
+    // empties, the crew are free, and nothing says the trip cost anything.
+    n: 411, gate: SHARD_D, name: 'a recall skips the cooldown, and the sealed outcome can be re-rolled on demand',
+    file: 'campaign/expedition.js',
+    anchor: `  state.campaign.expedition = null;
+  state.campaign.expeditionReadyAt = now + Math.round(expTuning(content).cooldownHours * HOUR);
+  return { ok: true, msg: content.copy?.expedition?.recalled };`,
+    to: `  state.campaign.expedition = null;
+  return { ok: true, msg: content.copy?.expedition?.recalled };`,
+  },
+  {
+    // THE WALKER STOPS RUNNING THE VERB. The policy sends the bench and
+    // keeps the A-team home, so one comparison decides whether a campaign
+    // ever mounts an expedition at all — and with it, whether anything
+    // behind one is reachable content or a species nobody will ever hold.
+    // This is the shape R95 built the reach gate for: not an error, just a
+    // branch that stops being taken, and a Dex entry that stays grey.
+    n: 412, gate: REACH, name: 'the walker keeps its whole roster home, and the only expedition-only species is never held',
+    file: 'tools/sim.js',
+    anchor: '    const spare = bench.slice(0, Math.max(0, bench.length - fullTeam()));',
+    to: '    const spare = bench.slice(0, Math.max(0, bench.length - fullTeam() - 99));',
   },
 ];
 

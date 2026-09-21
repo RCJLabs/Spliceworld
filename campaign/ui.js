@@ -40,6 +40,11 @@ import { creaturePortrait, renderRivalSVG } from '../render/renderer.js';
 import { rivalStatus, rivalEncounter } from './rivals.js';
 import { rescueEncounterFor } from './map.js';
 import { renderIcon } from '../ui/icons.js';
+import {
+  expTuning, expeditionHours, expeditionRegions, activeExpedition,
+  expeditionCandidates, expeditionRemainingMs, expeditionReadyAt, recallExpedition,
+} from './expedition.js';
+import { findsFor, findsBeyond, expeditionOdds, startExpedition } from './outfit.js';
 import { directorRead } from './director.js';
 import {
   bayUnit, rehabPlan, rehabTuning, startRehab, rehabSession, cancelRehab,
@@ -70,6 +75,11 @@ let draftTarget = null; // { kind, nodeId?, captiveId?, rivalId?, encounterId, l
 
 let draftTeam = [];
 let lastAftermath = null;
+// R179 — the expedition being composed, held here for the same reason
+// `draftTeam` is: which region, for how long and with whom is a choice the
+// player makes across several taps, and a half-made one has no business in
+// the save.
+let expDraft = { regionId: null, hours: 0, crew: [] };
 // R108 — what the visitors' gate last said. Module-level for the same
 // reason `lastAftermath` above it is: this screen answers in a full
 // re-render, so a line appended to a DOM the next paint replaces is a line
@@ -478,7 +488,7 @@ function renderMap(root, ctx) {
 
   const views = {
     map: regions,
-    jobs: jobsCard(state, ctx, t),
+    jobs: `${expeditionCard(state, ctx, t)}${jobsCard(state, ctx, t)}`,
     labs: `
       ${releaseCard}
       ${dossier}
@@ -879,6 +889,94 @@ function bindDossier(root, ctx, redraw) {
 
 const pct = (n) => `${Math.round(n * 100)}%`;
 
+// R179 — EXPEDITIONS. One party at a time, so this is a composer rather
+// than a board: the three questions the entry asks for — which region, for
+// how long, with whom — are three rows, and the line underneath prices the
+// answer in the game's own numbers. What a longer or larger trip would reach
+// is DERIVED from the region's table (`findsBeyond`), never authored, so a
+// species added to a table tomorrow advertises itself without an edit here.
+function expeditionCard(state, ctx, t) {
+  const { content } = ctx;
+  const out = activeExpedition(state);
+  const report = state.campaign?.expeditionReport ?? null;
+  const reportHtml = report
+    ? `<div class="encounter job-report ${report.success ? 'is-win' : 'is-bust'}">
+        <div><strong>${report.success ? '\u2714' : '\u2718'} ${esc(report.region)}</strong><br>
+        <span class="fine-print">${report.animal
+      ? fill(content.copy?.expedition?.found, { creature: esc(report.animal.name) })
+      : fill(content.copy?.expedition?.empty, {})}${report.funds ? ` <strong>+${fmtMoney(report.funds)}</strong>.` : ''}${
+      report.overCapacity ? ` ${fill(content.copy?.expedition?.overfull, {})}` : ''}</span></div>
+        <button type="button" data-exp-dismiss="1">OK</button>
+      </div>`
+    : '';
+
+  if (out) {
+    const region = content.regions?.[out.regionId];
+    return `
+      <section class="card jobs-card">
+        <h3>${renderIcon('map')} ${fill(content.copy?.expedition?.heading_out, {})}</h3>
+        ${reportHtml}
+        <div class="encounter job-live">
+          <div><strong>${esc(region?.name ?? out.regionId)}</strong><br>
+          <span class="fine-print">${fill(content.copy?.expedition?.out, {
+      crew: (out.crew ?? []).length,
+      region: esc(region?.name ?? out.regionId),
+      left: `<strong class="countdown">${fmtDuration(expeditionRemainingMs(state, t))}</strong>`,
+      odds: pct(out.chance),
+    })}</span></div>
+          <button type="button" class="job-abort" data-exp-recall="1">${fill(content.copy?.expedition?.recall, {})}</button>
+        </div>
+      </section>`;
+  }
+
+  const regions = expeditionRegions(state, content);
+  if (!regions.length) return reportHtml ? `<section class="card jobs-card">${reportHtml}</section>` : '';
+  const tune = expTuning(content);
+  const resting = Math.max(0, expeditionReadyAt(state) - t);
+  const busy = new Set((state.campaign?.operations ?? []).map((r) => r.chimeraId).filter(Boolean));
+  const candidates = expeditionCandidates(state, t, busy);
+
+  const region = regions.find((r) => r.id === expDraft.regionId) ?? regions[0];
+  const hours = expeditionHours(content).includes(expDraft.hours)
+    ? expDraft.hours : expeditionHours(content)[0];
+  const crew = candidates.filter((c) => expDraft.crew.includes(c.id));
+  const odds = expeditionOdds(state, content, region, hours, crew);
+  const beyond = findsBeyond(content, region, hours, crew.length)
+    .map((id) => speciesOf(content, id).name);
+  const carries = findsFor(content, region, hours, crew.length).length;
+
+  const row = (label, cells) => `<p class="fine-print">${label}</p><div class="op-row exp-row">${cells}</div>`;
+  return `
+    <section class="card jobs-card">
+      <h3>${renderIcon('map')} ${fill(content.copy?.expedition?.heading, {})}</h3>
+      <p class="fine-print">${fill(content.copy?.expedition?.card_blurb, {})}</p>
+      ${reportHtml}
+      ${row(fill(content.copy?.expedition?.where, {}), regions.map((r) => `<button type="button" data-exp-region="${r.id}"${
+    r.id === region.id ? ' class="is-selected"' : ''}>${esc(r.name)}</button>`).join(''))}
+      ${row(fill(content.copy?.expedition?.how_long, {}), expeditionHours(content).map((h) => `<button type="button" data-exp-hours="${h}"${
+    h === hours ? ' class="is-selected"' : ''}>${h}h</button>`).join(''))}
+      ${row(fill(content.copy?.expedition?.who, { max: tune.crewMax }), candidates.length
+    ? candidates.map((c) => `<button type="button" data-exp-crew="${c.id}"${
+      expDraft.crew.includes(c.id) ? ' class="is-selected"' : ''}>${esc(c.name)}</button>`).join('')
+    : `<span class="locked-tag">${fill(content.copy?.expedition?.nobody, {})}</span>`)}
+      <p class="fine-print">${esc(region.expedition?.brief ?? '')}</p>
+      <p class="fine-print">${fill(content.copy?.expedition?.priced, {
+    odds: pct(odds.chance), funds: fmtMoney(odds.funds), n: carries,
+    more: beyond.length ? fill(content.copy?.expedition?.reaches, { list: beyond.join(', ') }) : '',
+  })}</p>
+      ${resting
+    ? `<span class="locked-tag">${fill(content.copy?.expedition?.unpacking, { left: fmtDuration(resting) })}</span>`
+    : crew.length
+      // R161 — A REFUSAL IS NOT A CEREMONY, and a greyed button is a refusal
+      // that will not say what it wants. Before a crew is picked there is
+      // nothing to send, so the card says so in words instead of dimming the
+      // control to 2.69:1 and waiting — which is what `tools/a11y.js` read it
+      // as, correctly.
+      ? `<button type="button" data-exp-go="1">${fill(content.copy?.expedition?.send, {})}</button>`
+      : `<span class="locked-tag">${fill(content.copy?.expedition?.pick_crew, {})}</span>`}
+    </section>`;
+}
+
 function jobsCard(state, ctx, t) {
   const { content } = ctx;
   const jobs = boardOps(content);
@@ -995,6 +1093,47 @@ function jobsCard(state, ctx, t) {
 function bindJobs(root, ctx, redraw) {
   const { state, content } = ctx;
   const t = ctx.now();
+  // R179 — the three pickers write the draft and redraw; only `data-exp-go`
+  // touches the save. A half-composed expedition is a UI state and stays one.
+  root.querySelectorAll('button[data-exp-region]').forEach((btn) => {
+    btn.addEventListener('click', () => { expDraft = { ...expDraft, regionId: btn.dataset.expRegion }; redraw(); });
+  });
+  root.querySelectorAll('button[data-exp-hours]').forEach((btn) => {
+    btn.addEventListener('click', () => { expDraft = { ...expDraft, hours: Number(btn.dataset.expHours) }; redraw(); });
+  });
+  root.querySelectorAll('button[data-exp-crew]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.expCrew;
+      const had = expDraft.crew.includes(id);
+      const max = expTuning(content).crewMax;
+      const crew = had ? expDraft.crew.filter((x) => x !== id) : [...expDraft.crew, id].slice(-max);
+      expDraft = { ...expDraft, crew };
+      redraw();
+    });
+  });
+  root.querySelectorAll('button[data-exp-go]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const regions = expeditionRegions(state, content);
+      const region = regions.find((r) => r.id === expDraft.regionId) ?? regions[0];
+      const hours = expeditionHours(content).includes(expDraft.hours)
+        ? expDraft.hours : expeditionHours(content)[0];
+      const res = startExpedition(state, content, ctx.now(), region?.id, expDraft.crew, hours);
+      lastAftermath = res.msg ?? null;
+      if (res.ok) expDraft = { regionId: null, hours: 0, crew: [] };
+      ctx.save();
+      redraw();
+    });
+  });
+  root.querySelectorAll('button[data-exp-recall]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      lastAftermath = recallExpedition(state, content, ctx.now()).msg;
+      ctx.save();
+      redraw();
+    });
+  });
+  root.querySelectorAll('button[data-exp-dismiss]').forEach((btn) => {
+    btn.addEventListener('click', () => { state.campaign.expeditionReport = null; ctx.save(); redraw(); });
+  });
   root.querySelectorAll('button[data-dismiss]').forEach((btn) => {
     btn.addEventListener('click', () => { state.campaign.opReport = null; ctx.save(); redraw(); });
   });

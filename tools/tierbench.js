@@ -57,8 +57,24 @@ const frames = Object.keys(content.frames);
 const rng = mulberry32(hashString('gate125'));
 const pick = (a) => a[Math.floor(rng() * a.length)];
 
+// R179 — THE DRAW IS ADAPTIVE, because a fixed one is a number that goes
+// stale on content rather than on design. S is intrinsically rare in a
+// uniform draw — a near-perfect build — so at N=300 it landed 4 creatures
+// after a forty-second species shifted the stream, and the gate reported
+// "too few to say anything" about a scale that had not moved. Raising 300 to
+// 400 fixed it at exactly the floor of 5, which is the same brittleness one
+// milestone later.
+//
+// So the loop draws until every band has BAND_FLOOR, with a ceiling so a
+// scale that genuinely cannot populate a band still fails rather than
+// hanging. Measured on this tree: 500 draws gives S 8 and the smallest
+// adjacent step 3.3pp, against MIN_GAP's 3. `--n=` still sets the floor, so
+// a session that wants a bigger sample can still ask for one.
+const BAND_FLOOR = 8;
+const MAX_DRAWS = N * 4;
 const byTier = {};
-for (let i = 0; i < N; i++) {
+const thin = () => LETTERS.some((L) => (byTier[L] ?? []).length < BAND_FLOOR);
+for (let i = 0; i < MAX_DRAWS && (i < N || thin()); i++) {
   const frame = pick(frames);
   const slots = content.frames[frame]?.slots ?? Object.keys(bySlot);
   // Sometimes purebred, so the matched-set term is exercised rather than
@@ -97,7 +113,11 @@ const problems = [];
 const stat = {};
 for (const L of LETTERS) {
   const ws = (byTier[L] ?? []).sort((a, b) => a - b);
-  if (ws.length < 5) { problems.push(`tier ${L} drew ${ws.length} creatures — too few to say anything about it`); continue; }
+  if (ws.length < 5) {
+    problems.push(`tier ${L} drew ${ws.length} creatures in ${MAX_DRAWS} attempts`
+      + ' — too few to say anything about it, and the draw already gave up looking');
+    continue;
+  }
   stat[L] = {
     n: ws.length,
     mean: ws.reduce((a, b) => a + b, 0) / ws.length,

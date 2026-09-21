@@ -400,7 +400,36 @@ const REPORT = process.argv.includes('--report');
 // retainer's copy in `data/copy.json`, and 16 new `op_contract` phrasings in
 // `data/voice-pools.json` — which are the thing that kept R109's wire above
 // its floor when three job pools went quiet.
-const FIRST_PAINT_KB = 1099;
+// R179 — 1099 -> 1121, MEASURED FIRST, which is what R112's note asks of
+// every milestone that wants this line. Three readings on this box: 1094 on
+// the commit before this milestone, 1098 with the Manta's six parts in
+// `data/parts.json`, and 1112 with the expedition engine and the region
+// tables as well. So the drift this gate has been running on since R116 was
+// FIVE kilobytes, not nothing — R118, R183, R185 and R176 between them cost
+// four of it — and R179's own cost is 18 KB.
+//
+// WHAT THE 18 BUYS, itemised, because a raise that cannot say is a shrug:
+// 4 KB is a forty-second species and its six parts, which is the milestone
+// (this is the first animal in the game that no amount of money can order);
+// ~6 KB is the five regions' expedition tables and the tuning in
+// `data/regions.json`; ~3 KB is the copy, the two wire events and their
+// eight phrasings; and the rest is `campaign/expedition.js` and one more
+// module request.
+//
+// THE TAX WAS PAID FIRST AND IT WAS PAID IN CODE, not in a promise. The
+// composer — the table, the odds, the launch — is `campaign/outfit.js` and
+// is LAZY, so 3.5 KB of code and 1.5 KB of prose never enter this graph:
+// only the War Room and the harness ever ask what is on a region's table,
+// and neither of them is a first frame. `campaign/operations.js` also gave
+// ~0.9 KB of comments back to `data/notes/operations.md` — the exponential
+// decay argument was there almost word for word already, and R65's cooldown
+// history is a story about a defect that is fixed.
+//
+// 1121 is 1112 plus the nine kilobytes of slack R169 asked for, R112
+// restored and R116 kept. The next milestone to want this should re-measure
+// before it types a number, because the lesson of R112 is that half of a
+// raise can be invisible drift.
+const FIRST_PAINT_KB = 1121;
 
 // R169 — AND IT STAYS AT 1034, measured at 1016. Every previous milestone
 // either raised this number or brought it down to sit just above the

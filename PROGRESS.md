@@ -1,5 +1,116 @@
 # PROGRESS
 
+## Session 206 — R179: Expeditions, and the first creature money cannot buy ✅
+
+**Forty-one species, forty-one prices. The forty-second is not for sale at
+any price, and the only way to it is to send people to go and look.**
+
+### The verb
+
+    campaign/expedition.js   EAGER   who is abroad · is one running · the elapsed settle
+    campaign/outfit.js       LAZY    the region table · the odds · the launch
+
+The split is where the eager budget was paid. Only the War Room and the
+harness ever ask what is on a region's table, and the shell needs to know who
+is abroad on the first frame and nothing else. The first draft was ONE module
+and cost 50 modules, 329.5 KB of code and 258.5 of prose -- over all three
+caps. Split, it costs one module and sits under the code cap with room.
+
+The tick READS an outcome sealed at launch rather than rolling one, which is
+what lets the table be lazy at all, and is the board's own rule: a reload must
+not be able to reroll a trip that went badly.
+
+### The price is the crew, and five readers had to agree
+
+    jobSlots        freeCrew          campaign/operations.js
+    canBringMore    fitTeam    suggestTeam    campaign/warroom.js
+
+One predicate, `expeditionCrew(state)`, because a creature counted fit in one
+of them and abroad in another is a price that is not really being paid. The
+WALKER was not paying it either -- `isFit` read injuries only, so the harness
+could field a creature that was in the Drowned Quarter, in the one place that
+measures whether the cost is real.
+
+### rarityFloor is the decision
+
+Anything above common needs 24h and two crew. A short solo trip to the
+Drowned Quarter cannot roll a Manta however many times it is run, so "which
+region, how long, with whom" is one question instead of three. Without it the
+answer is always the cheapest trip repeated -- which is R116's jobs-board
+defect rebuilt at the other end of the county.
+
+Money is the wrong reason to go, on purpose: 9 a crew-hour against a board
+paying about 35 at half odds.
+
+### The Manta, and four gates that shaped it
+
+Water on the Kite frame. It arrived with six parts and left with five:
+
+    hindlimbs  the A frame has no socket for one, and a part a frame cannot
+               hold is a part the species silently loses
+    tail       a streamer votes Air; dropping the hindfin left a declared
+               Water animal reading as Air out of its own body
+    hide       a fin tail and a slick hide give the same active, which R23
+               forbids -- so countershading, evasionUp 2 under the tail's 1
+    bulk 0.8   at 0.9 a heavy import still flew the Scamper, which is the
+               whole reason the Kite exists
+
+Its wings vote Air. So it is a Water creature carrying **Tidewalker**, the
+only Airborne-and-Aquatic move in the county and the softest punch on a
+28-combo list -- a build that was previously impossible rather than a bigger
+number, which is the trap the entry named.
+
+### The faucet, and the gate that found it by accident
+
+    vault  seed 2026 finishes on 182 head against 28 pens (bound 80)
+    diet   gauntlet: 180 days and not once -- a Gauntlet stage cleared
+
+The same defect. An animal every other day with a breeding loop downstream is
+a faucet; 150 extra animals is upkeep; a campaign that cannot afford its
+roster does not clear Gauntlet stages. One fix closed both -- the walker stops
+at the herd limit its shopping already stops at -- and the diet now counts 21
+agenda rows where it counted 20.
+
+### Five gates re-derived rather than re-typed
+
+Each with its A/B in the commit that moved it.
+
+    two species counts    equalities every content milestone re-types, while
+                          roadmap.js already gates the exact number, derived
+    away-month, marginal  bank most of it OR go backwards, with a dead zone
+                          that a 4%-margin empire lands in (43 of 1,260)
+    rival scouting        read-vs-BLIND is a coin flip: air/water/water
+                          counters to ground, and ground is the blind default
+    tierbench             a fixed 300 draws; S is rare by construction and
+                          landed 4. It draws until every band holds 8 now
+    R142 splice floor     a twelve-seed design number against a five-seed
+                          mean. pre 25.2 PASS by 0.2, post 24.8 FAIL by 0.2,
+                          median 24 on BOTH -- a reshuffle, +4 and -6
+
+### Verification
+
+    anchors    404 match exactly once
+    breaks     408-412 -- 5 aimed, 5 caught
+    baseline   every gate passes on a pristine tree
+    npm test   1014 CPU-seconds of 1521 budgeted, 346.6s wall
+    height     10 screens at 380px, all inside budget
+    a11y       three problems found on the new card, all three fixed
+
+### Budgets moved, each measured first
+
+    MODULE_CAP        49 -> 50     the headroom R176 bought, spent as intended
+    PROSE_CAP        256 -> 258    measured 257.1, ~0.9 KB paid back first
+    FIRST_PAINT_KB  1099 -> 1121   measured 1112; 1094 clean, 1098 with the
+                                   Manta -- five of the drift was already there
+    dex:combos      2950 -> 3100   the 28th combo is one more row
+    dex:yearbook    1000 -> 1050   one more counter, which is R112 working
+
+### Next session's first task
+
+R186 -- the rare and the unique. Only `uncommon` has a floor today, and the
+R179 gate refuses a floor no trip can meet, so the hours and the tier ship in
+the same diff or neither does.
+
 ## Session 205 — R176: the fiftieth module, and the one that should have left ✅
 
 **The module this entry named could never have left the eager graph. The one

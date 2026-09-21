@@ -40,6 +40,12 @@ import {
 import { upkeepPerDay, stockUpkeepPerDay, chimeraUpkeepPerDay, TUNING } from '../ranch/ranch.js';
 import { liveWaves } from '../battle/engine.js';
 import { rivalOf } from '../data/catalog.js';
+import { expeditionCrew } from './expedition.js';
+
+// R179 — the three places that ask "who can fight" all have to agree
+// that a party in the field cannot. One predicate, because three copies
+// of this rule is how a creature ends up on two screens at once.
+const here = (state, c, now) => !expeditionCrew(state).has(c.id) && !isInjured(c, now);
 
 // --- What are we about to fight? -----------------------------------------
 //
@@ -351,13 +357,13 @@ export function obedienceRead(picked, now) {
 // team or has nobody fit left on the bench.
 export function canBringMore(state, team, now, cap) {
   return team.length < cap
-    && state.chimeras.some((c) => !team.includes(c.id) && !isInjured(c, now) && isSettled(c, now));
+    && state.chimeras.some((c) => !team.includes(c.id) && here(state, c, now) && isSettled(c, now));
 }
 
 // The team as the launch button will read it: picked, minus anyone the
 // Infirmary has taken since they were picked.
 export function fitTeam(state, team, now) {
-  return team.map((id) => state.chimeras.find((c) => c.id === id)).filter((c) => c && !isInjured(c, now));
+  return team.map((id) => state.chimeras.find((c) => c.id === id)).filter((c) => c && here(state, c, now));
 }
 
 // --- Who should I send? (R123) --------------------------------------------
@@ -439,7 +445,7 @@ const teamsOf = (list, size) => {
 // Twelve forecasts at 12 runs is about 45ms, against the one the briefing
 // already pays for.
 export function suggestTeam(state, encounter, content, now, { budget = 12 } = {}) {
-  const fit = (state.chimeras ?? []).filter((c) => !isInjured(c, now) && isSettled(c, now));
+  const fit = (state.chimeras ?? []).filter((c) => here(state, c, now) && isSettled(c, now));
   if (fit.length < TEAM_SIZE) return { team: fit.slice(0, TEAM_SIZE), forecasts: 0, winRate: null, why: fit.length ? 'Everyone else is in the Infirmary or still settling.' : 'Nobody is fit to send.' };
 
   const { classes: foeClasses } = foeRead(encounter, content);

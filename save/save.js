@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 59;
+export const SAVE_VERSION = 60;
 // R101 — exported for `save/slots.js`, which was carved out of this file
 // and still addresses the same keys. Nothing outside the save system
 // reads either one.
@@ -79,6 +79,10 @@ export function newGameState() {
       // that finished refilling, so a new lab opens with every lead going.
       boardRefillAt: 0,
       operations: [], opCooldowns: {}, opCount: 0, opReport: null, heat: 0, heatAt: null,
+      // R179 — the party in the field. One at a time, so this is a slot
+      // rather than a list; `expeditionReadyAt` is the van coming back, and
+      // zero means ready now, the way every other refill time here does.
+      expedition: null, expeditionReadyAt: 0, expeditionCount: 0, expeditionReport: null,
       // R87: the Compliance Task Force. `raid` is the one at the gate,
       // `nextRaidAt` the schedule R9's rule requires, and the counters are
       // what the escalation and the wire read.
