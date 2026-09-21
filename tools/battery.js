@@ -6118,6 +6118,45 @@ const BREAKS = [
       + '    "Keeper insists the reptile house door was shut. The door agrees, in writing.",',
     to: '    "Reptile house completes a full recount and arrives at a different, worse number.",',
   },
+  // --- gate: the Dex tab list (R185 — five of six, one level down) ---------
+  {
+    // THE BREAK THE ENTRY ASKED FOR: a seventh tab lands and the table does
+    // not name it. Before this milestone the walk carried a literal list, so
+    // a new tab was simply not measured and the gate stayed green — which is
+    // how the Yearbook went five milestones with no folded budget, no tallest
+    // budget and no word budget. Now the list comes off the bar, so a tab
+    // nobody budgeted is a tab the gate names.
+    n: 402, gate: HEIGHT, name: 'a seventh Dex tab ships with no height budget and the gate never notices',
+    file: 'splice/dex-ui.js',
+    anchor: "  { id: 'yearbook', icon: 'book', label: 'Yearbook' },",
+    to: "  { id: 'yearbook', icon: 'book', label: 'Yearbook' },\n"
+      + "  { id: 'ledger', icon: 'book', label: 'Ledger' },",
+  },
+  {
+    // AND THE OTHER DIRECTION — the list goes back to being typed here. This
+    // is the defect exactly as it shipped: five ids in a file that is not the
+    // screen, and a sixth tab on the screen that nothing walks. Caught by the
+    // UNION rather than by the budget rule, because the budget rule only ever
+    // sees what the walk reached: `dex:yearbook` declares a budget and no row
+    // comes back for it.
+    n: 403, gate: HEIGHT, name: 'the Dex tab list goes back to a literal, and the sixth tab is unmeasured again',
+    file: 'tools/height.js',
+    anchor: "  const dexTabs = JSON.parse(await evaluate(`JSON.stringify(",
+    to: "  const dexTabs = ['roster', 'variants', 'combos', 'genes', 'foes']; void JSON.parse(await evaluate(`JSON.stringify(",
+  },
+  {
+    // AND THE READ ITSELF GOING BLIND, which is the hazard a DOM-read list
+    // adds that a literal did not have. One character in the selector and the
+    // query matches nothing: the loop walks no tab, every Dex budget goes
+    // unchecked, and without the floor below the gate would report a clean
+    // run having measured nothing at all. That is the failure shape this
+    // project has shipped more than any other — a rule with nothing to look
+    // at passes.
+    n: 404, gate: HEIGHT, name: 'the Dex tab selector matches nothing, and the walk measures no tab at all',
+    file: 'tools/height.js',
+    anchor: "    [...document.querySelectorAll('#screen-dex nav.subtabs#dex-subtabs button[data-dex-tab]')]",
+    to: "    [...document.querySelectorAll('#screen-dex nav.subtabs#dex-subtabs button[data-dex-tabs]')]",
+  },
 ];
 
 const pristine = {};

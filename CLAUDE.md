@@ -77,13 +77,19 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (~4h55m, RE-MEASURED at R118 over all 390 breaks in four
-`--only` chunks: 98 in 25m, 98 in 81m, 98 in 152m, 96 in 65m — 323 minutes
-including four baselines, so one uninterrupted run is a little under five
-hours. R116 read 216 minutes for the same shape of run and this line said
-~3.1h; it is now the FOURTH reading and the third time the number was wrong,
-so treat any figure here as stale by default and re-measure before planning
-an evening around it. Per-break cost varies by more than an order of
+**The full battery (~4h55m, and R185 is the FIFTH reading and the FIRST time
+this number held. R118 measured 390 breaks in four `--only` chunks at 25m,
+81m, 152m and 65m — 323 minutes. R185 ran 396 breaks on the same box at 25m,
+82m, 151m and 67m — 325 minutes, every chunk within a minute of its
+predecessor. Both include four baselines, so one uninterrupted run is a
+little under five hours.
+
+That agreement is worth more than either reading alone: it says the per-break
+costs are stable and the drift this line kept suffering was re-measurement on
+a moved host, not a suite that grows unpredictably. R116 read 216 minutes and
+this line said ~3.1h; the number was wrong three times running before R118.
+Treat it as a figure with two agreeing readings behind it rather than as
+gospel — and if a third disagrees, believe the third. Per-break cost varies by more than an order of
 magnitude between gates and the expensive ones cluster in the LATER
 numbering — chunk 1 would have predicted a 100-minute battery and chunk 3
 alone cost more than that. ANY breaks-per-minute figure taken from a slice is
@@ -98,8 +104,9 @@ R116 before chunking: one to a tree edited underneath it, one to a restart
 twenty-five minutes in. Build the id list from the file, because break
 numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327 are
 retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
-393 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
-gene probe, and R183 added 399-401 for the job headline. R183's own
+396 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
+gene probe, R183 added 399-401 for the job headline, and R185 added 402-404
+for the Dex tab list. R183's own
 `--only` run is the standing example of why BATTERY_EXIT is the verdict: it
 read "3 breaks, 3 caught, 0 missed" on top of a RED baseline, because
 changing a precached data file without bumping the worker's CACHE is a
