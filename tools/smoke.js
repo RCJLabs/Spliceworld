@@ -15940,6 +15940,24 @@ if (inShard('voice')) {
       'and buzzes the phone for the same cue, which is the half that works before any gesture');
     assert.equal((body.match(/watchSignals\(state\)/g) ?? []).length, 2,
       'snapshotting both sides of the tick, not just one');
+    // R176 — AND THE CUE PATH IS NOT GATED ON THE CONTEXT. This is the exact
+    // regression this milestone came within one line of shipping.
+    //
+    // `buzz` checks `haptics` and `muted` and NOT the AudioContext, so a cue
+    // on the first tick — a job that came back while you were away — buzzes
+    // the phone with no context at all, before anybody has touched anything.
+    // The obvious way to lazy-load a synth is to fetch it on the first
+    // gesture, and that would have deleted this silently: no gesture, no
+    // module, no buzz, and every gate in this file still green because a
+    // stinger is inaudible before a gesture ANYWAY.
+    //
+    // `audioOpen` is the flag that says the context exists, and it gates
+    // ambience — which really is a no-op without one. It must not gate the
+    // cues. Asserted as an ABSENCE from this body, which is the only shape
+    // that catches the one-line version of the mistake.
+    assert.ok(!/audioOpen/.test(body),
+      'the cue path is not gated on the audio context — haptics fire before any gesture, '
+      + 'and a synth fetched only on pointerdown would silently take that away');
   }
 
   // 5. The mute toggle still silences everything. A sound that ignores it is
