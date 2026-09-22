@@ -53,6 +53,13 @@
           "sub": "Parties sent into a region to look for something"
         },
         {
+          "id": "capers",
+          "label": "Capers",
+          "from": "campaign.missionCount",
+          "fmt": "count",
+          "sub": "Nights out against a rival lab, no battle involved"
+        },
+        {
           "id": "sent",
           "label": "Sent, not watched",
           "from": "sentCount",

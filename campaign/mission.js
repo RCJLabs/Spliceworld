@@ -27,7 +27,7 @@ const DEFAULTS = {
   maxChance: 0.9,
   aptitude: {
     camoWeight: 0.5, speedWeight: 0.3, massWeight: 0.2,
-    camoCeil: 3, speedCeil: 34, massFloor: 14, massCeil: 68,
+    camoCeil: 4, speedCeil: 12, massFloor: 95, massCeil: 165,
   },
 };
 

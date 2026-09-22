@@ -10,17 +10,21 @@
       "camoWeight": 0.5,
       "speedWeight": 0.3,
       "massWeight": 0.2,
-      "camoCeil": 3,
-      "speedCeil": 34,
-      "massFloor": 14,
-      "massCeil": 68
+      "camoCeil": 4,
+      "speedCeil": 12,
+      "massFloor": 95,
+      "massCeil": 165
     }
   },
   "missions": {
     "espionage": {
       "name": "Espionage",
       "brief": "Somebody quiet walks in, reads the filing cabinet, and walks out. Nothing is broken. That is the entire skill.",
-      "hourOptions": [3, 8, 18],
+      "hourOptions": [
+        3,
+        8,
+        18
+      ],
       "fundsPerHour": 13,
       "notoriety": 0,
       "consolation": 0.35,
@@ -32,7 +36,11 @@
     "sabotage": {
       "name": "Sabotage",
       "brief": "Their centrifuge is going to have an unscheduled disagreement with physics. Get in, disagree, get out before anybody signs anything.",
-      "hourOptions": [5, 12, 24],
+      "hourOptions": [
+        5,
+        12,
+        24
+      ],
       "fundsPerHour": 21,
       "notoriety": 2,
       "consolation": 0.25,
@@ -45,7 +53,9 @@
     "renewal": {
       "name": "Unscheduled Urban Renewal",
       "brief": "The block was scheduled for demolition in nine years. We are ahead of schedule and the paperwork will catch up. Your specimen does not come home from this one.",
-      "hourOptions": [6],
+      "hourOptions": [
+        6
+      ],
       "fundsPerHour": 62,
       "notoriety": 6,
       "consolation": 0.6,

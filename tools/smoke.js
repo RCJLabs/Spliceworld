@@ -7642,7 +7642,13 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     ['Greenfield falls', () => {
       lab.campaign.heldNodes = ['barn_perimeter', 'downtown', 'checkpoint', 'precinct'];
       lab.campaign.notoriety = 65;
-    }, ['regions', 'rivals']],
+      // R180 — the mission board lights HERE, with the ladder, and not a
+      // step later. Its own precondition is a rival you have met, so the
+      // moment the ladder opens is the moment a caper becomes a thing you
+      // could run; `rivals` lights on this step for the same reason and has
+      // not been fought yet either. A step later would be a note explaining
+      // a board the player had already found.
+    }, ['regions', 'rivals', 'missions']],
     ['a convoy is on the road', () => {
       lab.campaign.contested = [{ nodeId: 'downtown', deadline: t0 + 13 * HOUR }];
     }, ['contest']],
@@ -25128,6 +25134,40 @@ if (inShard('capers')) {
     assert.ok(t.minChance > 0 && t.maxChance < 1,
       'a hopeless specimen can still land one and a perfect one can still miss');
     assert.ok(st.campaign, 'the fixture has a campaign to hang a mission on');
+
+    // THE ORDERING IS THE DESIGN; the numbers are calibration. This asserts
+    // the three relations the milestone rests on and NOT the values, so a
+    // later balance pass can move the ceilings without touching this gate —
+    // but cannot quietly turn the aptitude back into the decoration the
+    // first cut shipped, where every real creature scored within 5 points
+    // of every other because the mass term was zero for all of them and the
+    // camo term could not fire at all.
+    const mk = (sp, socks) => ({
+      name: sp, frame: 'M',
+      tokens: Object.fromEntries(socks
+        .filter((k) => c.parts[`${sp}_${k}`])
+        .map((k) => [k, { partId: `${sp}_${k}`, grade: 'standard' }])),
+    });
+    const ALL = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
+    const BARE = ['head', 'forelimbs', 'hindlimbs', 'tail', 'organ'];
+    const infiltrator = missionAptitude(c, mk('chameleon', BARE));
+    const clothed = missionAptitude(c, mk('chameleon', ALL));
+    const bruiser = missionAptitude(c, mk('rhino', ALL));
+
+    assert.ok(infiltrator.hidden,
+      'the infiltrator is actually hidden — a build with no hide carries Camo');
+    assert.ok(!clothed.hidden,
+      'and armour cancels it, which is camoTags in splice/physiology.js and not a rule this module owns');
+    assert.ok(infiltrator.score > bruiser.score * 2,
+      `the specialist is worth building: infiltrator ${infiltrator.score.toFixed(3)} vs bruiser ${bruiser.score.toFixed(3)}`);
+    assert.ok(infiltrator.score - clothed.score > 0.2,
+      `and wearing its own hide costs it real odds (${(infiltrator.score - clothed.score).toFixed(3)})`);
+    // The terms must each be LIVE for a real creature — the first cut passed
+    // an ordering check while two of the three read zero for everything.
+    assert.ok(infiltrator.mass > 0 && bruiser.mass < infiltrator.mass,
+      `mass discriminates rather than reading zero for every build (${infiltrator.mass.toFixed(2)} vs ${bruiser.mass.toFixed(2)})`);
+    assert.ok(infiltrator.speed > 0 && infiltrator.camo > 0,
+      'and so do speed and camo');
   }
 }
 
