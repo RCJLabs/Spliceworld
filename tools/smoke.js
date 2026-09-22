@@ -25011,7 +25011,7 @@ if (inShard('untrusted')) {
 if (inShard('capers')) {
   const { missionTuning, missionsFor, missionCommitted, conscriptsOf, tickMissions } =
     await import('../campaign/mission.js');
-  const { missionOdds, startMission } = await import('../campaign/caper.js');
+  const { missionOdds, startMission, missionAptitude } = await import('../campaign/caper.js');
   const { rivalTeam } = await import('../campaign/rivals.js');
   const { looseSpecimens } = await import('../campaign/breakout.js');
   const { labCore } = await import('./fixtures.js');
