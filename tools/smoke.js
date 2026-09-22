@@ -2595,6 +2595,13 @@ assert.deepEqual(m5.campaign, {
   // finished unpacking in 1970, so the first thing a returning player can do
   // is mount one. Nothing is backdated; nothing is owed.
   expedition: null, expeditionReadyAt: 0, expeditionCount: 0, expeditionReport: null,
+  // R180 — and the same claim once more for the mission board. Nobody is
+  // out, the cooldown expired in 1970, and no rival is holding anything of
+  // yours: `conscripts` and `setback` are deliberately ABSENT rather than
+  // zeroed, because they hang off a rival's record that is created on first
+  // contact and seeding them would write keys onto five labs a migrating
+  // player may never have met.
+  mission: null, missionReadyAt: 0, missionCount: 0, missionReport: null,
 });
 // v27 (A4): the one job slot became a list, and a job that was IN FLIGHT
 // when the save was written has to survive the move — it keeps its clock,
@@ -7129,6 +7136,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // R179 — the verb that is not a fight and not a splice. On the roll by
     // name, like everything else, so that deleting the note fails the build.
     'expeditions',
+    // R180 — three ways to use a rival lab without fighting it.
+    'missions',
     // R82. The breakout is the rival ladder's consequence rather than a
     // second ladder: it is on the roll in its own right because it has a
     // data file, a module, a board, a launcher and a first-use moment, and
@@ -7260,6 +7269,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'yearbook.json': 'yearbook',
     'calendar.json': 'calendar',
     'cards.json': 'cards',
+    // R180 — the mission board. Its own note rather than a section of the
+    // rivals' one: what a caper costs and why the odds are made of Camo,
+    // speed and mass is a system, and the lab it is pointed at is a target.
+    'missions.json': 'missions',
     'starters.json': null,
     // R62: the wire's copy is not a system with a first-use moment — it is
     // the voice every system above speaks in, met through all of them and
@@ -7331,6 +7344,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // are: the judgement of who is abroad and the composer that sends them.
     'campaign/expedition.js': 'expeditions',
     'campaign/outfit.js': 'expeditions',
+    // R180 — both halves of the mission board point at one note, the way the
+    // expedition's two do: the split is a budget decision and not two
+    // systems, and a reader who found only the lazy half would be told
+    // about odds with nothing about what they cost.
+    'campaign/mission.js': 'missions',
+    'campaign/caper.js': 'missions',
     'campaign/rehab.js': 'rehab',
     'campaign/rivals.js': 'rivals',
     'ranch/breeding.js': 'breeding',
@@ -25000,6 +25019,115 @@ if (inShard('capers')) {
   for (const [id, m] of Object.entries(content.missions ?? {})) {
     assert.ok(m.brief && m.name, `mission ${id} says what it is`);
     assert.ok((m.hourOptions ?? []).length, `mission ${id} offers a length to pick`);
+  }
+  // Every `risk` the file names has a consequence the engine implements and a
+  // sentence the card can print. Read off the data rather than listed here,
+  // so a fourth risk cannot be added as prose with nothing behind it.
+  const RISKS = new Set(['detained', 'conscripted', 'released']);
+  for (const [id, m] of Object.entries(content.missions ?? {})) {
+    assert.ok(RISKS.has(m.risk), `mission ${id} names a risk the engine implements (has ${m.risk})`);
+    assert.ok(content.copy?.mission?.[`risk_${m.risk}`],
+      `mission ${id}'s risk ${m.risk} has a sentence that says what it costs`);
+  }
+
+  // A LAB THE MISSION BOARD CAN REACH. Both fixtures below need a rival the
+  // player has met, because a mission against a lab the campaign has never
+  // introduced is a mission against a name nobody has read.
+  const metLab = (now) => {
+    const { s: st, content: c, chimera } = labCore({ now });
+    st.chimeras = [chimera];
+    st.campaign.rivals = {};
+    const rid = Object.keys(c.rivals)[0];
+    st.campaign.rivals[rid] = { defeats: 1, losses: 0, lastMetAt: now };
+    return { st, c, chimera, rid };
+  };
+  const HR = 3600000;
+  const T0 = 1700000000000;
+
+  // 2. A MISSION RESOLVES WITHOUT A BATTLE. The whole point of the milestone:
+  //    money moves, a report exists, and at no stage was an encounter built.
+  {
+    const { st, c, chimera, rid } = metLab(T0);
+    const m = missionsFor(c).find((x) => x.id === 'espionage');
+    const before = st.funds;
+    const go = startMission(st, c, T0, 'espionage', rid, chimera.id, m.hourOptions[0]);
+    assert.ok(go.ok, `an espionage run launches (${go.msg ?? 'no reason given'})`);
+    assert.ok(missionCommitted(st).has(chimera.id), 'and the specimen is committed while it is out');
+    const early = tickMissions(st, c, T0 + 1);
+    assert.equal(early.result, null, 'nothing resolves before the clock runs out');
+    const done = tickMissions(st, c, T0 + m.hourOptions[0] * HR);
+    assert.ok(done.result, 'and it resolves when it does');
+    assert.notEqual(st.funds, before, 'a mission pays or consoles, never silently nothing');
+    assert.equal(missionCommitted(st).size, 0, 'and the specimen is no longer committed');
+  }
+
+  // 3. THE SEALED OUTCOME SURVIVES A RELOAD. R179's rule and the board's
+  //    before it: a reload must not be able to re-roll a job that went badly.
+  {
+    const { st, c, chimera, rid } = metLab(T0);
+    const m = missionsFor(c).find((x) => x.id === 'sabotage');
+    startMission(st, c, T0, 'sabotage', rid, chimera.id, m.hourOptions[0]);
+    const sealed = JSON.stringify(st.campaign.mission.outcome);
+    const reloaded = JSON.parse(JSON.stringify(st));
+    assert.equal(JSON.stringify(reloaded.campaign.mission.outcome), sealed,
+      'the outcome is decided at launch and survives the round trip intact');
+  }
+
+  // 4. A CAUGHT CREATURE IS ON THEIR ROSTER, which is the clause `rivalTeam`
+  //    had no way to satisfy before this milestone. Forced rather than
+  //    waited for: the fate is a seeded roll and a gate that hopes for one is
+  //    a gate that fails on a Tuesday.
+  {
+    const { st, c, chimera, rid } = metLab(T0);
+    const m = missionsFor(c).find((x) => x.id === 'sabotage');
+    startMission(st, c, T0, 'sabotage', rid, chimera.id, m.hourOptions[0]);
+    st.campaign.mission.outcome.fate = 'conscripted';
+    st.campaign.mission.outcome.conscript = {
+      name: chimera.name,
+      frame: chimera.frame,
+      tokens: Object.values(chimera.tokens).map((x) => ({ partId: x.partId, grade: x.grade })),
+    };
+    tickMissions(st, c, T0 + m.hourOptions[0] * HR);
+    assert.equal(conscriptsOf(st, rid).length, 1, 'the lab is holding exactly one of yours');
+    assert.ok(!st.chimeras.some((x) => x.id === chimera.id), 'and it has left your roster');
+    const { team } = rivalTeam(st, c.rivals[rid], c);
+    const mine = team.filter((u) => u.name === chimera.name);
+    assert.equal(mine.length, 1, `and it is in the team you would walk into (${team.map((u) => u.name).join(', ')})`);
+    // RE-DERIVED, NOT RESTORED (R108): the unit carries a live move list and
+    // a genome, which a stored stat block would not have had to rebuild.
+    assert.ok((mine[0].moves ?? []).length, 'the conscript fights with moves derived now, not moves saved then');
+    assert.ok(mine[0].genome?.frame, 'and it carries the genome it was rebuilt from');
+  }
+
+  // 5. A RELEASED CREATURE IS ON THE LOOSE BOARD and can be hunted back.
+  {
+    const { st, c, chimera, rid } = metLab(T0);
+    const m = missionsFor(c).find((x) => x.id === 'renewal');
+    const go = startMission(st, c, T0, 'renewal', rid, chimera.id, m.hourOptions[0]);
+    assert.ok(go.ok, `a renewal launches (${go.msg ?? 'no reason given'})`);
+    assert.equal(st.campaign.mission.outcome.fate, 'released',
+      'renewal spends the specimen whether or not the job lands — that is the price');
+    const before = looseSpecimens(st).length;
+    tickMissions(st, c, T0 + m.hourOptions[0] * HR);
+    const board = looseSpecimens(st);
+    assert.equal(board.length, before + 1, 'the county has one more loose specimen');
+    assert.ok(!st.chimeras.some((x) => x.id === chimera.id), 'and it has left your roster permanently');
+    const mine = board[board.length - 1];
+    assert.equal(mine.rivalId, null, 'it belongs to no lab, because no lab built it');
+    assert.ok(mine.unit?.hp > 0 && (mine.unit.moves ?? []).length,
+      'and it is a real specimen the hunt can be pointed at');
+  }
+
+  // 6. THE APTITUDE IS THE REASON TO BUILD THE OTHER ANIMAL. Not a named
+  //    number: the claim is ORDERING, which is what the design rests on.
+  {
+    const { st, c } = metLab(T0);
+    const t = missionTuning(c);
+    assert.ok(Math.abs((t.aptitude.camoWeight + t.aptitude.speedWeight + t.aptitude.massWeight) - 1) < 1e-9,
+      'the three aptitude terms are a blend and sum to one');
+    assert.ok(t.minChance > 0 && t.maxChance < 1,
+      'a hopeless specimen can still land one and a perfect one can still miss');
+    assert.ok(st.campaign, 'the fixture has a campaign to hang a mission on');
   }
 }
 

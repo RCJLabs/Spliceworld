@@ -45,6 +45,11 @@ import {
   expeditionCandidates, expeditionRemainingMs, expeditionReadyAt, recallExpedition,
 } from './expedition.js';
 import { findsFor, findsBeyond, expeditionOdds, startExpedition } from './outfit.js';
+import {
+  missionTuning, missionsFor, missionHours, activeMission, missionReadyAt,
+  missionRemainingMs, missionCandidates, recallMission,
+} from './mission.js';
+import { missionOdds, missionTargets, startMission, missionAptitude } from './caper.js';
 import { directorRead } from './director.js';
 import {
   bayUnit, rehabPlan, rehabTuning, startRehab, rehabSession, cancelRehab,
@@ -80,6 +85,10 @@ let lastAftermath = null;
 // player makes across several taps, and a half-made one has no business in
 // the save.
 let expDraft = { regionId: null, hours: 0, crew: [] };
+// R180 — the caper draft. One creature rather than a crew, so it is an id
+// and not a list, and the same rule holds: a half-composed mission is a UI
+// state and never touches the save.
+let capDraft = { missionId: null, rivalId: null, hours: 0, chimeraId: null };
 // R108 — what the visitors' gate last said. Module-level for the same
 // reason `lastAftermath` above it is: this screen answers in a full
 // re-render, so a line appended to a DOM the next paint replaces is a line
@@ -488,7 +497,7 @@ function renderMap(root, ctx) {
 
   const views = {
     map: regions,
-    jobs: `${expeditionCard(state, ctx, t)}${jobsCard(state, ctx, t)}`,
+    jobs: `${expeditionCard(state, ctx, t)}${missionCard(state, ctx, t)}${jobsCard(state, ctx, t)}`,
     labs: `
       ${releaseCard}
       ${dossier}
@@ -977,6 +986,96 @@ function expeditionCard(state, ctx, t) {
     </section>`;
 }
 
+function missionCard(state, ctx, t) {
+  const { content } = ctx;
+  const out = activeMission(state);
+  const report = state.campaign?.missionReport ?? null;
+  const reportHtml = report
+    ? `<div class="encounter job-report ${report.success ? 'is-win' : 'is-bust'}">
+        <div><strong>${report.success ? '\u2714' : '\u2718'} ${esc(report.mission)}</strong><br>
+        <span class="fine-print">${report.fate === 'conscripted'
+      ? fill(content.copy?.mission?.conscripted, { creature: esc(report.name), rival: esc(report.rival) })
+      : report.fate === 'released'
+        ? fill(content.copy?.mission?.released, { creature: esc(report.name) })
+        : report.success
+          ? fill(content.copy?.mission?.landed, {})
+          : fill(content.copy?.mission?.missed, {})}${
+      report.funds ? ` <strong>+${fmtMoney(report.funds)}</strong>.` : ''}${
+      report.granted === 'intel' ? ` ${fill(content.copy?.mission?.intel, { rival: esc(report.rival) })}` : ''}${
+      report.granted === 'setback' ? ` ${fill(content.copy?.mission?.setback, { rival: esc(report.rival) })}` : ''}</span></div>
+        <button type="button" data-cap-dismiss="1">OK</button>
+      </div>`
+    : '';
+
+  if (out) {
+    return `
+      <section class="card jobs-card">
+        <h3>${renderIcon('map')} ${fill(content.copy?.mission?.heading_out, {})}</h3>
+        ${reportHtml}
+        <div class="encounter job-live">
+          <div><strong>${esc(content.missions?.[out.missionId]?.name ?? out.missionId)}</strong><br>
+          <span class="fine-print">${fill(content.copy?.mission?.out, {
+      creature: esc(out.name ?? ''),
+      rival: esc(content.rivals?.[out.rivalId]?.name ?? out.rivalId),
+      time: `<strong class="countdown">${fmtDuration(missionRemainingMs(state, t))}</strong>`,
+    })}</span></div>
+          <button type="button" class="job-abort" data-cap-recall="1">${fill(content.copy?.mission?.recall, {})}</button>
+        </div>
+      </section>`;
+  }
+
+  const targets = missionTargets(state, content);
+  if (!targets.length) return reportHtml ? `<section class="card jobs-card">${reportHtml}</section>` : '';
+  const board = missionsFor(content);
+  const resting = Math.max(0, missionReadyAt(state) - t);
+  const busy = new Set((state.campaign?.operations ?? []).map((r) => r.chimeraId).filter(Boolean));
+  const candidates = missionCandidates(state, t, busy);
+
+  const mission = board.find((m) => m.id === capDraft.missionId) ?? board[0];
+  const rival = targets.find((r) => r.id === capDraft.rivalId) ?? targets[0];
+  const hours = missionHours(mission).includes(capDraft.hours) ? capDraft.hours : missionHours(mission)[0];
+  const who = candidates.find((c) => c.id === capDraft.chimeraId) ?? null;
+  const odds = missionOdds(content, mission, hours, who);
+  const apt = who ? missionAptitude(content, who) : null;
+  // The one-line read on the creature you picked, off the score the launch
+  // actually rolls against rather than a second opinion about it.
+  const aptLine = !apt ? '' : apt.score >= 0.6
+    ? fill(content.copy?.mission?.apt_good, {})
+    : apt.score >= 0.3 ? fill(content.copy?.mission?.apt_mixed, {}) : fill(content.copy?.mission?.apt_poor, {});
+
+  const row = (label, cells) => `<p class="fine-print">${label}</p><div class="op-row exp-row">${cells}</div>`;
+  return `
+    <section class="card jobs-card">
+      <h3>${renderIcon('map')} ${fill(content.copy?.mission?.heading, {})}</h3>
+      <p class="fine-print">${fill(content.copy?.mission?.card_blurb, {})}</p>
+      ${reportHtml}
+      ${row(fill(content.copy?.mission?.what, {}), board.map((m) => `<button type="button" data-cap-mission="${m.id}"${
+    m.id === mission.id ? ' class="is-selected"' : ''}>${esc(m.name)}</button>`).join(''))}
+      ${row(fill(content.copy?.mission?.which, {}), targets.map((r) => `<button type="button" data-cap-rival="${r.id}"${
+    r.id === rival.id ? ' class="is-selected"' : ''}>${esc(r.name)}</button>`).join(''))}
+      ${row(fill(content.copy?.mission?.how_long, {}), missionHours(mission).map((h) => `<button type="button" data-cap-hours="${h}"${
+    h === hours ? ' class="is-selected"' : ''}>${h}h</button>`).join(''))}
+      ${row(fill(content.copy?.mission?.who, {}), candidates.length
+    ? candidates.map((c) => `<button type="button" data-cap-who="${c.id}"${
+      c.id === who?.id ? ' class="is-selected"' : ''}>${esc(c.name)}</button>`).join('')
+    : `<span class="locked-tag">${fill(content.copy?.mission?.nobody, {})}</span>`)}
+      <p class="fine-print">${esc(mission.brief ?? '')}</p>
+      <p class="fine-print">${fill(content.copy?.mission?.[`risk_${mission.risk}`], {})}</p>
+      ${apt && !apt.hidden && apt.camoParts > 0
+    ? `<p class="fine-print">${fill(content.copy?.mission?.armored_warning, {})}</p>` : ''}
+      <p class="fine-print">${fill(content.copy?.mission?.odds, {
+    pct: Math.round(odds.chance * 100), why: aptLine,
+  })} &middot; <strong>${fmtMoney(odds.funds)}</strong></p>
+      ${resting
+    ? `<span class="locked-tag">${fill(content.copy?.mission?.resting, {})} ${fmtDuration(resting)}</span>`
+    : who
+      // R161 again — a greyed Send is a refusal that will not say what it
+      // wants. Before a specimen is picked the card says so in words.
+      ? `<button type="button" data-cap-go="1">${fill(content.copy?.mission?.send, {})}</button>`
+      : `<span class="locked-tag">${fill(content.copy?.mission?.pick_specimen, {})}</span>`}
+    </section>`;
+}
+
 function jobsCard(state, ctx, t) {
   const { content } = ctx;
   const jobs = boardOps(content);
@@ -1133,6 +1232,58 @@ function bindJobs(root, ctx, redraw) {
   });
   root.querySelectorAll('button[data-exp-dismiss]').forEach((btn) => {
     btn.addEventListener('click', () => { state.campaign.expeditionReport = null; ctx.save(); redraw(); });
+  });
+
+  // R180 — the four pickers write the draft and redraw; only `data-cap-go`
+  // touches the save. Same rule as the expedition one line up, and it has to
+  // be the same rule: a half-composed caper that wrote itself down would be
+  // a creature marked committed to a mission that was never sent.
+  root.querySelectorAll('button[data-cap-mission]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      // The length options are per-mission, so switching the verb drops a
+      // length the new one does not offer rather than carrying it over and
+      // being silently corrected at launch.
+      capDraft = { ...capDraft, missionId: btn.dataset.capMission, hours: 0 };
+      redraw();
+    });
+  });
+  root.querySelectorAll('button[data-cap-rival]').forEach((btn) => {
+    btn.addEventListener('click', () => { capDraft = { ...capDraft, rivalId: btn.dataset.capRival }; redraw(); });
+  });
+  root.querySelectorAll('button[data-cap-hours]').forEach((btn) => {
+    btn.addEventListener('click', () => { capDraft = { ...capDraft, hours: Number(btn.dataset.capHours) }; redraw(); });
+  });
+  root.querySelectorAll('button[data-cap-who]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.capWho;
+      capDraft = { ...capDraft, chimeraId: capDraft.chimeraId === id ? null : id };
+      redraw();
+    });
+  });
+  root.querySelectorAll('button[data-cap-go]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const board = missionsFor(content);
+      const mission = board.find((m) => m.id === capDraft.missionId) ?? board[0];
+      const targets = missionTargets(state, content);
+      const rival = targets.find((r) => r.id === capDraft.rivalId) ?? targets[0];
+      const hours = missionHours(mission).includes(capDraft.hours)
+        ? capDraft.hours : missionHours(mission)[0];
+      const res = startMission(state, content, ctx.now(), mission?.id, rival?.id, capDraft.chimeraId, hours);
+      lastAftermath = res.msg ?? null;
+      if (res.ok) capDraft = { missionId: null, rivalId: null, hours: 0, chimeraId: null };
+      ctx.save();
+      redraw();
+    });
+  });
+  root.querySelectorAll('button[data-cap-recall]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      lastAftermath = recallMission(state, content, ctx.now()).msg;
+      ctx.save();
+      redraw();
+    });
+  });
+  root.querySelectorAll('button[data-cap-dismiss]').forEach((btn) => {
+    btn.addEventListener('click', () => { state.campaign.missionReport = null; ctx.save(); redraw(); });
   });
   root.querySelectorAll('button[data-dismiss]').forEach((btn) => {
     btn.addEventListener('click', () => { state.campaign.opReport = null; ctx.save(); redraw(); });
