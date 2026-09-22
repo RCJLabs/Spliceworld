@@ -23623,7 +23623,23 @@ if (inShard('wire')) {
   // should either evict something the bill has not caught — a module where
   // boot calls one small function and nothing else, which is the blind spot
   // R169 named — or admit that 50 is what this game costs and say so.
-  const MODULE_CAP = 50;
+  // R180 — 50 -> 51, measured at 51, and this is the raise the note above
+  // asked the next milestone to argue for. It tried the eviction first: the
+  // mission board's eager half began as one module boot pulled in for a
+  // single function, which is exactly the R169 blind spot named up there, so
+  // six of its ten exports moved to the lazy `campaign/caper.js` — the board,
+  // the lengths, the candidates, the recall and the two clocks, none of which
+  // the first frame reads. What is left is irreducible and is four functions:
+  // `tickMissions`, because a mission has to settle from timestamps on load
+  // or a released chimera does not reach the loose board until somebody opens
+  // a screen; `activeMission` and `missionCommitted`, which the tick and the
+  // roster read; and `conscriptsOf`, because `campaign/rivals.js` is eager
+  // and has to know who a lab is holding before it can field them.
+  //
+  // So this is the other half of that note's instruction: 51 is what this
+  // game costs once the campaign has a third verb, and saying so is more
+  // honest than pretending the tick can be lazy.
+  const MODULE_CAP = 51;
   // R131: 548 -> 553, measured at 550.3. `ui/pager.js` and the two screens
   // that use it; see the FIRST_PAINT_KB note in tools/boot.js.
   // R135: 553 -> 557, measured at 555.2, and the raise has to argue.
@@ -23937,7 +23953,19 @@ if (inShard('wire')) {
 // is NOT in this number, because it is imported the first time the query
 // matches and a phone never asks. That is the shape a wide-screen feature
 // should have, and 0.8 KB is what it costs to have it.
-const KB_CAP = 327;        // CODE only, measured at 326.4
+// R180 — 327 -> 332, measured at 331.0. The mission board's eager half, and
+// the two call sites that reach it: the tick block in campaign/campaign.js
+// and the conscript loop in campaign/rivals.js. 4.6 KB of it is the module
+// itself after six exports were moved to the lazy half (see MODULE_CAP
+// above); the remaining 1.1 is the two call sites, which cannot be lazy
+// because the modules that hold them are not.
+//
+// This is a bigger step than R117's single kilobyte and it buys a system
+// rather than a layout, which is the only reason it is defensible. The next
+// milestone that wants eager bytes should read the MODULE_CAP note first:
+// the cheap evictions are gone, and the honest question is now whether a new
+// verb is worth a kilobyte of everybody's first paint.
+const KB_CAP = 332;        // CODE only, measured at 331.0
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.
@@ -24037,7 +24065,13 @@ const KB_CAP = 327;        // CODE only, measured at 326.4
 // next reader of this diff will ask, and the rest of the argument — the
 // tuning, the tables, what `rarityFloor` buys — is in
 // `data/notes/regions.md` beside the data it is about.
-const PROSE_CAP = 258;
+// R180 — 258 -> 261, measured at 260.3. The mission board's eager half was
+// trimmed to pointers first, on R130's rule that the argument belongs in
+// data/notes/missions.md where it is free: 2.5 KB of comment became 1.4. What
+// is left is the three-fate block in the tick and the conscript loop's
+// explanation of why a genome is stored rather than a stat block, which is
+// the R108 rule this milestone leans on hardest and is worth its bytes.
+const PROSE_CAP = 261;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(codeKb <= KB_CAP,
@@ -25009,9 +25043,10 @@ if (inShard('untrusted')) {
 // is not gone either: it is on the loose board the breakout engine already
 // runs, and it can be hunted back.
 if (inShard('capers')) {
-  const { missionTuning, missionsFor, missionCommitted, conscriptsOf, tickMissions } =
+  const { missionTuning, missionCommitted, conscriptsOf, tickMissions } =
     await import('../campaign/mission.js');
-  const { missionOdds, startMission, missionAptitude } = await import('../campaign/caper.js');
+  const { missionOdds, startMission, missionAptitude, missionsFor } =
+    await import('../campaign/caper.js');
   const { rivalTeam } = await import('../campaign/rivals.js');
   const { looseSpecimens } = await import('../campaign/breakout.js');
   const { labCore } = await import('./fixtures.js');

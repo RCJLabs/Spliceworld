@@ -14,11 +14,52 @@
 import { rngStream } from '../util/rng.js';
 import { analyze } from '../splice/physiology.js';
 import { isInjured, unitFromGenome } from '../battle/statblock.js';
-import {
-  missionTuning, missionsFor, missionHours, activeMission, missionReadyAt,
-} from './mission.js';
+import { missionTuning, activeMission, HOUR_MS } from './mission.js';
 
-const HOUR = 3600000;
+const HOUR = HOUR_MS;
+
+// THE BOARD'S READERS, here rather than in the eager half. Every one of them
+// is read by the War Room and by nothing the first frame runs — R169's blind
+// spot is a module boot pulls in for one small function, and `mission.js` was
+// becoming one. What stays eager is the tick and the two state reads the
+// world and the rival roster genuinely need.
+// The board, in the order the file declares. Sorted on `order` rather than
+// on object key order, so adding a fourth mission is a JSON object.
+export function missionsFor(content) {
+  return Object.entries(content.missions ?? {})
+    .map(([id, m]) => ({ id, ...m }))
+    .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+}
+
+export function missionHours(mission) {
+  const hours = mission?.hourOptions ?? [];
+  return hours.length ? hours : [6];
+}
+
+export function missionReadyAt(state) {
+  return state.campaign?.missionReadyAt ?? 0;
+}
+
+export function missionRemainingMs(state, now) {
+  const run = activeMission(state);
+  return run ? Math.max(0, run.until - now) : 0;
+}
+
+// The creatures who could go: fit, home, and not already carrying a job.
+export function missionCandidates(state, now, busy = new Set()) {
+  return (state.chimeras ?? []).filter((c) => !isInjured(c, now) && !busy.has(c.id));
+}
+
+// Call it off. Nothing is gained, the creature comes home, and the cooldown
+// runs from the moment it is back — the board's `startCooldown` rule (R65).
+export function recallMission(state, content, now = state.lastTickAt ?? 0) {
+  if (!activeMission(state)) return { ok: false, msg: content.copy?.mission?.none };
+  state.campaign.mission = null;
+  state.campaign.missionReadyAt = now + Math.round(missionTuning(content).cooldownHours * HOUR);
+  return { ok: true, msg: content.copy?.mission?.recalled };
+}
+
+
 
 // WHAT MAKES A CREATURE GOOD AT THIS, read off the anatomy the same way the
 // class vote is. Three terms, each normalised to 0..1 and weighted in data:

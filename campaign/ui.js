@@ -45,11 +45,11 @@ import {
   expeditionCandidates, expeditionRemainingMs, expeditionReadyAt, recallExpedition,
 } from './expedition.js';
 import { findsFor, findsBeyond, expeditionOdds, startExpedition } from './outfit.js';
+import { missionTuning, activeMission } from './mission.js';
 import {
-  missionTuning, missionsFor, missionHours, activeMission, missionReadyAt,
-  missionRemainingMs, missionCandidates, recallMission,
-} from './mission.js';
-import { missionOdds, missionTargets, startMission, missionAptitude } from './caper.js';
+  missionsFor, missionHours, missionReadyAt, missionRemainingMs, missionCandidates,
+  recallMission, missionOdds, missionTargets, startMission, missionAptitude,
+} from './caper.js';
 import { directorRead } from './director.js';
 import {
   bayUnit, rehabPlan, rehabTuning, startRehab, rehabSession, cancelRehab,
