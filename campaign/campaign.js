@@ -19,6 +19,7 @@ import { resolveBreakout } from './breakout.js';
 import { playerLine, rivalLine } from './monologue.js';
 import { tickOperations } from './operations.js';
 import { tickExpeditions } from './expedition.js';
+import { tickMissions } from './mission.js';
 import {
   regionList, allNodes, nodeById, regionOfNode,
   threatGen as mapThreatGen, threatLadder, nextThreatRung,
@@ -277,6 +278,26 @@ export function tickCampaign(state, content, now, since = state.lastTickAt ?? no
       emitNews(state, content, 'expedition_found',
         { region: trip.result.region, creature: trip.result.animal.name });
     } else emitNews(state, content, 'expedition_empty', { region: trip.result.region });
+  }
+
+  // R180 — the mission that was out, settled the same way. Three headlines
+  // rather than two, because the three missions do genuinely different
+  // things to the world and a single "mission over" line would bury the one
+  // that matters: a creature is now on somebody else's roster.
+  const caper = tickMissions(state, content, now);
+  if (caper.result) {
+    if (!state.campaign.missionReport) state.campaign.missionReport = caper.result;
+    if (caper.result.fate === 'conscripted') {
+      emitNews(state, content, 'mission_conscripted',
+        { rival: caper.result.rival, creature: caper.result.name });
+    } else if (caper.result.fate === 'released') {
+      emitNews(state, content, 'mission_released', { creature: caper.result.name });
+    } else if (caper.result.success) {
+      emitNews(state, content, 'mission_landed',
+        { rival: caper.result.rival, mission: caper.result.mission });
+    } else {
+      emitNews(state, content, 'mission_missed', { rival: caper.result.rival });
+    }
   }
 
   const rehabbed = tickRehab(state, content, now);

@@ -127,6 +127,10 @@ const SHARD_OF = {
   // block aims at the lane its name maps to, and two unrelated blocks under
   // one name make that aim a guess. Shard a is the lightest of the four.
   released: 'a',
+  // R180 — the mission board. Its own name for R129's reason above: a break
+  // that wants to aim at ONE block aims at the lane its name maps to. Shard
+  // a: the block builds two fixtures and runs no battles.
+  capers: 'a',
   // R102 — its own name, for R129's reason one entry up. Shard b: the comment
   // above calls shard a "the lightest of the four" and that went stale, which
   // is why this is a measurement rather than a quote — a 212s, b 134s, c 174s,
@@ -24957,6 +24961,45 @@ if (inShard('untrusted')) {
     assert.ok(imported + refused >= N * 0.8,
       `the fuzz actually reached a field ${imported + refused} times of ${N}`);
     assert.ok(imported > 0, 'and a mutated save is usually survivable rather than always refused');
+  }
+}
+
+
+// R180 — THE MISSION BOARD, and the three ways to use a rival without a fight.
+//
+// What the gate is for. Before this milestone the rival ladder was five labs
+// the player could only ever FIGHT: the War Room dispatched seven target
+// kinds and every one of them was a battle, and a rival's record on the save
+// carried `defeats`, `losses` and `lastMetAt` and nothing else. So "use a
+// rival without fighting them" had no representation at all, and the first
+// assertion here is the one that was red on the tree that shipped R179.
+//
+// THE OTHER TWO ARE ABOUT CONSEQUENCE, which is where a mission system
+// usually goes wrong. A mission that only pays money is a slot machine with
+// a timer; what makes these decisions is that two of them can hand the world
+// something it keeps. A creature caught on sabotage is not gone, it is
+// THEIRS — stored as a genome and re-derived through `unitFromGenome` on
+// every read, because R108's rule is that a saved stat block is a promise
+// about a fight the engine has stopped making. A creature sent into a city
+// is not gone either: it is on the loose board the breakout engine already
+// runs, and it can be hunted back.
+if (inShard('capers')) {
+  const { missionTuning, missionsFor, missionCommitted, conscriptsOf, tickMissions } =
+    await import('../campaign/mission.js');
+  const { missionOdds, startMission } = await import('../campaign/caper.js');
+  const { rivalTeam } = await import('../campaign/rivals.js');
+  const { looseSpecimens } = await import('../campaign/breakout.js');
+  const { labCore } = await import('./fixtures.js');
+
+  // 1. THE THREE VERBS EXIST AND ARE DATA. Read off the file rather than
+  //    named here, so adding a fourth is a JSON object and not an edit to
+  //    this gate.
+  const kinds = Object.keys(content.missions ?? {});
+  assert.ok(kinds.length >= 3,
+    `the board offers at least three missions (offers ${kinds.length}: ${kinds.join(', ') || 'nothing'})`);
+  for (const [id, m] of Object.entries(content.missions ?? {})) {
+    assert.ok(m.brief && m.name, `mission ${id} says what it is`);
+    assert.ok((m.hourOptions ?? []).length, `mission ${id} offers a length to pick`);
   }
 }
 
