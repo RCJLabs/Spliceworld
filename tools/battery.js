@@ -6281,6 +6281,45 @@ const BREAKS = [
     anchor: '    const spare = bench.slice(0, Math.max(0, bench.length - fullTeam()));',
     to: '    const spare = bench.slice(0, Math.max(0, bench.length - fullTeam() - 99));',
   },
+  // R180 — the mission board. One break per rule the milestone added, and
+  // every one of them aims at a line that would look like a reasonable edit
+  // to somebody who had not read the note.
+  {
+    n: 413, gate: SHARD_A, name: 'a conscript is restored rather than re-derived, and a caught creature fights with numbers the engine has retired',
+    file: 'campaign/rivals.js',
+    anchor: "      name: taken.name || 'Reassigned Specimen',",
+    to: "      name: taken.name || 'Reassigned Specimen', powerScale: 1,",
+  },
+  {
+    n: 414, gate: SHARD_A, name: 'the lab forgets what it took, and a sabotage that cost you a creature costs them nothing',
+    file: 'campaign/rivals.js',
+    anchor: '  for (const [n, taken] of (record.conscripts ?? []).entries()) {',
+    to: '  for (const [n, taken] of [].entries()) {',
+  },
+  {
+    n: 415, gate: SHARD_A, name: 'renewal hands the specimen back, and the loudest mission in the game costs nothing',
+    file: 'campaign/caper.js',
+    anchor: "  if (mission.alwaysSpends) fate = 'released';",
+    to: "  if (false) fate = 'released';",
+  },
+  {
+    n: 416, gate: SHARD_A, name: 'armour stops cancelling camouflage, and a plated bruiser is as quiet as a chameleon',
+    file: 'campaign/caper.js',
+    anchor: "  const camo = hidden ? clamp01(camoParts / Math.max(1, a.camoCeil)) : 0;",
+    to: "  const camo = clamp01(camoParts / Math.max(1, a.camoCeil));",
+  },
+  {
+    n: 417, gate: SHARD_A, name: 'the mass scale goes back to the guess, and every creature in the game reads zero on a third of the blend',
+    file: 'data/missions.json',
+    anchor: '      "massFloor": 95,',
+    to: '      "massFloor": 14,',
+  },
+  {
+    n: 418, gate: SHARD_A, name: 'the outcome is rolled at the tick instead of sealed at launch, and a reload re-rolls a job that went badly',
+    file: 'campaign/mission.js',
+    anchor: '  const out = run.outcome ?? {};',
+    to: '  const out = {};',
+  },
 ];
 
 const pristine = {};
