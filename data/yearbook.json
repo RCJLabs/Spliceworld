@@ -29,7 +29,7 @@
           "label": "Counter-offensives",
           "from": "campaign.contestCount",
           "fmt": "count",
-          "sub": "Times the coalition came to take a node back"
+          "sub": "When the coalition came back"
         },
         {
           "id": "breakouts",
@@ -50,14 +50,14 @@
           "label": "Expeditions",
           "from": "campaign.expeditionCount",
           "fmt": "count",
-          "sub": "Parties sent into a region to look for something"
+          "sub": "Parties sent to go and look"
         },
         {
           "id": "capers",
           "label": "Capers",
           "from": "campaign.missionCount",
           "fmt": "count",
-          "sub": "Nights out against a rival lab, no battle involved"
+          "sub": "Rival labs, no battle"
         },
         {
           "id": "sent",

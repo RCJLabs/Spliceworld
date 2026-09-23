@@ -6287,8 +6287,14 @@ const BREAKS = [
   {
     n: 413, gate: SHARD_A, name: 'a conscript is restored rather than re-derived, and a caught creature fights with numbers the engine has retired',
     file: 'campaign/rivals.js',
-    anchor: "      name: taken.name || 'Reassigned Specimen',",
-    to: "      name: taken.name || 'Reassigned Specimen', powerScale: 1,",
+    // A MULTI-LINE ANCHOR, because the single-line one did not bite. The
+    // first cut inserted `powerScale: 1` beside `name:` — earlier in the
+    // same object literal than the real `powerScale,` key, so the later one
+    // won and the break was a no-op that reported MISSED. `      powerScale,`
+    // on its own appears twice in this file, so the anchor carries enough of
+    // the conscript's call to be unique.
+    anchor: "      name: taken.name || 'Reassigned Specimen',\n      frame: taken.frame,\n      tokens,\n      powerScale,",
+    to: "      name: taken.name || 'Reassigned Specimen',\n      frame: taken.frame,\n      tokens,\n      powerScale: 1,",
   },
   {
     n: 414, gate: SHARD_A, name: 'the lab forgets what it took, and a sabotage that cost you a creature costs them nothing',
