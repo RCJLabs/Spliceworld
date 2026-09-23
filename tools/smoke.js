@@ -8533,6 +8533,11 @@ if (inShard('regions')) {
     // taps "Mount an expedition" and lands on three unanswered questions has
     // been taken to a form, not to a verb.
     expedition: 'data-exp-go=',
+    // R180 — the caper chip lands on the same subtab and promises its own
+    // Send. Not `data-cap-who`, though that is the first thing a player
+    // presses: this gate asks which control the chip PROMISES, and the row
+    // is offering to run a mission rather than to look at a roster.
+    mission: 'data-cap-go=',
     buy: 'data-act="order"', facility: 'data-act="upgrade"', pens: 'data-act="pen"',
   };
   const screenModule = Object.fromEntries(shellScreenMap().map((e) => [e.screen, e.file]));
