@@ -16,6 +16,7 @@ import { analyze } from '../splice/physiology.js';
 import { rivalLine } from './monologue.js';
 import { newsFor } from './wire.js';
 import { rivalOf } from '../data/catalog.js';
+import { conscriptsOf } from './mission.js';
 
 // Slots a rival will try to fill, in the order they commit to them. Head
 // first (mandatory), then the limbs that carry classAffinity votes.
@@ -316,10 +317,9 @@ export function rivalTeam(state, rival, content) {
 
   const dossier = rivalDossier(state, rival, content);
   const counter = dossier.counterClass;
-  // R180 — a landed sabotage is worth something you can FEEL in the fight it
-  // precedes, or it is a press release. Each one takes a step back off the
-  // lab's escalation, floored so a player cannot grind a rival to nothing:
-  // the worst a saboteur can do is undo the last defeat's worth of anger.
+  // R180 — a landed sabotage takes a step back off this lab's escalation,
+  // floored so a rival cannot be ground down by a board that never risks a
+  // fight. What that buys and why: data/notes/missions.md.
   const setback = Math.min(record.setback ?? 0, record.defeats);
   const powerScale = Math.min(
     meta.powerCap,
@@ -337,20 +337,12 @@ export function rivalTeam(state, rival, content) {
       rng, meta, defeats: record.defeats, index: i, dossier, counter, powerScale, names,
     }));
   }
-  // R180 — AND ANYBODY THEY CAUGHT. Until this milestone `rivalTeam` was a
-  // pure function of the seed and the defeat count, which meant a rival's
-  // roster could not be changed by anything the player did except lose to
-  // them; a creature taken on a sabotage had nowhere to go. It goes here,
-  // after the lab's own build, so the team a player walks into is "what they
-  // make" followed by "what they took from you".
-  //
-  // RE-DERIVED, NEVER RESTORED. The save holds a genome and this rebuilds
-  // the stat block on every read, which is R108's rule (`campaign/
-  // visiting.js`): a saved stat block is a promise about a fight the engine
-  // has stopped making, so a conscript taken three balance passes ago would
-  // otherwise fight with numbers nothing else in the game still uses. It
-  // keeps its name because the player knew it by that name.
-  for (const [n, taken] of (record.conscripts ?? []).entries()) {
+  // R180 — AND ANYBODY THEY CAUGHT, appended AFTER the lab's own build, so the
+  // team reads as what they make followed by what they took from you. The save
+  // holds a genome and this rebuilds the stat block every read — R108's rule,
+  // argued in campaign/visiting.js and data/notes/missions.md. The name stays
+  // because the player knew it by that name.
+  for (const [n, taken] of conscriptsOf(state, rival.id).entries()) {
     if (!taken?.frame || !(taken.tokens ?? []).length) continue;
     const tokens = taken.tokens.filter((t) => content.parts?.[t.partId]);
     if (!tokens.length) continue;

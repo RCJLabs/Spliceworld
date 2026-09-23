@@ -1,6 +1,7 @@
 {
   "tuning": {
     "cooldownHours": 11,
+    "maxConscripts": 3,
     "baseChance": 0.26,
     "perAptitude": 0.42,
     "perHour": 0.006,

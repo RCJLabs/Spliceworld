@@ -13,6 +13,7 @@ const HOUR = HOUR_MS;
 
 const DEFAULTS = {
   cooldownHours: 11,
+  maxConscripts: 3,
   baseChance: 0.26,
   perAptitude: 0.42,
   perHour: 0.006,
@@ -33,41 +34,22 @@ export function activeMission(state) {
   return state.campaign?.mission ?? null;
 }
 
-// Who is away, as a Set. ONE HOME, because a creature counted fit on one
-// screen and committed on another is a price that is not really paid.
-export function missionCommitted(state) {
-  const run = activeMission(state);
-  return new Set(run?.chimeraId ? [run.chimeraId] : []);
-}
-
-// The creatures who could go: fit, home, and not already carrying a job.
-// BACK IN THE EAGER HALF. It was moved to the lazy one on the belief that
-// only the War Room asks, and the agenda proved that wrong on the first
-// frame — a row that offers a caper has to know somebody is fit to run one.
-// One home rather than a second copy of the predicate in ranch/agenda.js,
-// which is R174's rule and the reason that module has one filler and not six.
+// The creatures who could go: fit, home, and not already carrying a job. Eager
+// because the agenda asks on the first frame; why, in data/notes/missions.md.
 export function missionCandidates(state, now, busy = new Set()) {
   return (state.chimeras ?? []).filter((c) => !isInjured(c, now) && !busy.has(c.id));
 }
 
-// Every conscript this rival is holding. One reader, so the roster and the
-// board cannot disagree about who was taken.
-// ONE HOME for the board's rest, which R180 shipped with two: the tick that
-// ends a run and the recall that calls one off both wrote `missionReadyAt`
-// from the same arithmetic, spelled out twice. That is the R174 defect
-// planted fresh, and the per-mission override below is exactly the kind of
-// change that would have landed in one of them and not the other.
-//
-// A mission may carry its own `cooldownHours`; without one it rests for the
-// board's. Data, so a fourth mission sets its own pace without an engine
-// edit.
+// ONE HOME for the board's rest: the tick and the recall both write it, and a
+// mission may override the board's own. Renewal does; why, and what it cost
+// R93's late game not to, is in data/notes/missions.md.
 export function missionCooldownMs(content, mission) {
-  const hours = Number.isFinite(mission?.cooldownHours)
-    ? mission.cooldownHours
-    : missionTuning(content).cooldownHours;
-  return Math.round(hours * HOUR);
+  const t = missionTuning(content);
+  return Math.round((mission?.cooldownHours ?? t.cooldownHours) * HOUR);
 }
 
+// Every conscript this rival is holding. One reader, so the roster and the
+// board cannot disagree about who was taken.
 export function conscriptsOf(state, rivalId) {
   return state.campaign?.rivals?.[rivalId]?.conscripts ?? [];
 }
@@ -105,10 +87,11 @@ export function tickMissions(state, content, now) {
 
   // The three fates. Each is a move of data the composer already built.
   if (result.fate === 'conscripted' && out.conscript && content.rivals?.[run.rivalId]) {
-    state.campaign.rivals ??= {};
-    const record = (state.campaign.rivals[run.rivalId] ??= { defeats: 0, losses: 0, lastMetAt: null });
-    record.conscripts ??= [];
-    record.conscripts.push(out.conscript);
+    // A lab holds only so many: `rivalTeam` fields every one of these, so
+    // unbounded is a save array AND a fight nobody designed. Oldest reassigned.
+    const cap = Math.max(1, missionTuning(content).maxConscripts ?? 3);
+    const record = recordFor(state, run.rivalId);
+    record.conscripts = [...(record.conscripts ?? []), out.conscript].slice(-cap);
     dropChimera(state, run.chimeraId);
   } else if (result.fate === 'released' && out.loose) {
     state.campaign.loose ??= [];
@@ -126,17 +109,21 @@ export function tickMissions(state, content, now) {
 
   // What a success bought besides money, filed here so the digest can name it.
   if (out.success && out.grants === 'intel') {
-    state.campaign.rivals ??= {};
-    const record = (state.campaign.rivals[run.rivalId] ??= { defeats: 0, losses: 0, lastMetAt: null });
-    record.intel = true;
+    recordFor(state, run.rivalId).intel = true;
     result.granted = 'intel';
   } else if (out.success && out.grants === 'setback') {
-    state.campaign.rivals ??= {};
-    const record = (state.campaign.rivals[run.rivalId] ??= { defeats: 0, losses: 0, lastMetAt: null });
+    const record = recordFor(state, run.rivalId);
     record.setback = (record.setback ?? 0) + (Number.isFinite(out.setback) ? out.setback : 1);
     result.granted = 'setback';
   }
   return { result };
+}
+
+// The lab's record, made if this is the first thing to touch it. Written out
+// three times in one function before R180 finished; the shape is rivals.js's.
+function recordFor(state, rivalId) {
+  state.campaign.rivals ??= {};
+  return (state.campaign.rivals[rivalId] ??= { defeats: 0, losses: 0, lastMetAt: null });
 }
 
 // A creature that is not coming back. Vault tokens stay spent, as for every

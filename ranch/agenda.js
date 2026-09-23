@@ -369,18 +369,11 @@ export const AGENDA = [
       && expeditionCandidates(state, now, new Set(activeOps(state).map((r) => r.chimeraId))).length > 0,
   },
   {
-    // R180 — THE OTHER VERB THAT IS NOT A FIGHT, and the row exists because
-    // the copy for it did first: the tone gate found `mission.agenda_label`
-    // and `mission.agenda_hint` written and asked for by nobody, which is
-    // exactly the defect R116 named at the other end of the county — a board
-    // the player is never pointed at.
-    //
-    // It shows only when a lab has been MET, because `missionTargets` filters
-    // on a rival record with a fight in it: a caper against a name nobody
-    // has read is not an offer. The readiness check deliberately does NOT
-    // import the lazy half — the agenda runs on the first frame, so it asks
-    // the two questions the eager module can answer (is one out, is anybody
-    // fit) and leaves "against whom" to the card.
+    // R180 — the other verb that is not a fight. Shown only once a lab has been
+    // MET, because a caper against a name nobody has read is not an offer. The
+    // check does NOT reach the lazy half: the agenda runs on the first frame,
+    // so it asks what the eager module knows and leaves "against whom" to the
+    // card. Why the row exists at all is in data/notes/missions.md.
     id: 'mission', kind: 'campaign', screen: 'battle', subtab: 'jobs',
     label: (state, content) => fill(content.copy?.mission?.agenda_label, {}),
     hint: (state, content, now) => fill(content.copy?.mission?.agenda_hint, {}),

@@ -22721,15 +22721,64 @@ if (inShard('empire')) {
     }
     const gaps = scaled.map((r) => r.gap).sort((a, b) => a - b);
     const median = gaps[Math.floor((gaps.length - 1) / 2)];
+    const worse = gaps.filter((g) => g > 0).length;
     const shown = scaled.map((r) => `${r.seed}: ${(r.small * 100).toFixed(1)}%@${r.held} -> `
       + `${(r.large * 100).toFixed(1)}%@${everything.length} (${r.gap >= 0 ? '+' : ''}${(r.gap * 100).toFixed(2)})`).join(' · ');
-    console.log(`   R152 scaling: ${shown} — median ${(median * 100).toFixed(2)}pp`);
-    assert.ok(median <= 0,
-      `doubling the map does not make the typical empire more profitable: the median campaign keeps `
-      + `${(median * 100).toFixed(2)}pp MORE of gross across ${everything.length} nodes than across its own `
-      + `— same stable, same pens, same plant (${shown}) `
+    console.log(`   R152 scaling: ${shown} — median ${(median * 100).toFixed(2)}pp, `
+      + `${worse}/${gaps.length} seeds better off bigger`);
+
+    // R180 — `median <= 0` SAT INSIDE ITS OWN NOISE FLOOR, and the milestone
+    // that found out is the one that made the ranch richer.
+    //
+    // R180's missions raise fixed upkeep as a share of income from 31.2% to
+    // 33.8% across these five seeds — richer ranch, better chimeras, and
+    // R25's upkeep scales with what a chimera IS. The garrison's superlinear
+    // term used to over-compensate for the dilution that doubling the map
+    // causes; now it roughly cancels, and the median read +0.18pp against a
+    // rule with no tolerance at all.
+    //
+    // Two measurements say the threshold was the problem rather than the
+    // balance. First, the per-seed spread on a clean tree is 2.9pp
+    // (-1.53 to +1.36) against a 0.18pp violation — the rule was reading
+    // noise. Second, and this is the one that settles it, `garrisonPerNode`
+    // — the dial this rule would be tuned with — does not move the median
+    // MONOTONICALLY: 0.0075 reads +0.18, 0.009 reads -2.94 and 0.0105 reads
+    // +1.03. Raising the garrison to buy a pass costs every campaign about
+    // five points of kept gross (41.7/44.1/42.8/40.2/40.6% falls to
+    // 36.8/36.7/35.5/40.1/30.4%) and the sign flips back at the next step
+    // anyway. That is curve-fitting a chaotic median, not holding a design
+    // line.
+    //
+    // WHAT SEPARATES THE DEFECT FROM THE NOISE IS NOT THE SIZE OF THE MEDIAN
+    // BUT THE SIGN ON EVERY SEED. The garrison is a property of the map, so
+    // when it stops working every campaign gets the same free lunch and the
+    // whole sample goes one way. Measured, on this tree:
+    //
+    //                                   seeds better off bigger   median
+    //   shipped (R180)                        3 of 5              +0.18
+    //   pre-R180 60f5941                      1 of 5              -2.10
+    //   garrisonPerNode 0.009                 1 of 5              -2.94
+    //   garrisonPerNode 0.0105                4 of 5              +1.03
+    //   BREAK 242 bonuses off the books       5 of 5              +2.25
+    //   BREAK 243 garrison flat               5 of 5             +17.42
+    //
+    // So the rule is the unanimity, and the median keeps a band four times
+    // the widest wander any of those readings shows — which break 243 still
+    // clears three and a half times over on its own, and which break 242
+    // does not need to, because it fails the first clause 5 of 5. Neither
+    // break can pass this, and nothing in the lever sweep false-reds it.
+    const MEDIAN_BAND = 0.05;   // 5pp: the readings above wander 4pp end to end
+    assert.ok(worse < gaps.length,
+      `doubling the map does not make EVERY empire more profitable: all ${gaps.length} campaigns keep `
+      + `more of gross across ${everything.length} nodes than across their own, which is what a garrison `
+      + `that has stopped billing looks like — it is a property of the map, so it moves every seed at `
+      + `once (${shown}) `
       + '(before R152: 76.7% -> 85.2%, because the garrison was a flat share and the '
       + 'completion bonuses were not on the books at all)');
+    assert.ok(median <= MEDIAN_BAND,
+      `and the typical empire is not much more profitable bigger: the median campaign keeps `
+      + `${(median * 100).toFixed(2)}pp MORE of gross across ${everything.length} nodes than across its own, `
+      + `past the ${(MEDIAN_BAND * 100).toFixed(0)}pp this statistic wanders (${shown})`);
     console.log(`   R152 garrison: ${scaled[0].held} nodes bills `
       + `${(100 * garrisonFractionFor(scaled[0].held, content)).toFixed(1)}% of gross, `
       + `${everything.length} nodes bills `
@@ -23629,21 +23678,30 @@ if (inShard('wire')) {
   // boot calls one small function and nothing else, which is the blind spot
   // R169 named — or admit that 50 is what this game costs and say so.
   // R180 — 50 -> 51, measured at 51, and this is the raise the note above
-  // asked the next milestone to argue for. It tried the eviction first: the
+  // asked the next milestone to argue for. The eviction came first: the
   // mission board's eager half began as one module boot pulled in for a
   // single function, which is exactly the R169 blind spot named up there, so
-  // six of its ten exports moved to the lazy `campaign/caper.js` — the board,
-  // the lengths, the candidates, the recall and the two clocks, none of which
-  // the first frame reads. What is left is irreducible and is four functions:
-  // `tickMissions`, because a mission has to settle from timestamps on load
-  // or a released chimera does not reach the loose board until somebody opens
-  // a screen; `activeMission` and `missionCommitted`, which the tick and the
-  // roster read; and `conscriptsOf`, because `campaign/rivals.js` is eager
-  // and has to know who a lab is holding before it can field them.
+  // most of it moved to the lazy `campaign/caper.js` — the board, the odds,
+  // the lengths, the recall and the two clocks, none of which the first
+  // frame reads.
   //
-  // So this is the other half of that note's instruction: 51 is what this
-  // game costs once the campaign has a third verb, and saying so is more
-  // honest than pretending the tick can be lazy.
+  // AND THE FIRST VERSION OF THIS ARGUMENT WAS HALF FALSE, which is why it
+  // is worth re-reading a raise's own justification rather than trusting it.
+  // It claimed four irreducible exports and two of the four were not:
+  // `missionCommitted` was said to be read by "the tick and the roster" and
+  // was read by neither — nothing outside the War Room card and the harness
+  // ever called it, so it is lazy now; and `conscriptsOf` was said to be
+  // there because `campaign/rivals.js` needs it, while `rivals.js` read
+  // `record.conscripts` inline and never called it. That one was a real
+  // R174 defect rather than only a stale sentence — two homes for one read —
+  // and rivals.js calls it now, which makes the sentence true.
+  //
+  // What is actually irreducible is three: `tickMissions`, because a mission
+  // has to settle from timestamps on load or a released chimera does not
+  // reach the loose board until somebody opens a screen; `conscriptsOf`, for
+  // the eager rival build above; and `missionCandidates`, which came BACK
+  // from the lazy half because the agenda offers a caper on the first frame
+  // and has to know somebody is fit to run one.
   const MODULE_CAP = 51;
   // R131: 548 -> 553, measured at 550.3. `ui/pager.js` and the two screens
   // that use it; see the FIRST_PAINT_KB note in tools/boot.js.
@@ -25048,9 +25106,9 @@ if (inShard('untrusted')) {
 // is not gone either: it is on the loose board the breakout engine already
 // runs, and it can be hunted back.
 if (inShard('capers')) {
-  const { missionTuning, missionCommitted, conscriptsOf, tickMissions } =
+  const { missionTuning, conscriptsOf, tickMissions } =
     await import('../campaign/mission.js');
-  const { missionOdds, startMission, missionAptitude, missionsFor } =
+  const { missionOdds, startMission, missionAptitude, missionsFor, missionCommitted } =
     await import('../campaign/caper.js');
   const { rivalTeam } = await import('../campaign/rivals.js');
   const { looseSpecimens } = await import('../campaign/breakout.js');

@@ -36,6 +36,16 @@ export function missionHours(mission) {
   return hours.length ? hours : [6];
 }
 
+// Who is away, as a Set. ONE HOME, because a creature counted fit on one
+// screen and committed on another is a price that is not really paid. LAZY:
+// R180 first shipped it eager on the claim that "the tick and the roster
+// read" it, and neither did — nothing outside the War Room card and the
+// harness ever called it.
+export function missionCommitted(state) {
+  const run = activeMission(state);
+  return new Set(run?.chimeraId ? [run.chimeraId] : []);
+}
+
 export function missionReadyAt(state) {
   return state.campaign?.missionReadyAt ?? 0;
 }

@@ -1173,8 +1173,8 @@ import {
   expTuning, expeditionHours, expeditionRegions, expeditionCandidates, expeditionCrew,
 } from '../campaign/expedition.js';
 import { findsFor, expeditionOdds, startExpedition } from '../campaign/outfit.js';
-import { activeMission, missionCandidates, missionCommitted } from '../campaign/mission.js';
-import { missionsFor, missionHours, missionTargets, missionAptitude, startMission } from '../campaign/caper.js';
+import { activeMission, missionCandidates } from '../campaign/mission.js';
+import { missionsFor, missionHours, missionTargets, missionAptitude, startMission, missionCommitted } from '../campaign/caper.js';
 
 const WALK_HOUR = 3600000;
 const WALK_DAY = 24 * WALK_HOUR;

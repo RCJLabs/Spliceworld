@@ -99,6 +99,15 @@ const BOUNDS = {
   // by what a chimera itself is bounded by, which is where they came from.
   'campaign.containment[].chimera.moveset': { max: 8, by: 'MOVE_SLOTS plus the combos a genome can unlock' },
   'campaign.containment[].chimera.scars':   { max: 12, by: 'one scar per socket, twice over' },
+  // R180 — DERIVED FROM THE DIAL THAT ENFORCES IT, not re-typed beside it:
+  // `tickMissions` trims to `maxConscripts` on the way in, so moving the data
+  // moves this rule with it. Before that trim existed there was no ceiling at
+  // all and this gate said so, which is the whole point of it.
+  'campaign.rivals[].conscripts': { max: (c) => Math.max(1, c.missionMeta?.maxConscripts ?? 3),
+                            by: '`maxConscripts` in missions.json; the tick reassigns the oldest away' },
+  'campaign.rivals[].conscripts[].tokens': { max: (c) => Math.max(...Object.values(c.frames ?? {})
+                              .map((f) => (f.sockets ?? []).length), 1),
+                            by: 'the sockets on the widest frame — a conscript is one genome' },
   // R92 — DERIVED, and with the one designed exception stated. R91 wrote
   // "40, by penCapacity" when penCapacity had no ceiling of its own, so the
   // bound was a sentence: a walk that ran the Resequencer bought 97 pen
@@ -226,6 +235,13 @@ const BOUNDS = {
 // A token on a chimera is `tokens.<socket>.traits`; the socket names come
 // from the frame, so they are enumerated rather than listed.
 const TOKEN_TRAITS = /^chimeras\[\]\.tokens\.[a-z0-9]+\.traits$/;
+// R180 — a lab's id is a DATA key, so these two are patterns rather than
+// paths, the same escape hatch the line above uses. They matter because a
+// conscript is a whole genome living on a rival's record: unbounded, it is a
+// save array that grows forever AND a rival roster that does, since
+// `rivalTeam` fields every one of them.
+const CONSCRIPTS = /^campaign\.rivals\.[A-Za-z0-9_-]+\.conscripts$/;
+const CONSCRIPT_TOKENS = /^campaign\.rivals\.[A-Za-z0-9_-]+\.conscripts\[\]\.tokens$/;
 
 // The widest frame in the data decides how many sockets one body can have,
 // derived rather than typed so a frame gaining a bay does not silently make
@@ -310,7 +326,10 @@ for (const row of [...arrayPaths(save), ...arrayPaths(populated)]) {
 const seen = [...byPath.values()];
 if (REPORT) console.log(`\n${seen.length} array paths in the save:`);
 for (const { path, n, bytes: b } of seen.sort((a, b) => b.n - a.n)) {
-  const rule = BOUNDS[path] ?? (TOKEN_TRAITS.test(path) ? BOUNDS['inventory.parts[].traits'] : null);
+  const rule = BOUNDS[path]
+    ?? (TOKEN_TRAITS.test(path) ? BOUNDS['inventory.parts[].traits'] : null)
+    ?? (CONSCRIPTS.test(path) ? BOUNDS['campaign.rivals[].conscripts'] : null)
+    ?? (CONSCRIPT_TOKENS.test(path) ? BOUNDS['campaign.rivals[].conscripts[].tokens'] : null);
   if (!rule) {
     fails.push(`\`${path}\` (${n} entries) is an array no bound is stated for`
       + ' — add it to BOUNDS in tools/vault.js with the thing that caps it');
