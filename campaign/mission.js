@@ -9,7 +9,6 @@
 import { isInjured, applyInjury } from '../battle/statblock.js';
 
 export const HOUR_MS = 3600000;
-const HOUR = HOUR_MS;
 
 const DEFAULTS = {
   cooldownHours: 11,
@@ -44,14 +43,15 @@ export function missionCandidates(state, now, busy = new Set()) {
 // mission may override the board's own. Renewal does; why, and what it cost
 // R93's late game not to, is in data/notes/missions.md.
 export function missionCooldownMs(content, mission) {
-  const t = missionTuning(content);
-  return Math.round((mission?.cooldownHours ?? t.cooldownHours) * HOUR);
+  const h = mission?.cooldownHours ?? missionTuning(content).cooldownHours;
+  return Math.round(h * HOUR_MS);
 }
 
 // Every conscript this rival is holding. One reader, so the roster and the
 // board cannot disagree about who was taken.
 export function conscriptsOf(state, rivalId) {
-  return state.campaign?.rivals?.[rivalId]?.conscripts ?? [];
+  const c = state.campaign?.rivals?.[rivalId]?.conscripts;
+  return Array.isArray(c) ? c : [];   // R114: `?? []` does not guard a string
 }
 
 // Elapsed, like every other timer here. Stamped `run.until`, never `now`.
@@ -104,7 +104,7 @@ export function tickMissions(state, content, now) {
     // holding pen — writing `c.injury` directly would have done exactly that.
     const c = (state.chimeras ?? []).find((x) => x.id === run.chimeraId);
     const hours = Number.isFinite(out.detainHours) ? out.detainHours : 9;
-    if (c) applyInjury(c, { until: endedAt + Math.round(hours * HOUR), reason: 'detained' });
+    if (c) applyInjury(c, { until: endedAt + Math.round(hours * HOUR_MS), reason: 'detained' });
   }
 
   // What a success bought besides money, filed here so the digest can name it.

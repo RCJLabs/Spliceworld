@@ -24028,7 +24028,21 @@ if (inShard('wire')) {
 // milestone that wants eager bytes should read the MODULE_CAP note first:
 // the cheap evictions are gone, and the honest question is now whether a new
 // verb is worth a kilobyte of everybody's first paint.
-const KB_CAP = 332;        // CODE only, measured at 331.0
+// R180 (second pass): 332 -> 333, measured at 332.0, and the 0.9 KB it buys
+// is TWO R114 GUARDS plus the cap the vault gate asked for. The eviction was
+// done first and twice over — module prose to the data notes, six exports and
+// then `missionCommitted` to the lazy half, a duplicated rival-record lookup
+// given one home, and an alias for `HOUR_MS` deleted — which is what got the
+// first raise to 332 and then kept it there through the conscript work.
+//
+// What would not fit is not decoration. `conscriptsOf` returned whatever the
+// save held, and R114's fuzzer proved it: `?? []` does not guard a field that
+// is PRESENT and not an array, so a hand-edited save crashed the battle
+// render on `.entries()`. The same is true one level down, where a
+// conscript's own `tokens` reached `.filter`. A guard on untrusted input is
+// not a line to trade away for a budget; the budget is what says how many of
+// them a milestone is allowed to need without saying so out loud.
+const KB_CAP = 333;        // CODE only, measured at 332.0
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.

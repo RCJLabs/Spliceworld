@@ -343,7 +343,7 @@ export function rivalTeam(state, rival, content) {
   // argued in campaign/visiting.js and data/notes/missions.md. The name stays
   // because the player knew it by that name.
   for (const [n, taken] of conscriptsOf(state, rival.id).entries()) {
-    if (!taken?.frame || !(taken.tokens ?? []).length) continue;
+    if (!taken?.frame || !Array.isArray(taken.tokens)) continue;
     const tokens = taken.tokens.filter((t) => content.parts?.[t.partId]);
     if (!tokens.length) continue;
     team.push(unitFromGenome({
