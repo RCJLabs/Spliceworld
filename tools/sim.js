@@ -1173,6 +1173,8 @@ import {
   expTuning, expeditionHours, expeditionRegions, expeditionCandidates, expeditionCrew,
 } from '../campaign/expedition.js';
 import { findsFor, expeditionOdds, startExpedition } from '../campaign/outfit.js';
+import { activeMission, missionCandidates, missionCommitted } from '../campaign/mission.js';
+import { missionsFor, missionHours, missionOdds, missionTargets, missionAptitude, startMission } from '../campaign/caper.js';
 
 const WALK_HOUR = 3600000;
 const WALK_DAY = 24 * WALK_HOUR;
@@ -2032,6 +2034,61 @@ function walkAct(state, content, now, open, opts = {}) {
         crew: best.crew.length,
         won: sent.run.outcome.success,
         found: sent.run.outcome.species ?? null,
+      });
+    }
+  }
+  if (has('mission')) {
+    // R180 — A POLICY, and the same shape of one as the expedition above
+    // because the price is the same shape: a specimen is committed for the
+    // whole run. Four rules:
+    //
+    //   1. THE A-TEAM STAYS HOME, for the expedition's reason. A caper takes
+    //      its specimen out of jobs and fights, and a stable with nobody
+    //      spare runs nothing.
+    //   2. IT SENDS THE QUIETEST ANIMAL IT HAS. The aptitude is the whole
+    //      design, so the walker sorts the bench by it rather than by
+    //      quality — which is the one place in this file where the WORST
+    //      fighter is the right pick, and the gate that checks the ordering
+    //      would be decoration if nothing ever chose on it.
+    //   3. IT DOES NOT SPEND A CREATURE IT CANNOT REPLACE. Renewal costs
+    //      the specimen outright, so the walker only runs one when it has a
+    //      body to lose: more chimeras than a full team needs.
+    //   4. IT PREFERS THE JOB ITS SPECIMEN IS GOOD AT. Odds per hour, so a
+    //      poor infiltrator takes the short espionage rather than the long
+    //      sabotage that would lose it.
+    const busyCap = new Set([
+      ...activeOps(state).map((r) => r.chimeraId).filter(Boolean),
+      ...missionCommitted(state),
+    ]);
+    const benchCap = missionCandidates(state, now, busyCap)
+      .map((c) => ({ c, apt: missionAptitude(content, c).score }))
+      .sort((a, b) => b.apt - a.apt);
+    const spareCap = Math.max(0, (state.chimeras ?? []).length - fullTeam());
+    const picks = [];
+    if (!activeMission(state) && spareCap > 0 && benchCap.length) {
+      const who = benchCap[0].c;
+      for (const rival of missionTargets(state, content)) {
+        for (const mission of missionsFor(content)) {
+          // Rule 3: a mission that spends the specimen needs a spare body,
+          // and one that only risks it does not.
+          if (mission.alwaysSpends && spareCap < 2) continue;
+          for (const hours of missionHours(mission)) {
+            const odds = missionOdds(content, mission, hours, who);
+            picks.push({ mission, rival, hours, who, score: odds.chance / hours });
+          }
+        }
+      }
+    }
+    const pick = picks.sort((a, b) => b.score - a.score)[0];
+    const ran = pick && startMission(state, content, now, pick.mission.id, pick.rival.id, pick.who.id, pick.hours);
+    if (ran?.ok) {
+      did('mission', {
+        mission: pick.mission.id,
+        rival: pick.rival.id,
+        hours: pick.hours,
+        apt: Number(missionAptitude(content, pick.who).score.toFixed(3)),
+        won: ran.run.outcome.success,
+        fate: ran.run.outcome.fate,
       });
     }
   }
