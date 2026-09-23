@@ -261,6 +261,11 @@ const VARIANT_LINE_FLOOR = 5.5;
 // stopped separating break 347 once the walker could start a line from zero;
 // this is what replaced it. Derived beside the rule, not here.
 const VARIANT_FULL_SEEDS = 10;
+// R180 — AND THE SEED COUNT STOPPED SEPARATING TOO, for the third time and
+// the same reason each time: the game keeps getting better at variant lines,
+// so deleting the pair-sort costs less than it used to. This is the census
+// that replaced it. Derived beside the rule below, not here.
+const VARIANT_MISSED_CEILING = 2;
 const TOTAL_PARTS = Object.keys(content.parts).length;
 {
   const per = [];
@@ -478,6 +483,50 @@ const TOTAL_PARTS = Object.keys(content.parts).length;
     if (meanLines < VARIANT_LINE_FLOOR) {
       fails.push(`variant lines: the average campaign rolls for ${meanLines.toFixed(2)} of`
         + ` ${ALL_LINES.length} variant lines (under ${VARIANT_LINE_FLOOR})`
+        + ` — ${short.join('; ')}`);
+    }
+    // R180 — THE RULE THE SEED COUNT CAN NO LONGER CARRY EITHER.
+    //
+    // Break 347 went MISSED again, in R180's rot check. Nothing is wrong with
+    // the break and nothing is wrong with the walker: R180's economy makes a
+    // campaign richer, a richer campaign breeds more, and more breeding finds
+    // variant lines without being steered to them. That is the THIRD time
+    // this rule has been eroded from below by an unrelated improvement, and
+    // the trend is the finding rather than any one reading:
+    //
+    //                    clean                 pair-sort deleted
+    //     R177    mean 5.92, 12/13 at 6/6    mean 5.15,  4/13
+    //     R116    mean 5.85, 12/13           mean 5.54,  8/13
+    //     R180    mean 6.00, 13/13           mean 5.77, 11/13
+    //
+    // The mean stopped separating at R116 and the seed count separates by two
+    // now, against a floor of ten that eleven clears. Both are kept as
+    // backstops against a collapse — a walker that stops breeding entirely
+    // still trips them — and it is written down that NEITHER sees 347.
+    //
+    // What still separates is the census: LINES MISSED across all thirteen
+    // seeds, out of 78. It weights a seed that loses two lines twice, which
+    // is exactly what the break does and what counting seeds throws away.
+    //
+    //     R177    clean 1 missed    broken 11
+    //     R116    clean 2           broken  6
+    //     R180    clean 0           broken  3
+    //
+    // A ceiling of two sits above every clean reading and below every broken
+    // one, across three trees measured years apart. THE MARGIN TODAY IS ONE
+    // LINE on the broken side, and saying so is the point: each milestone
+    // that improves breeding shrinks the break's cost, so when a clean tree
+    // reads 3 or a broken one reads 2, this statistic is finished too. At
+    // that point retire break 347 or re-aim it at the Incubator door itself,
+    // rather than inventing a fourth number for a defect the game has grown
+    // out of noticing.
+    const missed = perLines.reduce((n, r) => n + (ALL_LINES.length - r.lines.size), 0);
+    if (REPORT) {
+      console.log(`  lines missed across the census: ${missed} of ${ALL_LINES.length * perLines.length}`);
+    }
+    if (missed > VARIANT_MISSED_CEILING) {
+      fails.push(`variant lines: ${missed} of ${ALL_LINES.length * perLines.length} line-slots go`
+        + ` unrolled across ${perLines.length} seeds (over ${VARIANT_MISSED_CEILING})`
         + ` — ${short.join('; ')}`);
     }
     // R116 — the rule the mean can no longer carry; see the note above.
