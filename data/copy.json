@@ -138,7 +138,7 @@
   },
   "mission": {
     "already": "One caper at a time. You have exactly one set of nerves and it is already out.",
-    "resting": "The last one is still being denied on three local news channels. Give it an hour.",
+    "resting": "The last one is still being denied on three local news channels. The board rests until it blows over.",
     "no_mission": "That is not a job anybody here has offered you.",
     "no_rival": "You cannot burgle a lab you have never met. Go and be introduced first.",
     "no_hours": "That is not one of the lengths this job comes in.",
@@ -161,7 +161,7 @@
     "armored_warning": "Plating is the opposite of a disguise. This one will be seen.",
     "risk_detained": "If it goes wrong they are held overnight and released with a stern letter.",
     "risk_conscripted": "If it goes wrong they keep your specimen. It will be on their roster next time.",
-    "risk_released": "Your specimen does not come home from this one. It stays, and it will be out there.",
+    "risk_released": "Your specimen does not come home from this one. It stays, and it will be out there. A block only goes once a fortnight; the board shuts after.",
     "landed": "Clean work. Nobody saw anything and everybody has opinions about it.",
     "missed": "Not clean work. The expenses claim is, regrettably, still itemised.",
     "conscripted": "{creature} did not come home. {rival} has been in touch to say how pleased they are.",

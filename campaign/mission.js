@@ -52,6 +52,22 @@ export function missionCandidates(state, now, busy = new Set()) {
 
 // Every conscript this rival is holding. One reader, so the roster and the
 // board cannot disagree about who was taken.
+// ONE HOME for the board's rest, which R180 shipped with two: the tick that
+// ends a run and the recall that calls one off both wrote `missionReadyAt`
+// from the same arithmetic, spelled out twice. That is the R174 defect
+// planted fresh, and the per-mission override below is exactly the kind of
+// change that would have landed in one of them and not the other.
+//
+// A mission may carry its own `cooldownHours`; without one it rests for the
+// board's. Data, so a fourth mission sets its own pace without an engine
+// edit.
+export function missionCooldownMs(content, mission) {
+  const hours = Number.isFinite(mission?.cooldownHours)
+    ? mission.cooldownHours
+    : missionTuning(content).cooldownHours;
+  return Math.round(hours * HOUR);
+}
+
 export function conscriptsOf(state, rivalId) {
   return state.campaign?.rivals?.[rivalId]?.conscripts ?? [];
 }
@@ -64,7 +80,7 @@ export function tickMissions(state, content, now) {
   if (!run || !(now >= run.until)) return { result: null };
   const endedAt = run.until;
   state.campaign.mission = null;
-  state.campaign.missionReadyAt = endedAt + Math.round(missionTuning(content).cooldownHours * HOUR);
+  state.campaign.missionReadyAt = endedAt + missionCooldownMs(content, content.missions?.[run.missionId]);
 
   const out = run.outcome ?? {};
   const funds = Number.isFinite(out.funds) ? out.funds : 0;

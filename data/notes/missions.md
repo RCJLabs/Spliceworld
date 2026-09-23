@@ -17,7 +17,7 @@ THE INFILTRATOR WEARS NOTHING, and that is the whole build. Since every hide car
 
 ## tuning
 
-`baseChance` plus `perAptitude` times the creature's score, plus `perHour` times the length, clamped between `minChance` and `maxChance`. A hopeless specimen on the shortest job still clears the floor and a perfect one on the longest still misses one time in ten, because a board that can be made certain is a board that stops being read. `cooldownHours` is one at a time, the same shape as `sparRefillAt`, `boardRefillAt` and `expeditionReadyAt`: a stamp in the past means ready now, so a save that has never seen the field behaves correctly the moment it is migrated. The `aptitude` weights sum to 1 and the ceilings are what a real build actually reaches — `camoCeil` 3 rather than 6, because a chimera with three chameleon sockets is already an unusual animal and the term should saturate where the commitment stops paying.
+`baseChance` plus `perAptitude` times the creature's score, plus `perHour` times the length, clamped between `minChance` and `maxChance`. A hopeless specimen on the shortest job still clears the floor and a perfect one on the longest still misses one time in ten, because a board that can be made certain is a board that stops being read. `cooldownHours` is one at a time, the same shape as `sparRefillAt`, `boardRefillAt` and `expeditionReadyAt`: a stamp in the past means ready now, so a save that has never seen the field behaves correctly the moment it is migrated. A MISSION MAY OVERRIDE IT, and renewal does — see below. The `aptitude` weights sum to 1 and the ceilings are what a real build actually reaches — `camoCeil` 3 rather than 6, because a chimera with three chameleon sockets is already an unusual animal and the term should saturate where the commitment stops paying.
 
 ## missions
 
@@ -28,5 +28,15 @@ THE INFILTRATOR WEARS NOTHING, and that is the whole build. Since every hide car
 A CONSCRIPT IS STORED AS A GENOME, NEVER AS A STAT BLOCK. R108's rule, and visiting.js gives the reason: a saved stat block is a promise about a fight the engine has stopped making, so a creature taken three balance passes ago would fight with numbers nothing else in the game still uses. `rivalTeam` re-derives it through `unitFromGenome` on every read, exactly like every other combatant.
 
 `grants` is what a SUCCESS buys beyond money. **intel** opens that lab's dossier. **setback** takes one step back off their escalation, floored at the defeats they have actually taken, so the worst a saboteur can do is undo the last defeat's worth of anger — a rival cannot be ground down to nothing by a board that never risks a fight.
+
+RENEWAL RESTS A FORTNIGHT, AND THAT NUMBER WAS MEASURED RATHER THAN CHOSEN. On the board's shared eleven hours the walker ran renewal 19 / 12 / 10 / 16 / 12 times across five 180-day campaigns, because "sell the animal you least want and splice a better one" is the obvious answer to being short of cash, and nothing stopped it being the answer every other day. That is not the price the brief describes. It is a roster upgrade with a cash bonus on it, and R93's late-game rule caught it: post-dominion defences are held 85.0% of the time on the tree before this milestone, and 90.5% with renewal on the shared cooldown — over the 90% ceiling that rule exists to hold.
+
+The cause is FREQUENCY, not the payout, and the isolation says so. Espionage and sabotage alone leave the late game exactly where they found it (83.7% held, against 85.0% before any of this existed); it is renewal that moves it. Sweeping the cooldown with everything else untouched:
+
+    11h  (the board's own)   90.5% held    19/12/10/16/12 renewals
+    120h (five days)         83.7% held      6/4/3/3/3
+    336h (a fortnight)       85.6% held      4/2/2/1/2
+
+A fortnight lands nearest where the rule was written, and it is the one that matches the brief: a city block is an event, not a chore. One to four a campaign is a decision the player weighs; nineteen is a routine. The override lives in data, so a fourth mission sets its own pace without an engine edit, and `missionCooldownMs` is its one home — R180 shipped the arithmetic written out twice, in the tick that ends a run and the recall that calls one off, which is exactly the R174 defect planted fresh and exactly where an override would have landed in one and not the other.
 
 THE TONE IS LOAD-BEARING AND IS CHECKED. CLAUDE.md forbids death language, and this is the milestone most able to break it. A flattened city block is evacuated, condemned and rezoned; the only casualties are an insurance adjuster's afternoon and several municipal bylaws; buildings retire loudly the way vehicles already do. Every line goes through R110's tone gate, which reads `data/copy.json` and `data/news.json` rather than trusting the author.

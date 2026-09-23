@@ -59,6 +59,7 @@
       "fundsPerHour": 62,
       "notoriety": 6,
       "consolation": 0.6,
+      "cooldownHours": 336,
       "risk": "released",
       "grants": "none",
       "alwaysSpends": true,

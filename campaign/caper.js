@@ -14,7 +14,7 @@
 import { rngStream } from '../util/rng.js';
 import { analyze } from '../splice/physiology.js';
 import { isInjured, unitFromGenome } from '../battle/statblock.js';
-import { missionTuning, activeMission, HOUR_MS } from './mission.js';
+import { missionTuning, missionCooldownMs, activeMission, HOUR_MS } from './mission.js';
 
 const HOUR = HOUR_MS;
 
@@ -48,9 +48,10 @@ export function missionRemainingMs(state, now) {
 // Call it off. Nothing is gained, the creature comes home, and the cooldown
 // runs from the moment it is back — the board's `startCooldown` rule (R65).
 export function recallMission(state, content, now = state.lastTickAt ?? 0) {
-  if (!activeMission(state)) return { ok: false, msg: content.copy?.mission?.none };
+  const run = activeMission(state);
+  if (!run) return { ok: false, msg: content.copy?.mission?.none };
   state.campaign.mission = null;
-  state.campaign.missionReadyAt = now + Math.round(missionTuning(content).cooldownHours * HOUR);
+  state.campaign.missionReadyAt = now + missionCooldownMs(content, content.missions?.[run.missionId]);
   return { ok: true, msg: content.copy?.mission?.recalled };
 }
 
