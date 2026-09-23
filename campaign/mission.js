@@ -40,6 +40,16 @@ export function missionCommitted(state) {
   return new Set(run?.chimeraId ? [run.chimeraId] : []);
 }
 
+// The creatures who could go: fit, home, and not already carrying a job.
+// BACK IN THE EAGER HALF. It was moved to the lazy one on the belief that
+// only the War Room asks, and the agenda proved that wrong on the first
+// frame — a row that offers a caper has to know somebody is fit to run one.
+// One home rather than a second copy of the predicate in ranch/agenda.js,
+// which is R174's rule and the reason that module has one filler and not six.
+export function missionCandidates(state, now, busy = new Set()) {
+  return (state.chimeras ?? []).filter((c) => !isInjured(c, now) && !busy.has(c.id));
+}
+
 // Every conscript this rival is holding. One reader, so the roster and the
 // board cannot disagree about who was taken.
 export function conscriptsOf(state, rivalId) {

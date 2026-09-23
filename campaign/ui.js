@@ -45,9 +45,9 @@ import {
   expeditionCandidates, expeditionRemainingMs, expeditionReadyAt, recallExpedition,
 } from './expedition.js';
 import { findsFor, findsBeyond, expeditionOdds, startExpedition } from './outfit.js';
-import { missionTuning, activeMission } from './mission.js';
+import { missionTuning, activeMission, missionCandidates } from './mission.js';
 import {
-  missionsFor, missionHours, missionReadyAt, missionRemainingMs, missionCandidates,
+  missionsFor, missionHours, missionReadyAt, missionRemainingMs,
   recallMission, missionOdds, missionTargets, startMission, missionAptitude,
 } from './caper.js';
 import { directorRead } from './director.js';
@@ -1060,7 +1060,11 @@ function missionCard(state, ctx, t) {
       c.id === who?.id ? ' class="is-selected"' : ''}>${esc(c.name)}</button>`).join('')
     : `<span class="locked-tag">${fill(content.copy?.mission?.nobody, {})}</span>`)}
       <p class="fine-print">${esc(mission.brief ?? '')}</p>
-      <p class="fine-print">${fill(content.copy?.mission?.[`risk_${mission.risk}`], {})}</p>
+      <p class="fine-print">${mission.risk === 'conscripted'
+    ? fill(content.copy?.mission?.risk_conscripted, {})
+    : mission.risk === 'released'
+      ? fill(content.copy?.mission?.risk_released, {})
+      : fill(content.copy?.mission?.risk_detained, {})}</p>
       ${apt && !apt.hidden && apt.camoParts > 0
     ? `<p class="fine-print">${fill(content.copy?.mission?.armored_warning, {})}</p>` : ''}
       <p class="fine-print">${fill(content.copy?.mission?.odds, {

@@ -45,11 +45,6 @@ export function missionRemainingMs(state, now) {
   return run ? Math.max(0, run.until - now) : 0;
 }
 
-// The creatures who could go: fit, home, and not already carrying a job.
-export function missionCandidates(state, now, busy = new Set()) {
-  return (state.chimeras ?? []).filter((c) => !isInjured(c, now) && !busy.has(c.id));
-}
-
 // Call it off. Nothing is gained, the creature comes home, and the cooldown
 // runs from the moment it is back — the board's `startCooldown` rule (R65).
 export function recallMission(state, content, now = state.lastTickAt ?? 0) {
@@ -58,8 +53,6 @@ export function recallMission(state, content, now = state.lastTickAt ?? 0) {
   state.campaign.missionReadyAt = now + Math.round(missionTuning(content).cooldownHours * HOUR);
   return { ok: true, msg: content.copy?.mission?.recalled };
 }
-
-
 
 // WHAT MAKES A CREATURE GOOD AT THIS, read off the anatomy the same way the
 // class vote is. Three terms, each normalised to 0..1 and weighted in data:
