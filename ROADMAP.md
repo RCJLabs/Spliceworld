@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**5 entries queued.** R180, R181, R182, R184, R186.
+**4 entries queued.** R181, R182, R184, R186.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -6817,30 +6817,70 @@ adds is a CHOICE rather than another button that is always available.
   carries would be a rule no trip this game offers can satisfy, which is the
   dead-content failure one level up from the one `tools/reach.js` exists for.
 
-- **R180 — Espionage, sabotage, and unscheduled urban renewal.** The rival
-  ladder is five labs the player can only ever FIGHT. Three escalating
-  missions that use them without a battle, each priced differently:
-  **(1) Espionage** — infiltrate, steal research or intel. Resolved on
-  Camo, speed and low mass, which is the half of the stat sheet combat
-  under-rewards: R148 and R149 both shipped because the Rumbler and the
-  Scamper had no reason to be built, and an infiltrator is a reason.
-  **(2) Sabotage** — break something of theirs; your creature can be CAUGHT,
-  and a caught creature lands in *their* containment, which is the mirror of
-  R8's Reorientation Wing. They can talk it round and field it against you.
-  **(3) Unscheduled urban renewal** — release a chimera into a city node.
-  It leaves the roster permanently and joins the loose board the breakout
-  engine already runs (`maxLoose` is 4), so the price of the mission is a
-  complication you will meet again.
-  *The tone constraint is load-bearing and needs saying out loud:* CLAUDE.md
-  forbids death language, so a flattened city is **evacuated, condemned and
-  rezoned**, buildings "retire loudly" the way vehicles already do, and the
-  only casualties are an insurance adjuster's afternoon and several
-  municipal bylaws. Every line of this goes through the R110 tone gate.
+- **R180 — Espionage, sabotage, and unscheduled urban renewal.** ✅ The rival
+  ladder was five labs the player could only ever FIGHT: the War Room
+  dispatched seven target kinds and every one was a battle, and a rival's
+  record on the save held `defeats`, `losses` and `lastMetAt` and nothing
+  else. Three missions in `data/missions.json` add the other verb, and what
+  makes each a decision rather than a dice roll is that they charge three
+  different prices. **Espionage** risks time — a failure is a night in a
+  holding pen and a stern letter. **Sabotage** risks the creature: lose it
+  and the lab KEEPS it, which is R8's Reorientation Wing pointed back at the
+  player, and `rivalTeam` now appends it to that lab's roster so your own
+  animal is in the next fight. **Unscheduled urban renewal** does not risk
+  the creature at all — it spends it, and the specimen joins the loose board
+  the breakout engine already runs, where it can be hunted back.
+
+  *THE APTITUDE WAS DECORATION UNTIL IT WAS MEASURED, and that is the
+  finding.* The entry said espionage should resolve on Camo, speed and low
+  mass. Built to that description and measured, a chameleon scored 0.071 and
+  a rhino 0.018 — 2.2 points of odds between the best and worst animal in
+  the game, which is a rounding error rather than a reason to build
+  anything. Three things were wrong and two meant a term could never fire:
+  mass across the 39 purebred builds runs **88 to 216** against a scale
+  written 14 to 68, so every creature clamped to zero; speed runs 1 to 13
+  against a ceiling of 34; and **all 43 hides in the game carry armour**
+  while `camoTags` strips Camo the moment armour exceeds zero, so half the
+  blend was dead for every buildable creature — including the chameleon,
+  whose own hide cancelled its own Camo.
+
+  The last one is not a defect but the build. Since no hide is armour-free,
+  the only way to be hidden is to leave the hide socket EMPTY: the best
+  infiltrator in the game is a creature that gave up its armour entirely,
+  and nothing in this milestone enforces that — it falls out of a rule R32
+  shipped and nobody has touched since. Re-derived from the distribution
+  (camo 4, speed 12, mass 95–165): **infiltrator 0.883 / 70.3% at 12h,
+  chameleon in its own hide 0.369 / 48.7%, tiger 0.260 / 44.1%, rhino 0.050
+  / 35.3%** — a 35-point spread, and 21.6 for the decision to put a hide
+  back on. The gate locks the ORDERING and not the values, and separately
+  asserts each of the three terms is LIVE for a real creature, because the
+  first cut would have passed an ordering check with two terms reading zero.
+
+  A conscript is stored as a GENOME and re-derived through `unitFromGenome`
+  on every read (R108: a saved stat block is a promise about a fight the
+  engine has stopped making). Break 413 proved that gate too weak on its
+  first cut — "carries moves and a genome" is true of a restored block too —
+  so it now asserts the conscript GROWS when the lab holding it does.
+
+  *FOUR EAGER BUDGETS MOVED, which is the largest single-milestone raise in
+  this repo and the notes say so.* The eviction came first, because
+  `MODULE_CAP`'s own note asked for it: `campaign/mission.js` was exactly
+  the R169 blind spot it names — a module boot pulled in for one function —
+  so six of its ten exports moved to the lazy `campaign/caper.js` and a
+  seventh was dead and deleted. What stayed is irreducible: `tickMissions`
+  must be eager or a released chimera does not reach the loose board until
+  somebody opens a screen. Then MODULE_CAP 50→51 (51), KB_CAP 327→332
+  (331.0), PROSE_CAP 258→261 (260.3) and FIRST_PAINT 1121→1136 (1127), each
+  measured after the trim and each argued in place. `missions.json` stays in
+  CORE rather than moving LATE, which was the obvious dodge: R81's split is
+  what things ARE against what they LOOK LIKE, and a mission's odds are
+  definitional. SAVE_VERSION 61 with its migration and fixture.
   *Done when: a mission resolves without a battle and reads as a decision
   rather than a dice roll; a creature caught on sabotage appears in that
   rival's roster and can be met in a later fight; a released chimera appears
   on the loose board and can be hunted back; and the tone gate passes on
-  every word of it.*
+  every word of it.* ✅ All four, and the aptitude spread is 35 points rather
+  than the 2.2 the first cut shipped.
 
 - **R181 — Henchmen, and the end of being one person.** Every lane in this
   game is capped because the player is a single pair of hands: the solo job

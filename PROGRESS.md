@@ -1,5 +1,70 @@
 # PROGRESS
 
+## Session 207 — R180: Espionage, sabotage, and unscheduled urban renewal ✅
+
+**Five labs you could only ever fight. Now there are three ways to use one
+without a battle, and the best animal for the job is the one that gave up
+its armour.**
+
+### The verb
+
+    campaign/mission.js   EAGER   who is committed · is one running · the settle
+    campaign/caper.js     LAZY    the board · the odds · the three consequences
+
+Same split as R179 and for the same reason, but this one had to earn it
+twice: the first cut put ten exports in the eager half and blew all four
+budgets at once. Six of them are read by the War Room and by nothing the
+first frame runs, so they moved. A seventh, `missionReady`, turned out to
+be dead on arrival and was deleted rather than re-imported.
+
+The three prices are the design. Espionage risks TIME. Sabotage risks the
+CREATURE — lose it and the lab keeps it, and `rivalTeam` appends it to that
+lab's roster so you meet your own animal in the next fight. Renewal does not
+risk the creature at all; it spends it, onto the loose board, where it can
+be hunted back.
+
+### What the measurement changed
+
+I built the aptitude to the roadmap's description — Camo, speed, low mass —
+and then measured it before believing it. Chameleon 0.071, rhino 0.018. Two
+points of odds between the best and worst animal in the game.
+
+Three things were wrong and two of them meant a term could never fire at
+all. Mass runs 88–216 across the 39 purebreds against a scale written
+14–68. Speed runs 1–13 against a ceiling of 34. And every one of the 43
+hides carries armour while `camoTags` strips Camo the moment armour is above
+zero — so half the blend was dead for every buildable creature, the
+chameleon included, its own hide cancelling its own Camo.
+
+That last one is the build, not the bug. The only way to be hidden is to
+wear nothing:
+
+    INFILTRATOR chameleon, no hide   0.883   70.3% at 12h
+    chameleon wearing its own hide   0.369   48.7%
+    BRUISER rhino, full              0.050   35.3%
+
+Thirty-five points, and 21.6 for the decision to put a hide back on. None of
+that is enforced here. It falls out of a rule R32 shipped.
+
+### Known issues
+
+- Four eager budgets moved in one milestone (MODULE_CAP 51, KB_CAP 332,
+  PROSE_CAP 261, FIRST_PAINT 1136), which is the largest single-milestone
+  raise this repo has taken. The eviction came first and the notes argue
+  each number in place, but the cheap evictions are now gone. The next
+  milestone that wants eager bytes has a harder question to answer.
+- Two of the six breaks MISSED on their first run and both were my aim, not
+  the code: 417 pointed at `massFloor` when the CEILING is what killed the
+  term, and 413's gate tested "has moves and a genome", which is true of a
+  restored stat block too. Both re-aimed; the conscript gate now asserts the
+  specimen GROWS when the lab holding it does.
+
+### Next session's first task
+
+R181 — Henchmen, and the end of being one person. Read ROADMAP §9.30's third
+phase; a henchman can also run an R180 mission, so the board built here is
+the thing it plugs into.
+
 ## Session 206 — R179: Expeditions, and the first creature money cannot buy ✅
 
 **Forty-one species, forty-one prices. The forty-second is not for sale at
