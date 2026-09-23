@@ -6311,8 +6311,14 @@ const BREAKS = [
   {
     n: 417, gate: SHARD_A, name: 'the mass scale goes back to the guess, and every creature in the game reads zero on a third of the blend',
     file: 'data/missions.json',
-    anchor: '      "massFloor": 95,',
-    to: '      "massFloor": 14,',
+    // Aimed at the CEILING, not the floor. R180's first cut aimed this at
+    // massFloor and the break was MISSED: real builds run 88 to 216, so with
+    // the ceiling still at 165 the term kept discriminating and the gate was
+    // right not to complain. 68 is the number from the pre-measurement guess,
+    // and it is the one that put every creature in the game under the floor
+    // and read zero for all of them.
+    anchor: '      "massCeil": 165',
+    to: '      "massCeil": 68',
   },
   {
     n: 418, gate: SHARD_A, name: 'the outcome is rolled at the tick instead of sealed at launch, and a reload re-rolls a job that went badly',

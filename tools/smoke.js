@@ -25138,6 +25138,21 @@ if (inShard('capers')) {
     // a genome, which a stored stat block would not have had to rebuild.
     assert.ok((mine[0].moves ?? []).length, 'the conscript fights with moves derived now, not moves saved then');
     assert.ok(mine[0].genome?.frame, 'and it carries the genome it was rebuilt from');
+
+    // AND IT SCALES WITH THE LAB HOLDING IT, which is the half of
+    // "re-derived rather than restored" the first cut of this gate missed.
+    // Break 413 pinned the conscript at powerScale 1 and went UNCAUGHT,
+    // because having moves and a genome is true of a restored stat block
+    // too. What is only true of a re-derivation is that the numbers move
+    // when the lab's do: a rival three defeats angrier fields a bigger
+    // version of the creature it took off you.
+    const angrier = JSON.parse(JSON.stringify(st));
+    angrier.campaign.rivals[rid].defeats = 4;
+    const grown = rivalTeam(angrier, c.rivals[rid], c).team
+      .filter((u) => u.name === chimera.name);
+    assert.equal(grown.length, 1, 'the conscript is still there when the lab has iterated');
+    assert.ok(grown[0].power > mine[0].power,
+      `and it grew with them (${mine[0].power} at one defeat, ${grown[0].power} at four)`);
   }
 
   // 5. A RELEASED CREATURE IS ON THE LOOSE BOARD and can be hunted back.

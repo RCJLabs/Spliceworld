@@ -257,6 +257,17 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
     // only one worth walking.
     s.campaign.expeditionReport = { regionId: 'greenfield', region: 'Greenfield County',
       hours: 4, crew: 1, success: true, funds: 36, animal: null, overCapacity: false };
+    // R180 — and an unread mission report, for the same reason and with the
+    // same restraint: the OK is painted only when one is waiting. The run
+    // itself is NOT set here, because the surface below reaches the live
+    // card by pressing Send, which is the only door a player has. The lab
+    // this names is the one the breakout fixture above already has a record
+    // for, so `missionTargets` can see it — a caper against a lab the
+    // player has never met is a caper against a name nobody has read.
+    s.campaign.missionReport = { missionId: 'espionage', mission: 'Espionage',
+      rivalId: rivalList(content)[0].id, rival: rivalList(content)[0].name,
+      hours: 3, chimeraId: null, name: 'Specimen', success: true, funds: 39,
+      fate: 'home', granted: 'intel' };
     return s;
   };
 
@@ -300,6 +311,13 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   // Send, and the card repaints as the field report with the recall on it.
   SURFACES.push({ name: 'battle:in-the-field', file: 'campaign/ui.js', fn: 'renderWarRoomScreen',
     subtab: 'jobs', path: [{ sel: '[data-exp-crew]' }, { sel: '[data-exp-go]' }] });
+  // R180 — THE MISSION CARD HAS THE SAME TWO FACES, and `Call it off` lives
+  // only on the second. Walked rather than hand-written for the reason one
+  // entry up: a fixture that writes `campaign.mission` by hand keeps passing
+  // after a rename. Pick a specimen, press Send, and the card repaints as
+  // the live run with the recall on it.
+  SURFACES.push({ name: 'battle:caper-running', file: 'campaign/ui.js', fn: 'renderWarRoomScreen',
+    subtab: 'jobs', path: [{ sel: '[data-cap-who]' }, { sel: '[data-cap-go]' }] });
   // R89 — the creature card's four tabs. The card is shut until pressed and
   // its Moves and Anatomy tabs are shut behind the bar inside it, so
   // `data-moves` and `data-dossier` are painted on a surface no earlier
