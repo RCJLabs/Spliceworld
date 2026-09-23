@@ -6,7 +6,7 @@
 // `campaign/caper.js`, which is lazy. Why the split, why the outcome is
 // sealed at launch, and what each mission costs: data/notes/missions.md.
 
-import { isInjured } from '../battle/statblock.js';
+import { isInjured, applyInjury } from '../battle/statblock.js';
 
 export const HOUR_MS = 3600000;
 const HOUR = HOUR_MS;
@@ -99,9 +99,13 @@ export function tickMissions(state, content, now) {
     state.campaign.loose.push(out.loose);
     dropChimera(state, run.chimeraId);
   } else if (result.fate === 'detained') {
+    // ONE HOME for an injury, which the gate caught this writing around.
+    // `applyInjury` counts it and keeps the LONGER of the two clocks, so a
+    // specimen already hurt is not quietly healed early by a night in a
+    // holding pen — writing `c.injury` directly would have done exactly that.
     const c = (state.chimeras ?? []).find((x) => x.id === run.chimeraId);
     const hours = Number.isFinite(out.detainHours) ? out.detainHours : 9;
-    if (c) c.injury = { until: endedAt + Math.round(hours * HOUR), reason: 'detained' };
+    if (c) applyInjury(c, { until: endedAt + Math.round(hours * HOUR), reason: 'detained' });
   }
 
   // What a success bought besides money, filed here so the digest can name it.
