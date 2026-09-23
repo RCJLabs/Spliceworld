@@ -6875,12 +6875,60 @@ adds is a CHOICE rather than another button that is always available.
   CORE rather than moving LATE, which was the obvious dodge: R81's split is
   what things ARE against what they LOOK LIKE, and a mission's odds are
   definitional. SAVE_VERSION 61 with its migration and fixture.
+  *AND THE SECOND PASS FOUND THAT THE WALKER COULD ONLY EVER PICK ONE OF THE
+  THREE, which is the same finding as the aptitude one and was invisible for
+  the same reason.* The walker's policy scored `odds.chance / hours` and
+  called that "prefers the job its specimen is good at". Measured: 154 capers
+  across four seeds, all 154 espionage, every one the three-hour option —
+  `chance` only moves from 0.649 to 0.679 across every mission and hour a
+  good infiltrator can pick, so the score is 1/hours and the shortest run of
+  the shortest mission always wins. Sabotage and renewal were unreachable,
+  and with them the conscription fate, the setback and the release. **Nothing
+  went red**: the `capers` gate asserts all three consequences on hand-built
+  fixtures, so it was green against a walker that never chose two of them.
+  The policy now reads mission PROPERTIES — spend a body when the bank is
+  thin, buy a setback against a lab that is beating you, otherwise the
+  quietest job — and a new rule in the `empire` block says every mission the
+  board offers must be one the walker actually runs (espionage 1166 /
+  sabotage 31 / renewal 11 across five campaigns).
+
+  *RENEWAL CHARGED NO PRICE, AND R93's LATE-GAME RULE SAID SO.* "Your
+  specimen does not come home" reads like a price and was not one: on the
+  board's shared eleven-hour cooldown the walker ran it 19/12/10/16/12 times
+  a campaign, because selling the animal you least want and splicing a
+  better one is the obvious answer to being short of cash. Post-dominion
+  defences went from 85.0% held on `60f5941` to 90.5%, over the 90% ceiling
+  R93 exists to hold. The cause is FREQUENCY, not payout — espionage and
+  sabotage alone leave the late game where they found it at 83.7% — so
+  renewal rests a fortnight (`cooldownHours` in data, one to four a campaign,
+  85.6% held). Raids across sixteen seeds: 79/99 held before, 91/113 after,
+  the rate flat at 80→81% while breakouts rose 306 → 464 because a released
+  specimen feeds the loose board.
+
+  *AND THREE GATES WERE READING A FIXTURE RATHER THAN THE THING THEY CLAIM
+  TO GUARD*, which is one finding wearing three hats. R152's scaling rule
+  asserted `median <= 0` with no tolerance on a statistic whose per-seed
+  spread is ±1.5pp, and whose own lever is non-monotone (`garrisonPerNode`
+  0.0075 → +0.18, 0.009 → −2.94, 0.0105 → +1.03); it is re-derived on what
+  actually separates the defect from the noise, which is the SIGN ON EVERY
+  SEED — both breaks read 5 of 5 positive against the shipped tree's 3 of 5.
+  The vault height budget moved because the hoard SHRANK and the species
+  spread widened by one bay. The Dex combos budget moved with no new row at
+  all: a fixture holding both halves of every combo measures 3116px, BELOW
+  the 3131 a twenty-combo fixture reads, so the driver is which part names
+  wrap.
+
   *Done when: a mission resolves without a battle and reads as a decision
   rather than a dice roll; a creature caught on sabotage appears in that
   rival's roster and can be met in a later fight; a released chimera appears
   on the loose board and can be hunted back; and the tone gate passes on
-  every word of it.* ✅ All four, and the aptitude spread is 35 points rather
-  than the 2.2 the first cut shipped.
+  every word of it.* ✅ All four, the aptitude spread is 35 points rather
+  than the 2.2 the first cut shipped, and all three missions are reachable
+  by something other than a fixture. Ten breaks (413-422); a lab holds at
+  most three conscripts, bounded in data and enforced at the tick, after
+  `tools/vault.js` found the array had no ceiling at all; and `conscriptsOf`
+  guards its own field after R114's fuzzer took the battle render down with
+  a `conscripts` that was a string.
 
 - **R181 — Henchmen, and the end of being one person.** Every lane in this
   game is capped because the player is a single pair of hands: the solo job

@@ -59,6 +59,73 @@ that is enforced here. It falls out of a rule R32 shipped.
   restored stat block too. Both re-aimed; the conscript gate now asserts the
   specimen GROWS when the lab holding it does.
 
+### Second pass — what the gates found once the walker actually played it
+
+**The walker could only ever pick one of the three missions, and nothing
+went red.** Rule 4 scored `odds.chance / hours`. Measured: 154 capers across
+four seeds, all espionage, every one the three-hour option — `chance` only
+moves 0.649 to 0.679 across every mission and hour a good infiltrator can
+pick, so the score is `1/hours` and the shortest run of the shortest mission
+always wins. Sabotage and renewal were unreachable, and with them the
+conscription fate, the setback and the release. The `capers` gate asserted
+all three consequences on HAND-BUILT FIXTURES and was green the whole time.
+That is the aptitude finding again in a new place: a thing only a fixture
+reaches is a thing nothing measures. The policy now reads mission
+properties, and a new rule in `empire` says every mission the board offers
+has to be one the walker runs (espionage 1166 / sabotage 31 / renewal 11).
+
+**Renewal charged no price.** On the board's shared eleven hours the walker
+ran it 19/12/10/16/12 times a campaign — sell the animal you least want,
+splice a better one, repeat. R93's late-game rule caught it: post-dominion
+defences 85.0% held before this milestone, 90.5% with renewal on the shared
+cooldown, over the 90% ceiling. Isolated: espionage and sabotage alone read
+83.7%, so it is renewal and it is FREQUENCY, not payout. A fortnight
+cooldown lands at 85.6% and one to four runs a campaign, which is what the
+brief describes. Sixteen seeds: raids held 79/99 → 91/113 (80% → 81%, flat),
+breakouts 306 → 464.
+
+**Three gates were reading the fixture rather than the screen.** R152's
+scaling rule asserted `median <= 0` with no tolerance on a ±1.5pp statistic
+whose own lever is non-monotone — 0.0075 reads +0.18, 0.009 reads −2.94,
+0.0105 reads +1.03, and buying a pass at 0.009 costs every campaign five
+points of kept gross. Re-derived (Evan's call) on the sign across seeds:
+both breaks read 5 of 5 positive, the shipped tree 3 of 5. The vault height
+grew while the hoard SHRANK, because the species spread widened one bay. The
+Dex combos budget moved with no new row: a fixture holding both halves of
+every combo measures 3116px, BELOW the 3131 a twenty-combo fixture reads, so
+the driver is which part names wrap.
+
+**Two real bugs, both from gates rather than from reading the code.**
+`tools/vault.js`: a lab's `conscripts` had no ceiling, which is a save array
+that grows forever AND a rival roster that does, since `rivalTeam` fields
+every one. Capped at three in data, trimmed at the tick, the bound derived
+from that dial. R114's fuzzer: `conscriptsOf` returned whatever the save
+held, and `?? []` does not guard a field that is present and not an array —
+a hand-edited save took the battle render down on `.entries()`.
+
+**And the MODULE_CAP raise had argued for two things that were not true.**
+`missionCommitted` was said to be read by "the tick and the roster" and was
+read by neither; `conscriptsOf` was said to be eager because
+`campaign/rivals.js` needs it, while rivals.js read the array inline and
+never called it — two homes for one read. Both fixed; the argument rewritten
+to the three exports that are actually irreducible.
+
+### Known issues (second pass)
+
+- Break 421 went MISSED twice: first because a walk produces nought to two
+  conscripts so the trim never fires, then because I aimed it at
+  `tools/vault.js`, which reads that same walk. Both the cap and the R114
+  guard are now exercised on a fixture in the `capers` block.
+- `data/missions.json` gained `maxConscripts` and a per-mission
+  `cooldownHours`; `missionCooldownMs` is their one home, which R180's first
+  pass shipped written out twice.
+- KB_CAP 332 → 333 after the eviction was done twice over. The two R114
+  guards are what would not fit; the note says so rather than pretending the
+  budget was always going to hold.
+- CLAUDE.md's break count was stale by six before this milestone touched it
+  (404 against a tree carrying 410). It reads 414 now, numbered to 422 —
+  and says to trust `--anchors` over the sentence.
+
 ### Next session's first task
 
 R181 — Henchmen, and the end of being one person. Read ROADMAP §9.30's third
