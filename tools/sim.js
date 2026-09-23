@@ -2063,7 +2063,17 @@ function walkAct(state, content, now, open, opts = {}) {
     const benchCap = missionCandidates(state, now, busyCap)
       .map((c) => ({ c, apt: missionAptitude(content, c).score }))
       .sort((a, b) => b.apt - a.apt);
-    const spareCap = Math.max(0, (state.chimeras ?? []).length - fullTeam());
+    // RULE 3, AND IT HAD TO BE MEASURED RATHER THAN REASONED. The first cut
+    // ran a caper whenever there was one body over a full team, and the Task
+    // Force raid gate went red: held fell from 24 of 32 to 20 of 32 across
+    // five seeds, every seed level or worse, because a committed specimen is
+    // one fewer defender and the board offers a caper roughly twice a day.
+    // One spare body is not spare when the State is coming for the ranch.
+    //
+    // So the margin is two, and spending one outright needs three. That is
+    // what a player does: you do not send your reserve out on the night the
+    // convoy is due, and you certainly do not feed it to a city block.
+    const spareCap = Math.max(0, (state.chimeras ?? []).length - fullTeam() - 1);
     const picks = [];
     if (!activeMission(state) && spareCap > 0 && benchCap.length) {
       const who = benchCap[0].c;
@@ -2071,7 +2081,7 @@ function walkAct(state, content, now, open, opts = {}) {
         for (const mission of missionsFor(content)) {
           // Rule 3: a mission that spends the specimen needs a spare body,
           // and one that only risks it does not.
-          if (mission.alwaysSpends && spareCap < 2) continue;
+          if (mission.alwaysSpends && spareCap < 2) continue;  // i.e. fullTeam()+3 bodies
           for (const hours of missionHours(mission)) {
             const odds = missionOdds(content, mission, hours, who);
             picks.push({ mission, rival, hours, who, score: odds.chance / hours });
