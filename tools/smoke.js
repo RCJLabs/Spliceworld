@@ -22341,6 +22341,43 @@ if (inShard('empire')) {
       `a county can be lost: post-dominion defences are held ${defs.pct}% of the time `
       + `(${defs.won}/${defs.n})`);
 
+    // R180 — AND THE HARNESS PLAYS ALL THREE MISSIONS, which is the rule that
+    // would have caught this milestone's worst bug on the day it shipped.
+    //
+    // The walker's first mission policy scored `odds.chance / hours` and
+    // called that "prefers the job its specimen is good at". Measured: 154
+    // capers across four seeds and all 154 were espionage, every one the
+    // three-hour option — because `chance` only moves from 0.649 to 0.679
+    // across every mission and hour a good infiltrator can pick, so the score
+    // is 1/hours and the shortest run of the shortest mission always wins.
+    // Two of the three missions were unreachable, and with them the
+    // conscription fate, the setback and the release to the loose board.
+    //
+    // Nothing went red. The `capers` shard asserts all three consequences and
+    // asserts them on HAND-BUILT FIXTURES, so it was green against a walker
+    // that never once chose them. That is R95's lesson in a new place: a
+    // consequence a campaign cannot reach is a consequence nothing measures.
+    // Asserted across the census rather than per-seed, because which mission
+    // a given campaign needs is situational by design — renewal wants a thin
+    // bank, sabotage wants a lab that is beating you.
+    {
+      const ran = new Map();
+      for (const w of walks) {
+        for (const e of w.log ?? []) {
+          if (e.kind === 'mission') ran.set(e.mission, (ran.get(e.mission) ?? 0) + 1);
+        }
+      }
+      const offered = Object.keys(content.missions ?? {});
+      assert.ok(offered.length >= 3, `the board offers missions at all (${offered.length})`);
+      const line = offered.map((id) => `${id}:${ran.get(id) ?? 0}`).join(' ');
+      console.log(`   R180 missions: ${line} across ${EMPIRE_SEEDS.length} campaigns`);
+      const never = offered.filter((id) => !ran.get(id));
+      assert.equal(never.length, 0,
+        `every mission the board offers is one the walker actually runs (${line})`
+        + ' — a mission no campaign reaches is a mission whose consequences only a'
+        + ' fixture has ever seen');
+    }
+
     // ...and the campaign still has to work. R93's second clause, and the one
     // that stops "make it harder" from being the whole answer.
     for (const w of walks) {
@@ -25230,6 +25267,58 @@ if (inShard('capers')) {
     assert.equal(grown.length, 1, 'the conscript is still there when the lab has iterated');
     assert.ok(grown[0].power > mine[0].power,
       `and it grew with them (${mine[0].power} at one defeat, ${grown[0].power} at four)`);
+  }
+
+  // 4b. A LAB HOLDS ONLY SO MANY, AND A CORRUPT FIELD IS NOT AN ARRAY.
+  //
+  //     Both of these are here rather than left to the walk, and the reason
+  //     is that breaks 421 and 422 went MISSED before this block existed. A
+  //     conscription needs a failed sabotage against a lab that is beating
+  //     you AND a 40% roll, so a campaign produces nought to two — the trim
+  //     never fires on a walk and the fuzzer never finds a `conscripts` field
+  //     to mutate. A cap nothing reaches is a cap nothing measures, which is
+  //     this milestone's own headline finding pointed back at itself.
+  {
+    const { st, c, chimera, rid } = metLab(T0);
+    const cap = missionTuning(c).maxConscripts;
+    assert.ok(cap >= 1, `the board states a conscript ceiling (${cap})`);
+    const take = (n) => {
+      st.campaign.mission = null;
+      st.campaign.missionReadyAt = 0;
+      const m = missionsFor(c).find((x) => x.id === 'sabotage');
+      const body = { ...chimera, id: `${chimera.id}-${n}`, name: `Specimen ${n}` };
+      st.chimeras.push(body);
+      startMission(st, c, T0, 'sabotage', rid, body.id, m.hourOptions[0]);
+      st.campaign.mission.outcome.fate = 'conscripted';
+      st.campaign.mission.outcome.conscript = {
+        name: body.name,
+        frame: body.frame,
+        tokens: Object.values(body.tokens).map((x) => ({ partId: x.partId, grade: x.grade })),
+      };
+      tickMissions(st, c, T0 + m.hourOptions[0] * HR);
+    };
+    for (let n = 1; n <= cap + 2; n += 1) take(n);
+    const held = conscriptsOf(st, rid);
+    assert.equal(held.length, cap,
+      `a lab holds at most the ${cap} it is allowed after ${cap + 2} sabotages went wrong `
+      + `(${held.length}) — unbounded, this is a save array that grows forever AND a rival `
+      + 'roster that does, because rivalTeam fields every one of them');
+    assert.equal(held[0].name, `Specimen 3`,
+      `and it is the OLDEST that was reassigned away, not the newest (${held.map((x) => x.name).join(', ')})`);
+    assert.equal(rivalTeam(st, c.rivals[rid], c).team.filter((u) => /^Specimen /.test(u.name)).length, cap,
+      'and the fight you walk into fields exactly those');
+
+    // R114 — AND THE FIELD IS UNTRUSTED. `?? []` reads as a guard and is not
+    // one: a `conscripts` that is PRESENT and not an array sails straight
+    // through it into `.entries()`. Asserted here because the fuzzer can only
+    // mutate a field a walk happened to produce.
+    for (const junk of ['not-an-array', 42, { length: 9 }]) {
+      st.campaign.rivals[rid].conscripts = junk;
+      assert.deepEqual(conscriptsOf(st, rid), [],
+        `a conscripts field of ${JSON.stringify(junk)} reads as no conscripts at all`);
+      assert.ok(rivalTeam(st, c.rivals[rid], c).team.length > 0,
+        `and the lab still fields a team rather than taking the render down (${JSON.stringify(junk)})`);
+    }
   }
 
   // 5. A RELEASED CREATURE IS ON THE LOOSE BOARD and can be hunted back.
