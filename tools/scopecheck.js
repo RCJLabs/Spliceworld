@@ -1534,7 +1534,7 @@ const COPY_BUDGET = {
   'splice/dexentry.js': 16,
   'splice/dossier.js': 165,
   'splice/extract-ui.js': 31,
-  'splice/extract.js': 115,
+  'splice/extract.js': 111,
   'splice/facility.js': 56,
   'splice/pens-ui.js': 203,
   'splice/physiology.js': 233,

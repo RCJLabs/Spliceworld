@@ -52,8 +52,9 @@ export function renderValue(token) {
 
 // WHICH PARTS GO FIRST when something has to. Worst grade first, and among
 // equals the ones the Dex already remembers — so a rendering never takes the
-// only token of an anatomy the player has not recorded yet.
-function renderOrder(state, tokens) {
+// only token of an anatomy the player has not recorded yet. R182: shared
+// with `splice/shelf.js`.
+export function renderOrder(state, tokens) {
   const seen = new Set(state.dex?.parts ?? []);
   return [...tokens].sort((a, b) =>
     (GRADE_INDEX[a.grade] ?? 0) - (GRADE_INDEX[b.grade] ?? 0)

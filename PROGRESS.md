@@ -1,5 +1,62 @@
 # PROGRESS
 
+## Session 210 — R182: The Vault's way out ✅
+
+**A full shelf with nothing to spare and no shelf left to buy used to refuse
+every graduation and offer no move at all. Every part now has its own render
+control, and the Vault says which ones it would miss least.**
+
+### Re-measured first
+
+The dead end still happens exactly as the entry says: seed 4242 hits it on
+day 157 (400/400, `surplusParts` empty, 34 of 34 graduations refused at day
+180). But it is 1 seed in 16, and the herd it leaves is 34 head, not the
+entry's 112. No seed ends past the 80-head ceiling. The user picked the
+entry's first candidate: render a chosen part.
+
+### What shipped
+
+- **Vault:** a render control on every part row, with the price on it. On
+  a tight shelf with no duplicates, the card lists the three parts it would
+  miss least (worst grade first). The full-shelf line says either "…or buy
+  shelf space above" or "…as big as the building gets", whichever is true.
+- **Refusal:** "Render something down on the Vault." The shelf half moved
+  to the Vault's own line, which knows whether any shelf is for sale.
+- **`splice/shelf.js` (lazy):** `leastMissed` and `shelfForSale`, shared by
+  the screen and the walker. The eager budget had 12 bytes of code headroom.
+  Net eager change is -17 bytes.
+- **Walker (`walkMakeRoom`):** duplicates first, then R116's save-for-shelf,
+  and only then exactly the parts the graduation is short. Seed 4242:
+  20 dead days → 0, and 34 head → 20 at day 180. Seeds 2026, 7 and 91 are
+  unchanged.
+- **Height:** a wrapping row put the button on its own line (4,361px against
+  4,200). A non-wrapping row reads 4,115. The a11y gate then caught a bay's
+  first button 1px under the bay header; the part list takes a 6px margin.
+- **Save/load in a browser:** 400 parts → render one → reload → 399, with no
+  console errors.
+
+### Gates
+
+- The `shelf` block in `tools/smoke.js` (shard d) BUILDS the dead end.
+- `tools/reach.js` holds all 13 of its 180-day campaigns to the vault gate's
+  herd ceiling. They end on 18-20 head.
+- `herdCeiling` in `tools/fixtures.js` is the ceiling's one home; both gates
+  import it.
+- Breaks 436-445.
+
+### Known issues
+
+- **Seed 91 waits seventy days for a $160,000 shelf** (queued as R191).
+  R116's rule makes the walker save for the next shelf level instead of
+  rendering parts. Graduations are refused from day 75 to 145, and the herd
+  peaks at 73 of 80. The Vault offers the way out the whole time.
+- The refusal no longer mentions buying shelf. The Vault's full-shelf line
+  does, when there is shelf to buy.
+
+### Next session's first task
+
+The §9.0 queue: R184, R186, R187, R189, R190, R191.
+
 ## Session 209 — R188: The walker hires ✅
 
 **R181 shipped a payroll with its whole proof in fixtures. The walk now runs

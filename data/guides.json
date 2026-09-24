@@ -764,7 +764,7 @@
       "order": 27,
       "icon": "wrench",
       "title": "The shelves have an edge",
-      "body": "The Gene Vault holds a fixed number of parts and vials, and the Extractor track sells more shelf. Graduating an animal is refused when its yield will not fit — nothing is lost, the animal is still in the pen — while anything the world hands you, battle salvage or a Wing graduate, is rendered down at the door and paid for rather than turned away. The button here clears duplicates only: worst grade first, never the last of an anatomy, never one carrying a gene. Vials past the rack retire into the Dex, so the donor stays remembered when the sample is gone.",
+      "body": "The Gene Vault holds a fixed number of parts and vials, and the Extractor track sells more shelf. Graduating an animal is refused when its yield will not fit — nothing is lost, the animal is still in the pen — while anything the world hands you, battle salvage or a Wing graduate, is rendered down at the door and paid for rather than turned away. The big button clears duplicates only: worst grade first, never the last of an anatomy, never one carrying a gene. Anything else you render by hand, from its own row — and when nothing is a spare, the Vault lists what it would miss least. The Dex keeps the anatomy either way. Vials past the rack retire into the Dex, so the donor stays remembered when the sample is gone.",
       "reachable": [
         {
           "helper": "vaultTight"

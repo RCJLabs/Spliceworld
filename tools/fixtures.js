@@ -31,7 +31,7 @@ import { indexContent } from '../render/renderer.js';
 import { CONTENT_FILES } from '../data/loader.js';
 import { newGameState, SAVE_VERSION } from '../save/save.js';
 import { spliceChimera } from '../splice/theater.js';
-import { createAnimal } from '../ranch/ranch.js';
+import { createAnimal, TUNING } from '../ranch/ranch.js';
 import { loadSimContent, campaignWalk } from './sim.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -263,6 +263,13 @@ export function walkCacheState({ days = 180 } = {}) {
   } catch { /* no cache dir at all is simply cold */ }
   return { dir, hits, warm: hits > 0 };
 }
+
+// R182 — THE HERD'S DESIGN CEILING, WITH ONE HOME. `tools/vault.js` bounds a
+// save's `ranch.stock` by it and `tools/reach.js` holds every one of its
+// thirteen 180-day campaigns to it; the argument for twice the paddock is on
+// the vault gate's `ranch.stock` line, where R154 wrote it. R157's break 152
+// is why this is a function both gates import rather than a number both type.
+export const herdCeiling = () => TUNING.penMaxCapacity * 2;
 
 export function walkedSave({ days = 180, seed = 2026, fresh = false } = {}) {
   const cache = join(tmpdir(), 'sw-walk-cache');

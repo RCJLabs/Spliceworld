@@ -6502,6 +6502,73 @@ const BREAKS = [
     anchor: '        if (plan.score > quality(weakest) + burned) {',
     to: '        if (true) {',
   },
+  // R182 — THE VAULT'S WAY OUT. A full shelf with nothing `surplusParts` may
+  // offer and no shelf left to buy used to have no move at all; the Vault now
+  // gives every part its own render control and lists the least missed first,
+  // and the walker takes exactly what the next graduation is short. The rule
+  // lives in the `shelf` block of tools/smoke.js, which BUILDS the dead end
+  // because every walk the suite reads either stops at dominion or is a saved
+  // state. 441-443 are the walker's policy, one clause each.
+  {
+    n: 436, gate: SHARD_D, name: 'a full shelf with nothing to spare offers the player nothing to press',
+    file: 'splice/vault-ui.js',
+    anchor: '  const spare = pressure.tight && !surplus.length ? leastMissed(state, content, 3) : [];',
+    to: '  const spare = [];',
+  },
+  {
+    n: 437, gate: SHARD_D, name: 'the bays list every part and let the player render none of them',
+    file: 'splice/vault-ui.js',
+    anchor: "    .map(tokenRow).join('')).join('');",
+    to: "    .map((t) => tokenRow(t).replace(/<button[\\s\\S]*<\\/button>/, '')).join('')).join('');",
+  },
+  {
+    n: 438, gate: SHARD_D, name: 'the least-missed list offers the best parts on the shelf first',
+    file: 'splice/shelf.js',
+    anchor: '  return renderOrder(state, state.inventory.parts.filter((t) => content.parts?.[t.partId])).slice(0, want);',
+    to: '  return renderOrder(state, state.inventory.parts.filter((t) => content.parts?.[t.partId])).reverse().slice(0, want);',
+  },
+  {
+    n: 439, gate: SHARD_D, name: 'the refusal goes back to selling shelf space that may not exist',
+    file: 'splice/extract.js',
+    anchor: '      + `${yields}. Render something down on the Vault.` };',
+    to: '      + `${yields}. Render something down, or buy shelf space from the Extractor.` };',
+  },
+  {
+    n: 440, gate: SHARD_D, name: 'a shelf at its last level still tells the player to buy more',
+    file: 'splice/vault-ui.js',
+    anchor: "          ? (shelfForSale(state, content) ? copy(content, 'vault.full_buy') : copy(content, 'vault.full_last'))",
+    to: "          ? (true ? copy(content, 'vault.full_buy') : copy(content, 'vault.full_last'))",
+  },
+  {
+    n: 441, gate: SHARD_D, name: 'the walker never takes the Vault\'s way out, and seed 4242 refuses every graduation again',
+    file: 'tools/sim.js',
+    anchor: '  if (fit.fits || surplusParts(state, content).length || shelfForSale(state, content)) return null;',
+    to: '  if (fit || surplusParts(state, content).length || shelfForSale(state, content)) return null;',
+  },
+  {
+    n: 442, gate: SHARD_D, name: 'the walker clears twice what the goat needs, and eats the collection a graduation at a time',
+    file: 'tools/sim.js',
+    anchor: '  return renderDown(state, content, leastMissed(state, content, fit.short).map((t) => t.id));',
+    to: '  return renderDown(state, content, leastMissed(state, content, fit.short * 2).map((t) => t.id));',
+  },
+  {
+    n: 443, gate: SHARD_D, name: 'the walker renders parts while shelf is still for sale, and R116\'s saving rule is skipped',
+    file: 'tools/sim.js',
+    anchor: '  if (fit.fits || surplusParts(state, content).length || shelfForSale(state, content)) return null;',
+    to: '  if (fit.fits || surplusParts(state, content).length) return null;',
+  },
+  {
+    n: 444, gate: HANDLERS, name: 'every part row paints a render button and nothing listens to it',
+    file: 'splice/vault-ui.js',
+    anchor: "  root.querySelectorAll('button[data-render-part]').forEach((btn) => {",
+    to: "  root.querySelectorAll('button[data-render-nothing]').forEach((btn) => {",
+  },
+  {
+    n: 445, gate: REACH, name: 'graduation stops, and the herd a campaign ends on runs past the vault gate\'s ceiling',
+    file: 'tools/sim.js',
+    anchor: "    if (donor && extractAnimal(state, donor.id, content, now).ok) did('graduate', { species: donor.species });",
+    to: "    if (false && donor && extractAnimal(state, donor.id, content, now).ok) did('graduate', { species: donor.species });",
+  },
 ];
 
 const pristine = {};

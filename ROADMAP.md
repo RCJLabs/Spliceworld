@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**6 entries queued.** R182, R184, R186, R187, R189, R190.
+**6 entries queued.** R184, R186, R187, R189, R190, R191.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -6838,7 +6838,7 @@ triangle working, and each region genuinely asks a different question)*.
 
 ### 9.31 A vault full of treasure has no exit (R182) — found closing R116
 
-- **R182 — The Vault's only button refuses to help when it is most needed.**
+- **R182 — The Vault's only button refuses to help when it is most needed.** ✅
   Found while re-deriving R116's cascade, and it is not R116's doing: R116 is
   simply the milestone that makes the state common. `extractAnimal` refuses
   into a full vault on purpose (R91: a yield is something the player ASKED
@@ -6866,6 +6866,73 @@ triangle working, and each region genuinely asks a different question)*.
   offers a move the player can actually take; a 180-day walk on every seed
   ends with the pens inside the design ceiling the vault gate states; and the
   refusal text names something that exists.*
+
+  **Re-measured first, and half of it had moved.** On today's tree (after
+  R181's payroll and R188's hires) the dead end still happens exactly as
+  described — seed 4242 reaches a 400-part shelf on day 157 with nothing
+  `surplusParts` will offer and no shelf left to buy, and refuses every
+  graduation for the rest of the campaign (398 of 400 parts, 34 refused at
+  day 180). But it is **one seed in sixteen**, and the herd it leaves is **34
+  head, not 112**: no seed in the census ends past the 80-head ceiling.
+  The walker's job livestock and the payroll both moved since R116 measured.
+
+  **Shipped: a chosen part, by hand** — the user's pick of the entry's three
+  candidates. Every part row on the Vault carries its own render control with
+  the price on it, and when nothing is a spare the Gene Vault card lists the
+  three parts the shelf would miss least (worst grade first, the order the
+  door already renders in, now over singletons and gene-carriers too). The
+  Dex keeps the anatomy either way, because `admitParts` records it on the
+  way in. The judgement lives in `splice/shelf.js`, which is LAZY: the eager
+  budget had 12 bytes of code headroom, and nothing on the first frame asks
+  which part the shelf would miss or whether any shelf is left to buy.
+
+  **The refusal's sentence is true again**, by moving half of it. It read
+  "Render something down, or buy shelf space from the Extractor" on a shelf
+  that could not sell any more. It now reads "Render something down on the
+  Vault", which always has a control for it; the shelf half moved to the
+  Vault's full-shelf line, the one place that knows whether any shelf is for
+  sale, and it says so both ways ("…or buy shelf space above" / "…as big as
+  the building gets"). 26 bytes of eager code came OUT of `extract.js`.
+
+  **The walker takes the same way out**, by a policy written above
+  `walkMakeRoom`: duplicates first (the R91 button), then R116's rule of
+  saving for shelf while any is for sale, and only then exactly as many parts
+  as the graduation is short, least missed first. Seed 4242: **20 dead days →
+  0, and 34 head at day 180 → 20**. The other seeds traced (2026, 7, 91) are
+  unchanged on every number the trace takes, because the policy fires only at
+  the dead end.
+
+  **The height it cost, and got back.** A render button on a wrapping row
+  went onto a line of its own and took an open bay to **4,361px** (R180 read
+  4,159)
+  against a 4,200 budget. The row no longer wraps and gives its block padding
+  to the button, whose 40px floor becomes the row: **4,115**, below where it
+  started. That put a bay's first button 1px under the bay's own header, and
+  the a11y gate's 6px gutter caught it; the part list takes a 6px top margin.
+
+  *The gates.* The `shelf` block in `tools/smoke.js` BUILDS the dead end —
+  every walk the suite reads stops at dominion (~day 30) or is a saved state,
+  so R99's rule says reach it on purpose — and asks the criterion of it: the
+  Vault offers the least-missed parts on the shut screen, every row of an
+  open bay has its own control, taking the move makes the refused graduation
+  fit and costs the Dex nothing, the refusal names the Vault and not shelf
+  that does not exist, and the walker renders exactly what it is short and
+  nothing while an earlier answer exists. `tools/reach.js` now holds all
+  thirteen of its 180-day campaigns to the vault gate's herd ceiling (they
+  end on 18-20 head); the ceiling has one home, `herdCeiling` in
+  `tools/fixtures.js`, which both gates import. Breaks 436-445.
+
+- **R191 — Seed 91 waits seventy days for a $160,000 shelf.** Found by R182.
+  From day 75 to day 145 seed 91 sits on a full 260-part shelf with nothing
+  to spare while the 400-part level costs $160,000 and the bank hovers either
+  side of it; R116's rule — while shelf is for sale, save for it — holds the
+  walker there, graduations are refused throughout, and the herd climbs to
+  **73 head against the 80-head ceiling** before the shelf is finally bought.
+  The Vault offers the per-part way out the whole time; the walker is told
+  not to take it. A player would render a few parts rather than wait ten
+  weeks. *Done when: the walker weighs rendering against waiting for shelf by
+  a stated rule, seed 91's longest refused stretch is measured before and
+  after, and the census still ends every seed inside the ceiling.*
 
 ### 9.30 Three new verbs (R179–R181) — asked for directly
 

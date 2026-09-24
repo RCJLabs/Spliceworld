@@ -24,7 +24,8 @@ import { facilityCard, bindFacility } from '../ui/facility-card.js';
 import { guideForScreen } from '../ranch/onboarding.js';
 import { speciesOf, isRetired } from '../data/catalog.js';
 import { vaultPressure, surplusParts, renderDown, renderValue } from './vault.js';
-import { fmtMoney } from '../util/text.js';
+import { leastMissed, shelfForSale } from './shelf.js';
+import { fmtMoney, copy, esc } from '../util/text.js';
 
 let lastMsg = '';
 
@@ -112,15 +113,26 @@ export function renderVaultScreen(root, ctx) {
     if (known) bay(known.species).tokens.push(token);
   }
 
+  // R182 — EVERY PART CARRIES ITS OWN WAY OUT. Before this the only control
+  // here was the duplicates button, so a shelf of singletons and gene-carriers
+  // had nothing a player could press — and the refusal on the Pens told them
+  // to render something down. The price is on the button because it is the
+  // whole of the trade: the token goes, the Dex keeps the anatomy.
+  const tokenRow = (t) => {
+    const part = content.parts[t.partId];
+    const grade = gradeOf(t.grade);
+    const price = fmtMoney(renderValue(t));
+    const traits = (t.traits ?? []).map((tr) => ` <span class="grade-badge grade-apex">${content.traits[tr]?.name ?? tr}</span>`).join('');
+    return `<li><span class="token-text"><span class="grade-badge grade-${t.grade}">${grade.name}</span> ${SLOT_LABELS[part.slot]}: ${part.name}${traits} <span class="lineage">${t.donor.name} ★${t.donor.stars}</span></span>
+      <button type="button" class="render-one" data-render-part="${esc(t.id)}" aria-label="${esc(copy(content, 'vault.render_one', { part: part.name, price }))}">${renderIcon('wrench')} ${price}</button></li>`;
+  };
   const tokenRows = (tokens) => SLOTS.map((slot) => tokens
     .filter((t) => content.parts[t.partId].slot === slot)
     .sort((a, b) => gradeIndexOf(b.grade) - gradeIndexOf(a.grade))
-    .map((t) => {
-      const part = content.parts[t.partId];
-      const grade = gradeOf(t.grade);
-      const traits = (t.traits ?? []).map((tr) => ` <span class="grade-badge grade-apex">${content.traits[tr]?.name ?? tr}</span>`).join('');
-      return `<li><span class="grade-badge grade-${t.grade}">${grade.name}</span> ${SLOT_LABELS[slot]}: ${part.name}${traits} <span class="lineage">${t.donor.name} ★${t.donor.stars}</span></li>`;
-    }).join('')).join('');
+    .map(tokenRow).join('')).join('');
+  // …and when nothing is a spare, the Vault says which parts it would miss
+  // least rather than leaving the player to hunt through forty bays for them.
+  const spare = pressure.tight && !surplus.length ? leastMissed(state, content, 3) : [];
 
   // Every bay closed, at every size — no threshold, which is the part R52
   // could not have. R52 kept a small rack FLAT so a new player could see
@@ -235,7 +247,7 @@ export function renderVaultScreen(root, ctx) {
         Math.min(100, Math.round(pressure.parts / pressure.capacity.parts * 100))}%"></div></div>
       ${pressure.tight ? `<p class="pen-alert">${renderIcon('wrench')} ${
         pressure.full
-          ? 'The shelves are full. A graduation needs somewhere to go.'
+          ? (shelfForSale(state, content) ? copy(content, 'vault.full_buy') : copy(content, 'vault.full_last'))
           : `Room for ${pressure.free} more. The shelves are getting opinionated.`
       }</p>` : ''}
       ${surplus.length ? `<div class="pen-actions">
@@ -243,6 +255,8 @@ export function renderVaultScreen(root, ctx) {
           renderIcon('wrench')} Render down ${surplus.length} duplicate${surplus.length === 1 ? '' : 's'} for ${fmtMoney(surplusValue)}</button>
       </div>
       <p class="fine-print">Duplicates only, worst grade first — never the last of an anatomy and never one carrying a gene. The vat pays cash and asks nothing.</p>` : ''}
+      ${spare.length ? `<p class="fine-print">${copy(content, 'vault.spare_none')}</p>
+      <ul class="token-list">${spare.map(tokenRow).join('')}</ul>` : ''}
       ${bays || '<p class="ranch-msg">The vault echoes. Graduate someone.</p>'}
       <p class="fine-print">A vial is the whole donor — its stars and its genes. Resequencing grows that animal back${
         run ? '' : '; the vial is spent whether or not it takes'
@@ -263,6 +277,13 @@ export function renderVaultScreen(root, ctx) {
     lastMsg = renderDown(state, content, surplus.map((tok) => tok.id)).msg;
     ctx.save();
     renderVaultScreen(root, ctx);
+  });
+  root.querySelectorAll('button[data-render-part]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      lastMsg = renderDown(state, content, [btn.dataset.renderPart]).msg;
+      ctx.save();
+      renderVaultScreen(root, ctx);
+    });
   });
   root.querySelector('#reseq-cancel')?.addEventListener('click', () => {
     lastMsg = cancelResequence(state, content).msg;

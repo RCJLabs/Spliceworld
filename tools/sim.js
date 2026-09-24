@@ -1147,9 +1147,10 @@ import { ensureRanchSeeded } from '../ranch/ranch.js';
 import { tickWorld } from '../campaign/world.js';
 import { resolveBattle, incomePerDay, salvageUnit } from '../campaign/campaign.js';
 import { careAction, careStatus, buyMailOrder, buyPenUpgrade, catalogFor, isNewToDex, ageStage, upkeepPerDay, penUpgradeCost } from '../ranch/ranch.js';
-import { extractAnimal, extractChimera, avgStars } from '../splice/extract.js';
+import { extractAnimal, extractChimera, avgStars, extractionFit } from '../splice/extract.js';
 import { salvagePreview } from '../splice/extract.js';
 import { vaultPressure, surplusParts, renderDown } from '../splice/vault.js';
+import { leastMissed, shelfForSale } from '../splice/shelf.js';
 import { stableRoom, theaterGrants } from '../splice/facility.js';
 import { spliceChimera, validateSplice, trainChimera, setMoveset, moveTrainingReady } from '../splice/theater.js';
 import { TRAINING } from '../splice/chimera.js';
@@ -1587,6 +1588,28 @@ function walkHire(state, content, now, did, introduced) {
   }
 }
 
+// R182 — THE VAULT'S LAST WAY OUT, TAKEN THE WAY A PLAYER TAKES IT.
+//
+// Before R182 the Vault had no per-part control, so the walker could not do
+// what a player would: seed 4242 reached a 400-part shelf with nothing
+// `surplusParts` would offer and no shelf left to buy on day 157, and refused
+// every graduation for the rest of its 180. The policy, in the order the
+// game offers the ways out:
+//
+//   1. A yield that fits needs nothing.
+//   2. Duplicates go first — the R91 step in `walkAct` presses that button
+//      whenever the shelf is tight, so the next visit fits.
+//   3. While shelf is still for sale, R116's rule saves for it instead.
+//   4. Only then, render exactly as many parts as this graduation is short,
+//      least missed first (`leastMissed`, the same list the Vault shows).
+//      Never more: the shelf is the player's collection, and the walker takes
+//      out only what the next animal needs to fit.
+export function walkMakeRoom(state, content, donor) {
+  const fit = extractionFit(state, donor, content);
+  if (fit.fits || surplusParts(state, content).length || shelfForSale(state, content)) return null;
+  return renderDown(state, content, leastMissed(state, content, fit.short).map((t) => t.id));
+}
+
 function walkAct(state, content, now, open, opts = {}) {
   const has = (id) => open.some((i) => i.id === id);
   const lvl = (c) => levelOf(c.xp ?? 0, content);
@@ -1696,6 +1719,8 @@ function walkAct(state, content, now, open, opts = {}) {
       || (over && ageStage(a, content, now) !== 'juvenile')
       || (state.chimeras.length < 3 && ageStage(a, content, now) !== 'juvenile');
     const donor = state.ranch.stock.find(ripe);
+    const room = donor && walkMakeRoom(state, content, donor);
+    if (room?.ok) did('render', { n: room.count, paid: room.paid, chosen: true });
     if (donor && extractAnimal(state, donor.id, content, now).ok) did('graduate', { species: donor.species });
   }
   // R120 — THE RANCH LOOP, which this walker had never once run. `breed`
@@ -2372,8 +2397,10 @@ function walkAct(state, content, now, open, opts = {}) {
       .sort((a, b) => a.next.level.cost - b.next.level.cost);
     // R116 — EXCEPT WHEN THE VAULT IS FULL, in which case the game has
     // already told the player which upgrade to buy and cheapest-first is not
-    // listening. `extractionFit`'s own refusal reads "Render something down,
-    // or buy shelf space from the Extractor", and once `surplusParts` is
+    // listening. `extractionFit`'s own refusal read "Render something down,
+    // or buy shelf space from the Extractor" (R182 moved the second half onto
+    // the Vault's full-shelf line, the one place that knows whether any shelf
+    // is left to sell), and once `surplusParts` is
     // empty — every part on the shelf a singleton, which is what a board of
     // exotic fauna produces — the first half of that advice is not available
     // and the second half is the only way out.
