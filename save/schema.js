@@ -76,6 +76,8 @@ const ROW_LISTS = new Set([
   'inventory.vials', 'inventory.parts',
   'campaign.captives', 'campaign.containment', 'campaign.contested',
   'campaign.loose', 'campaign.operations',
+  // R181 — the payroll's records.
+  'staff.hired',
 ]);
 
 // R111 — SLOTS THAT HOLD ONE THING IN PROGRESS, OR NOTHING. `newGameState`
@@ -218,6 +220,24 @@ export function cleanSave(save, { limit = TEXT_LIMIT } = {}) {
     }
   };
   slots(save, '');
+
+  // 6. R181 — a hire is only as good as its three numbers. Every one of them
+  //    is multiplied into the herd's condition and the bank on every tick, so
+  //    a `"yesterday"` in `at` would turn the whole herd into NaN. Repaired to
+  //    the value that changes nothing (hired at the epoch, which the clock
+  //    reads as "on shift for the whole window", and a zero tally), and a row
+  //    with no henchman id is not a hire at all.
+  const hired = save.staff?.hired;
+  if (Array.isArray(hired)) {
+    const kept = hired.filter((r) => typeof r.id === 'string');
+    if (kept.length !== hired.length) repairs.push({ at: 'staff.hired', why: 'not-a-hire', dropped: hired.length - kept.length });
+    for (const r of kept) {
+      for (const k of ['at', 'done', 'missed']) {
+        if (!Number.isFinite(r[k])) { r[k] = 0; repairs.push({ at: `staff.hired.${k}`, why: 'not-a-number' }); }
+      }
+    }
+    save.staff.hired = kept;
+  }
 
   return { save, repairs };
 }

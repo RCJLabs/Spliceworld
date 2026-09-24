@@ -90,6 +90,9 @@ export function indexContent(raw) {
     // is NOT enough — R41's lesson, and the fourth milestone to pay it.
     missions: raw.missions ? raw.missions.missions : {},
     missionMeta: raw.missions?.tuning ?? null,
+    // R181 — the payroll, split the same way.
+    henchmen: raw.henchmen ? raw.henchmen.henchmen : {},
+    henchmenMeta: raw.henchmen?.tuning ?? null,
     // R82: the breakout's whole tuning is one flat object, so it is
     // indexed as one rather than split into a list and a meta block.
     breakoutMeta: raw.breakout ?? null,

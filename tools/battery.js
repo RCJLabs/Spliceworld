@@ -5491,12 +5491,14 @@ const BREAKS = [
     // proves the constant is read, and this one proves the SUM is.
     n: 226, gate: EMPIRE, name: 'the ledger stops adding territory and the plant, and only livestock is billed',
     file: 'ranch/ranch.js',
-    anchor: `  return stockUpkeepPerDay(state, content)
-    + chimeraUpkeepPerDay(state, content)
+    // R181 re-aimed: the wage line now follows these two, so the break
+    // deletes exactly them and leaves the payroll standing.
+    anchor: `    + chimeraUpkeepPerDay(state, content)
     + territoryUpkeepPerDay(state, content)
-    + facilityUpkeepPerDay(state, content);`,
-    to: `  return stockUpkeepPerDay(state, content)
-    + chimeraUpkeepPerDay(state, content);`,
+    + facilityUpkeepPerDay(state, content)
+`,
+    to: `    + chimeraUpkeepPerDay(state, content)
+`,
   },
   {
     // R144 — THE EXEMPTION WIDENS AND THE GATE STOPS ASKING ANYTHING. Exactly
@@ -6378,6 +6380,74 @@ const BREAKS = [
     file: 'campaign/mission.js',
     anchor: '  const c = state.campaign?.rivals?.[rivalId]?.conscripts;\n  return Array.isArray(c) ? c : [];',
     to: '  const c = state.campaign?.rivals?.[rivalId]?.conscripts;\n  return c ?? [];',
+  },
+  // R181 — the payroll. One break per rule the `hires` block adds, all in
+  // shard D because that is where the block runs.
+  {
+    // The hand's relief comes off the drift. Everything else about the hire
+    // still works — the wage is billed, the tallies count — which is the
+    // shape of the real defect: a henchman on the books who does nothing.
+    n: 423, gate: SHARD_D, name: 'the hand is paid and does nothing, and a week with a hand costs the herd the same week as without one',
+    file: 'ranch/ranch.js',
+    anchor: '      animal.condition - drift * (owned / HOUR - 24 * fed * (hand?.h.rate ?? 0))',
+    to: '      animal.condition - drift * (owned / HOUR)',
+  },
+  {
+    // The wage is billed from the day of hiring instead of from the start of
+    // the window. One call for a week pays a week; 168 calls pay 84 weeks.
+    // The settle stops being arithmetic, which is the first clause of the
+    // criterion going false without anything looking wrong on one tick.
+    n: 424, gate: SHARD_D, name: 'the wage is billed from the hire date on every tick, and a week in 168 visits costs 84 weeks',
+    file: 'ranch/ranch.js',
+    anchor: 'upkeep += wageOf(state, content, rec) * ownedMs(rec.at) / DAY;',
+    to: 'upkeep += wageOf(state, content, rec) * (now - rec.at) / DAY;',
+  },
+  {
+    // The wage stops reading the operation: R152's defect, on the payroll.
+    n: 425, gate: SHARD_D, name: 'the wage is a flat fee again, and a hand costs the county the same as a barn',
+    file: 'ranch/ranch.js',
+    anchor: 'Math.max(content.henchmenMeta?.minSize ?? 0, size)',
+    to: '(content.henchmenMeta?.minSize ?? 0)',
+  },
+  {
+    // Mopsy reaches every pen, still for free, at Gristle's price. Nothing
+    // in the engine is wrong; one number in the JSON made a hire a trap.
+    n: 426, gate: SHARD_D, name: 'the frugal hand reaches every pen, and the one who overfeeds becomes a trap with a name',
+    file: 'data/henchmen.json',
+    anchor: '"reach": 8,',
+    to: '"reach": 40,',
+  },
+  {
+    // The fussiest vet stops refusing. Now two vets at one price halve the
+    // same clocks and one of them sends a bill: strictly worse, and the
+    // quirk that made the choice is gone from the digest as well.
+    n: 427, gate: SHARD_D, name: 'the vet who refuses the unstable treats everyone, and the one who bills is simply worse',
+    file: 'ranch/ranch.js',
+    anchor: '    if (c.instability > vet.h.ceiling) {',
+    to: '    if (false) {',
+  },
+  {
+    // The report keeps the flattering half. The refusals still happen and
+    // the tally still counts them; the welcome-back card just stops saying.
+    n: 428, gate: SHARD_D, name: "the vet's report brags about the hours and leaves out who was turned away",
+    file: 'data/henchmen.json',
+    anchor: ', and turned away {missed} hours of patients as too unstable to touch.',
+    to: '.',
+  },
+  {
+    // One slot holds two hires. "Slots are few" becomes one more than said.
+    n: 429, gate: SHARD_D, name: 'a full payroll takes one more hire than it has slots for',
+    file: 'campaign/staff.js',
+    anchor: "  if (hiredOf(state).length >= slotsOf(state, content)) return copy(content, 'staff.no_slot');",
+    to: "  if (hiredOf(state).length > slotsOf(state, content)) return copy(content, 'staff.no_slot');",
+  },
+  {
+    // The load path stops repairing a hire's numbers, and a hand-edited `at`
+    // multiplies NaN into every animal on the next tick.
+    n: 430, gate: SHARD_D, name: "a hire with a string for a start date loads as it is, and the next tick turns the herd into NaN",
+    file: 'save/schema.js',
+    anchor: 'if (!Number.isFinite(r[k])) { r[k] = 0;',
+    to: 'if (false) { r[k] = 0;',
   },
 ];
 

@@ -131,6 +131,10 @@ const SHARD_OF = {
   // that wants to aim at ONE block aims at the lane its name maps to. Shard
   // a: the block builds two fixtures and runs no battles.
   capers: 'a',
+  // R181 — the henchmen gate. One walk of the care clock and a settle
+  // comparison; no browser, no battles. Shard d is the lightest lane once
+  // R180's `capers` block landed in a.
+  hires: 'd',
   // R102 — its own name, for R129's reason one entry up. Shard b: the comment
   // above calls shard a "the lightest of the four" and that went stale, which
   // is why this is a measurement rather than a quote — a 212s, b 134s, c 174s,
@@ -7138,6 +7142,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'expeditions',
     // R180 — three ways to use a rival lab without fighting it.
     'missions',
+    // R181 — the payroll: somebody to hold one duty while you are out.
+    'henchmen',
     // R82. The breakout is the rival ladder's consequence rather than a
     // second ladder: it is on the roll in its own right because it has a
     // data file, a module, a board, a launcher and a first-use moment, and
@@ -7273,6 +7279,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // rivals' one: what a caper costs and why the odds are made of Camo,
     // speed and mass is a system, and the lab it is pointed at is a target.
     'missions.json': 'missions',
+    // R181 — the payroll, taught in the War Room where the board is.
+    'henchmen.json': 'henchmen',
     'starters.json': null,
     // R62: the wire's copy is not a system with a first-use moment — it is
     // the voice every system above speaks in, met through all of them and
@@ -7350,6 +7358,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // about odds with nothing about what they cost.
     'campaign/mission.js': 'missions',
     'campaign/caper.js': 'missions',
+    // R181 — the hire board's lazy half; the clock half is in ranch/ranch.js.
+    'campaign/staff.js': 'henchmen',
     'campaign/rehab.js': 'rehab',
     'campaign/rivals.js': 'rivals',
     'ranch/breeding.js': 'breeding',
@@ -7577,7 +7587,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // it is the same wall: holding a node is what opens a region, and an
     // expedition can only go somewhere the campaign has opened. Behind the
     // wall it explains (R37), and it queues behind the notes above it.
-    ['first conquest', () => { lab.campaign.heldNodes = ['barn_perimeter']; }, ['catalog', 'jobs', 'stable', 'triangle', 'chart', 'grades', 'calendar', 'expeditions']],
+    // R181 — and the payroll, on the same card for the same reason: the hire
+    // board sits on the jobs tab, and a first block held is the first
+    // operation big enough to leave in somebody else's hands.
+    ['first conquest', () => { lab.campaign.heldNodes = ['barn_perimeter']; }, ['catalog', 'jobs', 'stable', 'triangle', 'chart', 'grades', 'calendar', 'expeditions', 'henchmen']],
     // R38's note lights here too: the grade decision is live from the first
     // animal the player owns, and every starter animal is already below its
     // own ceiling — measured, all 1,200 of them across 400 seeds.
@@ -24079,7 +24092,21 @@ if (inShard('wire')) {
 // conscript's own `tokens` reached `.filter`. A guard on untrusted input is
 // not a line to trade away for a budget; the budget is what says how many of
 // them a milestone is allowed to need without saying so out loud.
-const KB_CAP = 333;        // CODE only, measured at 332.0
+// R181 — 333 -> 334, measured at 333.99, and the MODULE_CAP note's question
+// asked out loud first: is a new verb worth a kilobyte of everybody's first
+// paint? This one is not a verb, it is a CLOCK — the hand's shift, the vet's
+// round and the wage have to run on the tick that settles a week away, and
+// that tick is eager because boot calls it. Everything that is not the clock
+// (the roster, the slots, hire and let-go, the digest's lines) went to the
+// lazy `campaign/staff.js` and `campaign/digest.js` on day one.
+//
+// Paid down before it was raised: the tallies keep two numbers rather than
+// three (the fee is derived from `done` at the henchman's own price), the
+// stock pass bills species upkeep in the same walk of the herd rather than a
+// second one, the duties ride inside `tuning` so the index needs no spread,
+// and the PROSE half was paid outright — the Task Force header gave 1.2 KB of
+// measurement back to data/notes/taskforce.md, which already said it.
+const KB_CAP = 334;        // CODE only, measured at 333.99
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.
@@ -25156,6 +25183,294 @@ if (inShard('untrusted')) {
 // about a fight the engine has stopped making. A creature sent into a city
 // is not gone either: it is on the loose board the breakout engine already
 // runs, and it can be hunted back.
+// --- R181: the end of being one person ---------------------------------
+//
+// THE GATE FIRST, AND IT IS RED ON THIS TREE ON PURPOSE.
+//
+// Every lane in this game is capped because the player is a single pair of
+// hands, and the entry's premise checked out to the letter: `laneFree`
+// reads `soloOps(state, content).length < 1` — a hard one, with no tuning
+// value behind it and nothing a player can buy to raise it. The crewed lane
+// at least grows with fit chimeras and the paperwork lane is uncapped.
+//
+// But the milestone is not really about lanes, and writing this rule is
+// what showed that. A henchman holds ONE STANDING DUTY WHILE THE PLAYER IS
+// AWAY, so the thing that changes is not how many jobs run at once — it is
+// that something happens during a week nobody opened the app.
+//
+// So the measurable is the care clock. `applyElapsed` drifts every animal's
+// condition down by `decayPerHour` for every hour it has been owned, floored
+// at `conditionFloor`, and there is no way to stop it: care is a button a
+// person presses. A week away costs the whole week, every time, and the
+// hand who "never misses a feed" is the first thing in the game that can
+// answer that.
+//
+// Asserted as a DELTA against the same week with nobody hired, not as an
+// absolute, because R65's `ownedMs` and R105's seasonal `decayScale` both
+// move the raw number and neither is this milestone's business.
+if (inShard('hires')) {
+  const { applyElapsed, ensureRanchSeeded, TUNING: RANCH_TUNING } = await import('../ranch/ranch.js');
+  const HR = 3600000;
+  const WEEK = 168 * HR;
+  const T0 = Date.UTC(2026, 0, 1);
+
+  const stocked = (seed) => {
+    const st = { ...newGameState(), seed, lastTickAt: T0 };
+    ensureRanchSeeded(st, content, T0);
+    for (const a of st.ranch.stock) { a.birthAt = T0 - 30 * 24 * HR; a.condition = 90; }
+    return st;
+  };
+  assert.ok(stocked(11).ranch.stock.length > 0, 'a fresh lab has stock to neglect');
+
+  // 1. WHAT A WEEK AWAY COSTS TODAY, so the delta below has a baseline that
+  //    is measured rather than assumed.
+  const alone = stocked(11);
+  const beforeCond = alone.ranch.stock.map((a) => a.condition);
+  applyElapsed(alone, content, T0 + WEEK);
+  const afterCond = alone.ranch.stock.map((a) => a.condition);
+  const lost = beforeCond.map((b, i) => b - afterCond[i]);
+  const worst = Math.max(...lost);
+  console.log(`   R181 a week alone: condition ${beforeCond[0]} -> ${afterCond[0].toFixed(1)}`
+    + ` (${worst.toFixed(1)} lost at worst, floor ${RANCH_TUNING.conditionFloor})`);
+  assert.ok(worst > 0,
+    'a week nobody opened the app costs the stock condition — if this is zero the'
+    + ' measurable this milestone is about does not exist and the gate below is theatre');
+
+  // 2. THE SETTLE IS ARITHMETIC, NOT A LOOP. One call for the week has to
+  //    agree with 168 hourly calls, or something is running in between and
+  //    the criterion's first clause is false. This half is GREEN today —
+  //    `applyElapsed` already works this way — and it is here so that the
+  //    henchman settle added below cannot quietly be the one that does not.
+  const stepped = stocked(11);
+  for (let h = 1; h <= 168; h += 1) applyElapsed(stepped, content, T0 + h * HR);
+  stepped.ranch.stock.forEach((a, i) => {
+    assert.ok(Math.abs(a.condition - afterCond[i]) < 0.01,
+      `a week settled in one step equals a week settled hour by hour (${a.condition} vs ${afterCond[i]})`);
+  });
+
+  // 3. AND WITH A HAND ON THE PAYROLL, THE SAME WEEK FROM THE SAME START
+  //    COSTS LESS. This was the red line on the tree before R181: nobody could
+  //    be hired, so the week above was the only week the game had.
+  const staff = await import('../campaign/staff.js').catch(() => null);
+  assert.ok(staff, 'there is a staff module at all — R181 has not shipped yet');
+  const { treatInjuries, wageOf, upkeepPerDay } = await import('../ranch/ranch.js');
+  const { awayDigest } = await import('../campaign/digest.js');
+  const roster = staff.hireRoster(content);
+  const hired = stocked(11);
+  staff.hire(hired, content, T0, roster.find((h) => h.duty === 'care').id);
+  applyElapsed(hired, content, T0 + WEEK);
+  const keptMore = hired.ranch.stock.map((a, i) => a.condition - afterCond[i]);
+  assert.ok(Math.min(...keptMore) > 0,
+    `a week with a hand on the payroll costs less than a week without one (${keptMore.map((n) => n.toFixed(1)).join(', ')})`
+    + ' — this is the whole milestone: something happens while nobody is looking, because somebody is paid to do it');
+
+  // THE FIXTURE EVERY CLAUSE BELOW SHARES, wound up so that both sides of
+  // every quirk have something to act on: more pens than the short-reach hand
+  // can get to, and an Infirmary holding patients either side of the
+  // fussiest vet's ceiling. A fixture where every quirk's cost is zero would
+  // pass "legible" on lines that only ever say the flattering half.
+  const ceilings = roster.filter((h) => h.duty === 'infirmary').map((h) => h.ceiling ?? 100);
+  const reaches = roster.filter((h) => h.duty === 'care').map((h) => h.reach ?? 0);
+  const wound = (seed) => {
+    const st = stocked(seed);
+    st.funds = 1e6;
+    const proto = st.ranch.stock[0];
+    const herd = Math.max(...reaches.filter((r) => r < 40), 4) * 2;
+    while (st.ranch.stock.length < herd) {
+      st.ranch.stock.push({ ...proto, id: `h${st.ranch.stock.length}`, lastCare: { ...proto.lastCare } });
+    }
+    const low = Math.min(...ceilings);
+    st.chimeras = [0, 1, 2, 3].map((i) => ({
+      id: `v${i}`, name: `V${i}`, frame: 'M', tokens: {}, xp: 0, createdAt: T0 - 30 * 24 * HR,
+      instability: i < 2 ? Math.max(0, low - 10) : Math.min(100, low + 10),
+      injury: { name: 'Sprain', until: T0 + 72 * HR },
+    }));
+    return st;
+  };
+  const settle = (st, to) => {
+    const since = st.lastTickAt;
+    treatInjuries(st, content, to, since);
+    applyElapsed(st, content, to);
+  };
+
+  // 4. A WEEK AWAY IS SETTLED FROM TIMESTAMPS ALONE, WITH EVERY HIRE ON DUTY.
+  //    Clause 2 proved the clock this milestone inherited; this proves the
+  //    one it added. One call for the week and 168 hourly calls land on the
+  //    same herd, the same Infirmary clocks, the same bank balance and the
+  //    same tallies — so there is nothing that has to run in between.
+  for (const h of roster) {
+    const once = wound(21);
+    const hourly = wound(21);
+    staff.hire(once, content, T0, h.id);
+    staff.hire(hourly, content, T0, h.id);
+    settle(once, T0 + WEEK);
+    for (let k = 1; k <= 168; k += 1) settle(hourly, T0 + k * HR);
+    once.ranch.stock.forEach((a, i) => assert.ok(Math.abs(a.condition - hourly.ranch.stock[i].condition) < 0.01,
+      `${h.id}: condition settles the same in one step as in 168 (${a.condition} vs ${hourly.ranch.stock[i].condition})`));
+    once.chimeras.forEach((c, i) => assert.ok(Math.abs(c.injury.until - hourly.chimeras[i].injury.until) < 1000,
+      `${h.id}: an Infirmary clock settles the same in one step as in 168`));
+    assert.ok(Math.abs(once.funds - hourly.funds) < 1,
+      `${h.id}: the week's bill is the same in one step as in 168 (${once.funds.toFixed(2)} vs ${hourly.funds.toFixed(2)})`);
+    for (const k of ['done', 'missed']) {
+      assert.ok(Math.abs(once.staff.hired[0][k] - hourly.staff.hired[0][k]) < 1e-6,
+        `${h.id}: the ${k} tally settles the same in one step as in 168`);
+    }
+  }
+  // And the game's own tick runs the vet's round — a settle nobody calls is
+  // a settle that does not exist.
+  {
+    const { tickWorld } = await import('../campaign/world.js');
+    const vet = roster.find((h) => h.duty === 'infirmary');
+    const st = wound(23);
+    staff.hire(st, content, T0, vet.id);
+    tickWorld(st, content, T0 + 6 * HR);
+    assert.ok(st.staff.hired[0].done > 0, `tickWorld runs the vet's round (${vet.id} saved ${st.staff.hired[0].done}h)`);
+  }
+
+  // 5. THE WAGE BILL TRACKS THE SIZE OF THE OPERATION — the literal R152
+  //    rule. Double the operation and the bill doubles; the clock charges
+  //    exactly what `upkeepPerDay` promises; and a hire's price is the same
+  //    function the card prints, so there is one number and not two.
+  for (const h of roster) {
+    const small = wound(31);
+    const big = wound(31);
+    big.ranch.stock.push(...big.ranch.stock.map((a, i) => ({ ...a, id: `${a.id}b${i}` })));
+    big.chimeras.push(...big.chimeras.map((c) => ({ ...c, id: `${c.id}b` })));
+    const rec = { id: h.id };
+    assert.ok(Math.abs(wageOf(big, content, rec) - 2 * wageOf(small, content, rec)) < 1e-9,
+      `${h.id}: double the operation, double the wage (${wageOf(small, content, rec)} -> ${wageOf(big, content, rec)})`);
+    assert.equal(staff.wageNow(small, content, h.id), wageOf(small, content, rec),
+      `${h.id}: the card's wage is the clock's wage`);
+
+    const base = wound(33);
+    const paid = wound(33);
+    base.chimeras = [];
+    paid.chimeras = [];
+    staff.hire(paid, content, T0, h.id);
+    const promised = upkeepPerDay(paid, content) - upkeepPerDay(base, content);
+    assert.ok(Math.abs(promised - wageOf(paid, content, rec)) < 1e-9,
+      `${h.id}: upkeepPerDay carries the wage (${promised} vs ${wageOf(paid, content, rec)})`);
+    settle(base, T0 + WEEK);
+    settle(paid, T0 + WEEK);
+    const fee = h.duty === 'care' ? paid.staff.hired[0].done * (h.fee ?? 0) : 0;
+    const charged = base.funds - paid.funds;
+    assert.ok(Math.abs(charged - (7 * wageOf(paid, content, rec) + fee)) < 0.01,
+      `${h.id}: a week away charges seven days of wage plus the quirk's own fee (${charged.toFixed(2)})`);
+  }
+
+  // 6. NO HIRE IS STRICTLY BETTER THAN ANOTHER AT THE SAME PRICE. Measured
+  //    on the engine, not read off the JSON: each hire works the same week on
+  //    the same wound-up fixture and is scored on what the duty is FOR and
+  //    what it COSTS. For two hires of one duty at one wage, each must win
+  //    something — otherwise one of them is a trap with a name.
+  const outcome = (h) => {
+    const base = wound(41);
+    const st = wound(41);
+    staff.hire(st, content, T0, h.id);
+    settle(base, T0 + 24 * HR);
+    settle(st, T0 + 24 * HR);
+    const good = h.duty === 'care'
+      ? st.ranch.stock.reduce((n, a, i) => n + a.condition - base.ranch.stock[i].condition, 0)
+      : st.chimeras.reduce((n, c, i) => n + (base.chimeras[i].injury.until - c.injury.until) / HR, 0);
+    return { good, cost: base.funds - st.funds };
+  };
+  const beats = (a, b) => a.good >= b.good && a.cost <= b.cost && (a.good > b.good || a.cost < b.cost);
+  let pairs = 0;
+  for (const a of roster) {
+    for (const b of roster) {
+      if (a.id >= b.id || a.duty !== b.duty || a.wage !== b.wage) continue;
+      pairs += 1;
+      const oa = outcome(a);
+      const ob = outcome(b);
+      assert.ok(!beats(oa, ob) && !beats(ob, oa),
+        `${a.id} and ${b.id} cost the same and neither is simply better `
+        + `(${a.id}: ${oa.good.toFixed(1)} for $${oa.cost.toFixed(0)}, ${b.id}: ${ob.good.toFixed(1)} for $${ob.cost.toFixed(0)})`);
+      // And the declared axes say the same thing, so the data cannot drift
+      // away from what the engine does with it.
+      const axes = Object.entries(content.henchmenMeta?.duties?.[a.duty]?.axes ?? {});
+      const wins = (x, y) => axes.some(([k, dir]) => (dir === 'up' ? (x[k] ?? 0) > (y[k] ?? 0) : (x[k] ?? 0) < (y[k] ?? 0)));
+      assert.ok(axes.length && wins(a, b) && wins(b, a), `${a.id} and ${b.id} each lead on one of ${a.duty}'s declared axes`);
+    }
+  }
+  assert.ok(pairs >= 1, `there is at least one pair of hires at the same price to compare (${pairs}) — none would make this vacuous`);
+
+  // 7. EVERY HENCHMAN'S QUIRK IS LEGIBLE IN THE DIGEST — BOTH HALVES. A week
+  //    away through the game's own tick, one line per hire, naming them, with
+  //    what they did AND what it cost: the money for a hire whose quirk is a
+  //    fee, the count left undone for one whose quirk is a refusal.
+  {
+    const { tickWorld, worldSnapshot } = await import('../campaign/world.js');
+    const said = [];
+    for (const h of roster) {
+      const st = wound(51);
+      staff.hire(st, content, T0, h.id);
+      const before = worldSnapshot(st, T0);
+      tickWorld(st, content, T0 + WEEK);
+      const after = worldSnapshot(st, T0 + WEEK);
+      const mine = awayDigest(before, after, WEEK, content).filter((l) => l.key.startsWith(`hire:${h.id}:`));
+      assert.equal(mine.length, 1, `${h.id}: a week away earns exactly one line (${mine.length})`);
+      const { text } = mine[0];
+      const rec = st.staff.hired[0];
+      assert.ok(text.includes(h.name), `${h.id}: the line names them — "${text}"`);
+      assert.ok(Math.floor(rec.done) > 0 && text.includes(String(Math.floor(rec.done))),
+        `${h.id}: the line says what they did — "${text}"`);
+      if ((h.fee ?? 0) > 0) {
+        assert.ok(/\$[1-9]/.test(text), `${h.id}: a quirk that costs money says how much — "${text}"`);
+      } else {
+        assert.ok(Math.floor(rec.missed) > 0 && text.includes(String(Math.floor(rec.missed))),
+          `${h.id}: a quirk that leaves work undone says how much — "${text}"`);
+      }
+      assert.ok(!/undefined|NaN|\{\w+\}/.test(text), `${h.id}: every placeholder filled — "${text}"`);
+      // Each tally moving on its own is still that henchman's line, so a
+      // week where only the refusals moved is not a silent week.
+      for (const k of ['done', 'missed']) {
+        const key = `hire:${h.id}:${k}`;
+        const lone = awayDigest(before, { ...before, [key]: before[key] + 1 }, WEEK, content);
+        assert.deepEqual(lone.map((l) => l.key), [`hire:${h.id}:done`], `${key} moving alone produces ${h.id}'s line`);
+      }
+      said.push(text);
+    }
+    console.log(`   R181 digest: ${said.join(' | ')}`);
+  }
+
+  // 8. SLOTS ARE FEW, AND ONE PER DUTY. A fresh lab has one; a second hire
+  //    is refused and says why; two of one duty is refused even with room.
+  {
+    const st = stocked(61);
+    const t = content.henchmenMeta ?? {};
+    assert.equal(staff.slotsOf(st, content), t.slots, 'a fresh lab has the starting number of slots');
+    assert.ok(t.maxSlots <= Object.keys(t.duties ?? {}).length, 'never more slots than duties — every hire holds a different job');
+    const [first, second] = roster;
+    assert.ok(staff.hire(st, content, T0, first.id).ok, 'the first hire goes through');
+    const refused = staff.hire(st, content, T0, roster.find((h) => h.duty !== first.duty).id);
+    assert.ok(!refused.ok && refused.msg, `a second hire on one slot is refused in words (${refused.msg})`);
+    st.campaign.heldNodes = Array.from({ length: 60 }, (_, i) => `n${i}`);
+    assert.equal(staff.slotsOf(st, content), t.maxSlots, 'the map opens slots, up to the cap');
+    const twin = staff.hire(st, content, T0, roster.find((h) => h.duty === first.duty && h.id !== first.id).id);
+    assert.ok(!twin.ok && twin.msg, `two hires on one duty is refused in words (${twin.msg})`);
+    assert.ok(staff.letGo(st, content, first.id).ok && staff.hiredOf(st).length === 0, 'and a hire can be let go');
+    assert.ok(second, 'the roster has more than one henchman');
+  }
+
+  // 9. A HIRE IS UNTRUSTED INPUT (R114). Its three numbers are multiplied
+  //    into every animal's condition and the bank on every tick, so a string
+  //    in `at` would turn the whole herd into NaN. The load path repairs it
+  //    rather than carrying it — and a row with no henchman id is dropped,
+  //    because it is not a hire at all.
+  {
+    const { cleanSave } = await import('../save/schema.js');
+    const st = stocked(71);
+    st.staff.hired = [{ id: roster[0].id, at: 'yesterday', done: null, missed: 3 }, 7, { at: T0 }];
+    cleanSave(st);
+    assert.equal(st.staff.hired.length, 1, `a row that is not a hire is dropped (${JSON.stringify(st.staff.hired)})`);
+    assert.ok(['at', 'done', 'missed'].every((k) => Number.isFinite(st.staff.hired[0][k])),
+      `every number on a hire is a number after the load (${JSON.stringify(st.staff.hired[0])})`);
+    applyElapsed(st, content, T0 + WEEK);
+    assert.ok(st.ranch.stock.every((a) => Number.isFinite(a.condition)) && Number.isFinite(st.funds),
+      'and a week settles on it without a NaN anywhere');
+  }
+}
+
 if (inShard('capers')) {
   const { missionTuning, conscriptsOf, tickMissions } =
     await import('../campaign/mission.js');

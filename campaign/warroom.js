@@ -37,7 +37,7 @@ import {
   regionStates, threatGen, nextThreatRung, incomePerDay, incomeSuspended,
   regionBonusPerDay, regionComplete, nodeById, regionOfNode,
 } from './campaign.js';
-import { upkeepPerDay, stockUpkeepPerDay, chimeraUpkeepPerDay, TUNING } from '../ranch/ranch.js';
+import { upkeepPerDay, stockUpkeepPerDay, chimeraUpkeepPerDay, wageOf, TUNING } from '../ranch/ranch.js';
 import { liveWaves } from '../battle/engine.js';
 import { rivalOf } from '../data/catalog.js';
 import { expeditionCrew } from './expedition.js';
@@ -194,6 +194,8 @@ export function econRow(state, content) {
       chimeras: Math.round(chimeraUpkeepPerDay(state, content)),
       territory: Math.round(territoryUpkeepPerDay(state, content)),
       facility: Math.round(facilityUpkeepPerDay(state, content)),
+      // R181 — the payroll, priced per head of the operation.
+      wages: Math.round((state.staff?.hired ?? []).reduce((n, rec) => n + wageOf(state, content, rec), 0)),
     },
     notoriety: state.campaign.notoriety,
     gen: threatGen(state, content),

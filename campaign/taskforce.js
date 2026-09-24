@@ -1,28 +1,7 @@
 // R87 — THE COMPLIANCE TASK FORCE, and a ceiling on notoriety.
 //
-// Measured before building, over six 180-day walks: the county falls on
-// median day 35, every facility track is maxed by median day 28 — BEFORE
-// dominion, so from day 29 there is nothing left to buy, ever — and the
-// remaining 145 days are 5.1 fights a day won 97% of the time, 96% of them
-// at a flat 100%. Funds reach a median $864k at +$5,128 a day. Notoriety
-// reaches ~3,975 against a threat ladder whose top rung is 600: for 150
-// days it was a number that only went up and nothing read.
-//
-// §8 risk 5 named the director, variants and contestation as the content
-// engines for endless mode. Measured, they produce a SCHEDULE and not a
-// second act: every one of those fights is a formality.
-//
-// THE ANSWER WAS ALREADY WRITTEN, IN THE LADDER'S OWN LAST LINE. Threat
-// Generation 4 announces "they have stopped sending police and started
-// sending procurement." So procurement is what arrives. Notoriety is capped
-// at that top rung — you cannot be more wanted than maximally wanted — and
-// past it the State comes for the RANCH rather than for a node.
-//
-// WHY THE RANCH. Every existing threat costs a node, a purse or an
-// opportunity, and by dominion the player holds every node and has more
-// money than they can spend, so none of them is a stake. The barn is the
-// one thing the endgame player still cares about, and it has never once
-// been in danger.
+// Why it exists, what it was measured against and how it was tuned are in
+// data/notes/taskforce.md; this header keeps only what the code relies on.
 //
 // R9'S TWO RULES, UNCHANGED, BECAUSE THEY ARE WHY CONTESTATION IS FAIR:
 //

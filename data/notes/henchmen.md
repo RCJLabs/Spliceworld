@@ -1,0 +1,13 @@
+# data/henchmen.json
+
+The payroll (ROADMAP R181). Every lane in this game was capped by the player being one pair of hands, and nothing happened during a week nobody opened the app except decay. A henchman holds ONE standing duty and works it on the elapsed clock: `applyElapsed` runs the hand's shift and bills the wages, and `treatInjuries` runs the vet's round before the campaign tick, so it treats what was in the Infirmary when the window opened and never an injury that came home later in the same window. Both are LINEAR IN TIME, which is the whole of the first clause of the criterion: a week settled in one call equals a week settled in 168, and nothing runs in between.
+
+WHAT A HIRE COSTS. `wage` is dollars per day PER HEAD OF THE OPERATION (stock + chimeras + held blocks, floored at `tuning.minSize`), so the bill grows with the empire it staffs. That is R152's lesson taken literally: a cost that does not grow is a cost that stops mattering. Measured on the walk, an operation is ~10 heads on day 5 and ~55 from day 30 on, so a wage of 3 is ~$30/day on day 5 and ~$170/day at dominion. `fee` is the quirk's own running cost and is billed on top: the hand's is per meal given, the vet's per hour spent treating.
+
+SLOTS ARE FEW. `tuning.slots` to start, one more per `nodesPerSlot` held blocks, never past `maxSlots`, and one hire per duty. The first choice is therefore a hand OR a vet, which is a real decision rather than a formality.
+
+NO HIRE IS STRICTLY BETTER THAN ANOTHER AT THE SAME PRICE. Each duty declares its axes and which direction is better (`tuning.duties.<duty>.axes`); two hires of one duty at one `wage` must each win on at least one axis. Gristle and Mopsy tend at the same rate: Gristle reaches every pen and overfeeds at $2 a meal, Mopsy costs nothing extra and only reaches the front eight. Doc Sutures and Nurse Gauze both halve the clock: Doc is free and refuses anything over 40 instability (a third of a late roster measured on the day-180 walk), Gauze treats anything and bills $20 an hour, about the Infirmary's own rush price. The smoke gate measures this on the engine rather than reading these numbers, so a sixth hire that quietly dominates goes red.
+
+EVERY QUIRK IS LEGIBLE IN THE DIGEST. Each record keeps two tallies, `done` and `missed`; `worldSnapshot` reports them per hire in whole units and `awayDigest` prints one line per hire whose tallies moved, filled from that henchman's `report` template, with `{billed}` derived from `done` at the henchman's own fee. `report` must name both sides of the quirk.
+
+Adding a henchman to an existing duty is a JSON object here. A new DUTY is an engine edit, the way a new keyword mechanic is.

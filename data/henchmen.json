@@ -1,0 +1,78 @@
+{
+  "tuning": {
+    "slots": 1,
+    "maxSlots": 2,
+    "nodesPerSlot": 12,
+    "minSize": 4,
+    "duties": {
+      "care": {
+        "name": "Herd care",
+        "axes": {
+          "rate": "up",
+          "reach": "up",
+          "fee": "down"
+        },
+        "order": 1
+      },
+      "infirmary": {
+        "name": "Infirmary rounds",
+        "axes": {
+          "rate": "up",
+          "ceiling": "up",
+          "fee": "down"
+        },
+        "order": 2
+      }
+    }
+  },
+  "henchmen": {
+    "gristle": {
+      "name": "Gristle",
+      "title": "Ranch Hand",
+      "duty": "care",
+      "wage": 3,
+      "rate": 0.7,
+      "reach": 40,
+      "fee": 2,
+      "quirk": "Never misses a feed. Reliably overfeeds.",
+      "report": "{name} never missed a feed: {done} meals across the herd, and {billed} of extra feed nobody ordered.",
+      "order": 1
+    },
+    "mopsy": {
+      "name": "Mopsy",
+      "title": "Ranch Hand",
+      "duty": "care",
+      "wage": 3,
+      "rate": 0.7,
+      "reach": 8,
+      "fee": 0,
+      "quirk": "Feeds to the gram. Only ever reaches the front eight pens.",
+      "report": "{name} fed the front pens to the gram: {done} meals, not a crumb over. The back row went {missed} meals without her.",
+      "order": 2
+    },
+    "sutures": {
+      "name": "Doc Sutures",
+      "title": "Vet",
+      "duty": "infirmary",
+      "wage": 4,
+      "rate": 2,
+      "ceiling": 40,
+      "fee": 0,
+      "quirk": "Halves the Infirmary clock. Refuses anything over 40 instability.",
+      "report": "{name} cut {done} hours off the Infirmary clock, and turned away {missed} hours of patients as too unstable to touch.",
+      "order": 3
+    },
+    "gauze": {
+      "name": "Nurse Gauze",
+      "title": "Vet",
+      "duty": "infirmary",
+      "wage": 4,
+      "rate": 2,
+      "ceiling": 100,
+      "fee": 20,
+      "quirk": "Halves the Infirmary clock for anything with a pulse. Bills by the hour.",
+      "report": "{name} cut {done} hours off the Infirmary clock, however unstable the patient, and sent a bill for {billed}.",
+      "order": 4
+    }
+  }
+}
