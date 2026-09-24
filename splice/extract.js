@@ -81,7 +81,7 @@ export function extractionFit(state, animal, content) {
   const fit = vaultFit(state, content, yields);
   return { ...fit, yields, msg: fit.fits ? null
     : `The vault holds ${fit.room} more part${fit.room === 1 ? '' : 's'} and ${animal.name} yields `
-      + `${yields}. Render something down, or buy shelf space from the Extractor.` };
+      + `${yields}. Render something down on the Vault.` };
 }
 
 // Graduate a stock animal into a DNA vial + one token per species part.

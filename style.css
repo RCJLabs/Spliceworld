@@ -1818,6 +1818,29 @@ footer {
 .vault-species > .bay-head .lineage { flex: 1 1 0; min-width: 0; }
 .vault-species .token-list { margin-top: 0; }
 .vault-species .token-list li { background: var(--panel); font-size: 0.75rem; }
+/* R182 — a part's own render control. Pushed to the row's far end so the
+   price lines up down a bay; muted, because it is the quiet way out and not
+   the thing the row is about. The row does not wrap and gives up its block
+   padding to the button, whose 40px floor is then the row's height: a
+   wrapping row put the button on a line of its own and cost an open bay
+   ~200px, which the height gate caught at 4,361 against 4,200. */
+.token-list li:has(> .render-one) { flex-wrap: nowrap; padding-block: 0; }
+/* …which puts a bay's first render button 1px under the bay's own header
+   button, and the a11y gate's 6px gutter between controls caught it. */
+.vault-species .token-list:has(> li > .render-one) { margin-top: 6px; }
+.token-text { flex: 1 1 0; min-width: 0; padding-block: 4px; }
+.render-one {
+  flex: none;
+  margin-left: auto;
+  padding: 4px 9px;
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
 /* R52 — a vial fold ranks by its best donor the way a token fold ranks by
    its best grade. Borrowing .grade-badge for stars would have been a lie
    about what the number is. */

@@ -178,6 +178,9 @@ const SHARD_OF = {
   // AudioContext and some string work. Shard d, beside the other cheap ones
   // — and NOT `voice`, which R109's wire pools took one entry up.
   timbre: 'd',
+  // R182 — the Vault's way out. One built fixture and a few screen paints;
+  // no walk, no battles. Shard d, beside the other cheap ones.
+  shelf: 'd',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -7369,6 +7372,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'splice/extract.js': 'grades',
     'splice/grades.js': 'grades',
     'splice/vault.js': 'vault',
+    'splice/shelf.js': 'vault',
     'splice/facility.js': 'facility',
     // R128 — the card that draws a track, on whichever screen that track's
     // data names. Same system as the module above it, same note.
@@ -12538,6 +12542,142 @@ assert.equal(warp.ranch.stock[0].condition, condBefore, 'negative elapsed is a n
     const css = readFileSync(join(root, 'style.css'), 'utf8');
     assert.ok(css.includes('.list-group {'), 'the heading has a style');
     assert.ok(!css.includes('.dex-group'), 'and no Dex-only name survives it');
+  }
+}
+
+// --- R182: a full shelf with nothing to spare still has a way out.
+//
+// R91 made shelf space a decision and wrote the refusal's sentence: "Render
+// something down, or buy shelf space from the Extractor." Both halves could
+// be unavailable at once — `surplusParts` spares one of every anatomy and
+// anything carrying a gene, and the Extractor stops selling at 400 — and on
+// seed 4242 they were, from day 157 to the end, with every graduation refused.
+// The Vault had no per-part control, so the walker could not do what a player
+// would, and the player could not do it either.
+//
+// R99's rule: a gate has to REACH the state the defect lives in. Every walk
+// this suite reads either stops at dominion (~day 30) or is a saved day-180
+// state, so the dead end is BUILT here — the Extractor at its last level, a
+// shelf of singletons and gene-carriers, and a Prime goat that will not fit.
+if (inShard('shelf')) {
+  const { extractionFit } = await import('../splice/extract.js');
+  const { surplusParts, vaultCapacity, renderDown, renderValue } = await import('../splice/vault.js');
+  const { leastMissed, shelfForSale } = await import('../splice/shelf.js');
+  const { renderVaultScreen } = await import('../splice/vault-ui.js');
+  const { walkMakeRoom } = await import('./sim.js');
+  const { fmtMoney } = await import('../util/text.js');
+  const stub = () => ({ innerHTML: '', querySelector: () => null, querySelectorAll: () => [],
+    classList: { add() {}, remove() {} } });
+  const vaultHtml = (st) => {
+    const root = stub();
+    renderVaultScreen(root, { state: st, content, now: () => t0, save: () => {} });
+    return root.innerHTML;
+  };
+  const extractor = content.facility.extractor.levels;
+  const trait = Object.keys(content.traits)[0];
+  const partIds = Object.keys(content.parts);
+  // `level` picks the Extractor's level, and so the shelf; the shelf is then
+  // filled to the brim with one of every anatomy first and gene-carrying
+  // repeats after, so `surplusParts` has nothing it is allowed to offer. A
+  // repeat is always a grade BELOW its original: `surplusParts` keeps the
+  // best of each anatomy, and a gene-carrier that outranked its original
+  // would make the plain original the spare (the first draft did exactly
+  // that, and found 38).
+  const shelf = (level) => {
+    const st = { ...newGameState(), seed: 182, funds: 500 };
+    st.facility = { ...(st.facility ?? {}), extractor: level };
+    const cap = vaultCapacity(st, content).parts;
+    const n = partIds.length;
+    st.inventory.parts = Array.from({ length: cap }, (_, i) => {
+      const k = i % n;
+      const g = k < cap - n ? 1 + (k % (GRADES.length - 1)) : (k * 7) % GRADES.length;
+      return { id: `s${i}`, partId: partIds[k], grade: GRADES[i >= n ? g - 1 : g].id,
+        traits: i >= n ? [trait] : [], donor: { name: 'Donor', species: 'goat', stars: 3 } };
+    });
+    st.ranch.stock = [createAnimal(st, 'goat', content, t0 - (content.species.goat.growthHours.prime + 1) * HOUR)];
+    return st;
+  };
+  const top = extractor.reduce((m, l) => Math.max(m, l.level), 0);
+  const dead = shelf(top);
+  const goat = dead.ranch.stock[0];
+
+  // 1. THE FIXTURE IS THE DEAD END, or every rule below passes on a shelf
+  //    with a way out and proves nothing.
+  const fit = extractionFit(dead, goat, content);
+  assert.equal(dead.inventory.parts.length, vaultCapacity(dead, content).parts, 'the shelf is full');
+  assert.equal(surplusParts(dead, content, 999).length, 0, 'and has nothing the duplicates button may take');
+  assert.equal(shelfForSale(dead, content), null, 'and no track sells any more shelf');
+  assert.ok(!fit.fits && fit.short > 0, `and the goat's graduation is refused (${fit.short} short)`);
+
+  // 2. THE CRITERION. The Vault offers a move the player can actually take:
+  //    the parts the shelf would miss least, each with its own control, on
+  //    the shut screen — no fold to find first.
+  const html = vaultHtml(dead);
+  const offered = [...html.matchAll(/data-render-part="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(offered.length > 0, 'a full shelf with nothing to spare offers parts to render, by hand');
+  const least = leastMissed(dead, content, offered.length).map((t) => t.id);
+  assert.deepEqual(offered, least, 'and they are the ones the shelf would miss least, in that order');
+  const worst = Math.min(...dead.inventory.parts.map((t) => GRADES.findIndex((g) => g.id === t.grade)));
+  for (const id of offered) {
+    const t = dead.inventory.parts.find((x) => x.id === id);
+    assert.equal(GRADES.findIndex((g) => g.id === t.grade), worst, `${id} is from the worst grade on the shelf`);
+    assert.ok(html.includes(fmtMoney(renderValue(t))), `and its row says what the vat pays for it (${fmtMoney(renderValue(t))})`);
+  }
+  // …and taking it works: the move frees exactly what it claims, and the
+  // goat that was refused graduates.
+  {
+    const st = structuredClone(dead);
+    const going = leastMissed(st, content, fit.short).map((t) => t.id);
+    for (const id of going) assert.ok(renderDown(st, content, [id]).ok, `rendering ${id} by hand is accepted`);
+    assert.ok(extractionFit(st, st.ranch.stock[0], content).fits, `${fit.short} parts later the graduation fits`);
+    assert.equal(st.dex.parts.length, dead.dex.parts.length, 'and the Dex forgot nothing it had recorded');
+  }
+
+  // 3. EVERY PART ROW CARRIES ITS OWN CONTROL, not only the short list: the
+  //    entry's own words were "the Vault screen has no per-part control at
+  //    all". One bay opened, every row in it answers.
+  {
+    const species = content.parts[dead.inventory.parts[0].partId].species;
+    const st = { ...dead, ui: { collapsed: { [`vault-${species}`]: false }, pages: { [`vault-bay-${species}`]: 40 } } };
+    const inBay = dead.inventory.parts.filter((t) => content.parts[t.partId].species === species).length;
+    const rows = (vaultHtml(st).match(/data-render-part=/g) ?? []).length;
+    assert.equal(rows, inBay + offered.length, `an open ${species} bay gives each of its ${inBay} parts a control`);
+  }
+
+  // 4. THE REFUSAL NAMES SOMETHING THAT EXISTS. It sends the player to the
+  //    Vault, which now always has a control for it; the shelf half of R91's
+  //    sentence moved to the Vault's own line, which is the one place that
+  //    knows whether any shelf is left — and says so both ways.
+  assert.ok(/Render something down on the Vault/.test(fit.msg), `the refusal points at the Vault (${fit.msg})`);
+  assert.ok(!/shelf space/.test(fit.msg), 'and no longer sells shelf that may not exist');
+  assert.ok(html.includes(copy(content, 'vault.full_last')), 'a maxed shelf says it is as big as it gets');
+  assert.ok(!html.includes(copy(content, 'vault.full_buy')), 'and does not offer shelf for sale');
+  {
+    const smaller = shelf(top - 1);
+    assert.ok(shelfForSale(smaller, content), 'one level down, shelf is still for sale');
+    const h = vaultHtml(smaller);
+    assert.ok(h.includes(copy(content, 'vault.full_buy')), 'and the full-shelf line names both ways out');
+    assert.ok(/data-render-part=/.test(h), 'with the per-part way out still on screen');
+  }
+
+  // 5. THE WALKER TAKES THE SAME WAY OUT, by the policy written above
+  //    `walkMakeRoom`: exactly what the graduation is short, least missed
+  //    first — and nothing at all while an earlier answer exists.
+  {
+    const st = structuredClone(dead);
+    const expect = leastMissed(st, content, fit.short).map((t) => t.id);
+    const r = walkMakeRoom(st, content, st.ranch.stock[0]);
+    assert.ok(r?.ok && r.count === fit.short, `the walker renders exactly the ${fit.short} it is short (got ${r?.count})`);
+    assert.ok(expect.every((id) => !st.inventory.parts.some((t) => t.id === id)), 'and they are the least missed');
+    assert.ok(extractionFit(st, st.ranch.stock[0], content).fits, 'and the graduation then fits');
+    const buyable = shelf(top - 1);
+    assert.equal(walkMakeRoom(buyable, content, buyable.ranch.stock[0]), null,
+      'while shelf is for sale the walker saves for it (R116) rather than rendering');
+    const spare = structuredClone(dead);
+    spare.inventory.parts[spare.inventory.parts.length - 1].traits = [];
+    assert.ok(surplusParts(spare, content).length > 0, 'a shelf with one plain duplicate has a spare');
+    assert.equal(walkMakeRoom(spare, content, spare.ranch.stock[0]), null,
+      'and the duplicates button, not a chosen part, is the first answer');
   }
 }
 

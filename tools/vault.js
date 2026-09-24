@@ -39,7 +39,7 @@
 //    So a full vault and a full stable are the brake, not the clock. That
 //    took a wrong diagnosis to learn — see tools/battery.js, where break 164
 //    is retired with the numbers.
-import { walkedSave } from './fixtures.js';
+import { walkedSave, herdCeiling } from './fixtures.js';
 import { tickBreakouts } from '../campaign/breakout.js';
 import { rivalList } from '../campaign/rivals.js';
 import { newGameState } from '../save/save.js';
@@ -138,7 +138,7 @@ const BOUNDS = {
   // ratio 2026 finishes on 38, so it would have sat green through both of
   // the seeds that breached. That is R158's problem in a second gate and is
   // filed there rather than papered over here.
-  'ranch.stock':          { max: () => TUNING.penMaxCapacity * 2,
+  'ranch.stock':          { max: herdCeiling,
                             by: 'twice the paddock — a design ceiling on a herd that stopped turning over, not a mechanism' },
   'ranch.eggs':           { max: () => TUNING.penMaxCapacity, by: 'penMaxCapacity — an egg holds a pen slot' },
   'news':                 { max: 40,  by: 'WIRE_KEEP in campaign/wire.js' },

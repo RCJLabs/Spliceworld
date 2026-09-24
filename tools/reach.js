@@ -52,7 +52,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadSimContent, runSim, sampleBuilds, makeSimChimera } from './sim.js';
-import { walkedSave } from './fixtures.js';
+import { walkedSave, herdCeiling } from './fixtures.js';
 import { GRADES } from '../splice/grades.js';
 import { diagnose, forecast, bandFor } from '../battle/forecast.js';
 // R177 — the variant lines are a species question, so ask the module that owns it.
@@ -280,8 +280,26 @@ const TOTAL_PARTS = Object.keys(content.parts).length;
       // that never mounts one is not a policy, and the species below would
       // then be unreachable for a reason no other number here would show.
       trips: save.campaign?.expeditionCount ?? 0,
+      herd: save.ranch.stock.length,
     });
   }
+  // R182 — AND EVERY ONE OF THEM ENDS WITH ITS PENS INSIDE THE CEILING THE
+  // VAULT GATE STATES. That gate walks seed 2026 alone (R158's note on it
+  // says one seed is not a sample); these are the thirteen full 180-day
+  // campaigns the suite already has, so the check costs no walk. What it
+  // guards is the herd a refused graduation leaves behind: seed 4242 ended on
+  // 34 head with all 34 refused before the Vault had a per-part way out, and
+  // R116 measured 112. Every seed, not a mean — a herd that stopped turning
+  // over is a defect in the one campaign it happens to.
+  for (const r of per) {
+    if (r.herd > herdCeiling()) {
+      fails.push(`seed ${r.seed} ends day 180 with ${r.herd} animals in the pens, past the vault gate's`
+        + ` design ceiling of ${herdCeiling()} — graduation has stopped turning the herd over`);
+    }
+  }
+  if (REPORT) console.log(`
+herd at day 180: ${per.map((r) => `${r.seed}:${r.herd}`).join(' ')} (ceiling ${herdCeiling()})`);
+
   // The average campaign, not the middle one — see `REACH_FLOOR`.
   const mean = (xs) => xs.reduce((n, x) => n + x, 0) / xs.length;
   const meanParts = mean(per.map((r) => r.parts));
