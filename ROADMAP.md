@@ -6737,8 +6737,11 @@ triangle working, and each region genuinely asks a different question)*.
   standard error at most 45), and a per-seed line at double it for the
   runaway R135 actually measured, which is hundreds of splices.
 
-  Breaks 431-435. The finding it could not fix is filed as R190: Doc Sutures
-  is never the walker's vet.
+  Breaks 431-435. The full battery the ceiling change required read 423 of
+  427: R187's three known misses, and break 276, still aimed at R181 after it
+  shipped — re-aimed at R184, and `--anchors` now flags an append-style break
+  whose target already carries the append. The finding it could not fix is
+  filed as R190: Doc Sutures is never the walker's vet.
 
 - **R190 — Doc Sutures is never the walker's vet.** Found by R188. On every
   seed that has been walked — the four smoke seeds and a sixteen-seed census

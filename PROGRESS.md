@@ -41,7 +41,13 @@ floor: the design number on the average, double it per seed for the runaway.
   coverage before cost. Either the policy should weigh refused hours against
   Gauze's fee, or the ceiling is too low; R190 measures which.
 - The splice-ceiling change is a change to an existing gate's logic, so the
-  full battery ran this session (see the PR for its reading).
+  full battery ran: **4h38m** in four chunks (21 / 74 / 116 / 67 minutes),
+  423 of 427 caught. Three misses are R180's known 372 / 388 / 389, already
+  queued as R187 and unchanged. The fourth was mine from R181: break 276 still
+  pointed at R181, whose tick made its patch a no-op — exactly what its own
+  note warned "whoever ships R181" about. Re-aimed at R184 and caught; and
+  `--anchors` now flags any append-style break whose target already carries
+  the append, so it cannot go silent a third time.
 
 ### Next session's first task
 

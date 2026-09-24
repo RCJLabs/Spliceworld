@@ -77,8 +77,11 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (~4h55m, and R185 is the FIFTH reading and the FIRST time
-this number held. R118 measured 390 breaks in four `--only` chunks at 25m,
+**The full battery (~4h40m. R188 is the SIXTH reading, and it disagrees with
+the two below it: 427 breaks at 21m, 74m, 116m and 67m — 278 minutes, with 31
+more breaks than R185 and chunk 3 thirty-five minutes cheaper. The rule below
+says believe the third, so plan on 4h40m. R185 was the FIFTH reading and the
+FIRST time this number held. R118 measured 390 breaks in four `--only` chunks at 25m,
 81m, 152m and 65m — 323 minutes. R185 ran 396 breaks on the same box at 25m,
 82m, 151m and 67m — 325 minutes, every chunk within a minute of its
 predecessor. Both include four baselines, so one uninterrupted run is a

@@ -4420,12 +4420,18 @@ const BREAKS = [
     // anchor is silent. 277 escaped it by patching the LIST instead of a named
     // entry; this rule cannot, because the failure it models is exactly "an
     // ENTRY says shipped while the queue still lists it", so it has to name
-    // one. Whoever ships R181: move this to another entry §9.0 still queues,
-    // and do not wait for `--anchors` to remind you, because it will not.
+    // one.
+    //
+    // R188 — AND IT HAPPENED AGAIN. The line above said "whoever ships R181:
+    // move this"; R181 shipped and nobody did, and R188's full battery read
+    // 276 MISSED for the reason R116 already wrote down. It now aims at R184,
+    // the longest-queued entry, and `--anchors` has learned to say so when an
+    // append-style break's target already carries the append — so the next
+    // milestone that ships R184 is told the day it ticks it.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: '- **R181 — Henchmen, and the end of being one person.**',
-    to: '- **R181 — Henchmen, and the end of being one person.** ✅',
+    anchor: '- **R184 — The room inside `main`.**',
+    to: '- **R184 — The room inside `main`.** ✅',
   },
   {
     // The other direction: the count beside the list stops matching the list.
@@ -6570,6 +6576,14 @@ if (process.argv.includes('--anchors')) {
     }
     const hits = src.split(b.anchor).length - 1;
     if (hits !== 1) stale.push(`${b.n}: ${hits} matches in ${b.file} — ${b.name}`);
+    // R188 — A LIVE ANCHOR WITH A DEAD MEANING. A break that APPENDS to its
+    // anchor (a tick after a title, a clause after a line) is a no-op once
+    // the file already carries what it appends: 276 did exactly that from the
+    // day its target shipped until a full battery noticed, and this check is what the note on
+    // it said could not exist.
+    else if (b.to.startsWith(b.anchor) && b.to.length > b.anchor.length && src.includes(b.to)) {
+      stale.push(`${b.n}: ${b.file} already says what this break appends — its target has moved — ${b.name}`);
+    }
   }
   cleanup();
   if (stale.length) {
