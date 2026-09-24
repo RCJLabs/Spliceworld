@@ -281,7 +281,17 @@ const BUDGET = {
   // gate had never loaded it. The card is 238px and 61 words, measured as the
   // difference on the same 41-species spread; both numbers here are the old
   // budget plus exactly that card.
-  vault:          { folded: 2800,  tallest: 4440, opens: 20 },
+  // R187 — 2800 -> 3300 shut, AND THIS IS NOT A RE-RATCHET: it is the
+  // first number in this table that no campaign can move. It is the WORST
+  // CASE the pass at the end of this file builds and measures, rather than
+  // the day-180 walk plus headroom: every species on the shelf, tight and
+  // full, with spares and without, a resequence running, at all four
+  // Extractor levels, which is sixteen shelves. The tallest is level 4, full,
+  // no spares: 3,265px. The walk reads 2,720 and now sits under a bound
+  // instead of beside a guess. The slack is 35px, less than one bay (81px),
+  // so a species shipping goes red here ON PURPOSE and the milestone that
+  // adds it raises this by exactly one bay. The open half is still a reading.
+  vault:          { folded: 3300,  tallest: 4440, opens: 20 },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
   // R117 — 1100 -> 1150, and `dex:genes` below by the same 50, which is the
   // SHARED CHROME rather than the tab: the Dex's six-tab bar goes to two
@@ -506,7 +516,9 @@ const WORDS = {
   // of summary lines. 333 parts against 338, so nothing the player holds grew.
   // R186: 375 -> 440, measured at 405. R182's least-missed card, 61 words —
   // see the height note above. The old budget plus exactly that card.
-  vault:          { folded: 440,  open: 5000 },
+  // R187: 440 -> 600, the same bound in words: the worst case reads 582
+  // (level 4, full, no spares). Slack 18, under one bay's summary line.
+  vault:          { folded: 600,  open: 5000 },
   'dex:roster':   { folded: 400,  open: 400 },
   'dex:variants': { folded: 200,  open: 200 },
   // R136: 550/550 -> 150 shut (measured 78) and 600 open (measured 532).
@@ -1071,6 +1083,126 @@ try {
     if (!walked.has(id)) {
       problems.push(`${id} declares a height budget and the walk never reached it`
         + ` — the bar offered ${[...walked].join(', ') || 'nothing'}`);
+    }
+  }
+
+  // R187 — THE VAULT'S SHUT HEIGHT, STATED AS A BOUND AND MEASURED ON ITS
+  // WORST CASE. Every other budget in this table is a reading of the day-180
+  // walk plus headroom, and the Vault's was the clearest casualty of that:
+  // R152, R180 and R186 each moved it because the walk left a different shelf
+  // behind (a bay more, a bay less, R182's card appearing), never because the
+  // screen changed. A reading of a fixture is a question about the fixture.
+  //
+  // The shut Vault is finite and every term of it is known: one summary bay
+  // per species on the shelf, the pressure line, R182's least-missed card
+  // (only when the shelf is tight AND nothing is a spare), the resequence
+  // card while a run is going, and the Extractor's own card, which differs
+  // by level. So the worst case can be BUILT rather than waited for: every
+  // species on the shelf, part and vial, at the top grade; filled to tight
+  // and to full with no spares (trait carriers are never spares, so the
+  // duplicates carry one); a resequence running; at every Extractor level.
+  // The budget above is that maximum plus stated slack, and the day-180 walk
+  // can no longer move it: the only things that can are a species shipping
+  // (one more bay) or the screen itself changing.
+  //
+  // WHAT WOULD MAKE IT BLIND AGAIN: a new shut-screen element this builder
+  // does not know to switch on (a fifth card, a new alert), which is why the
+  // pass checks it reached every state it claims, and why a new element on
+  // this screen owes this builder a line. Not covered on purpose: a guide
+  // open on the screen (the fixture reads them all, as every row here does)
+  // and the message card after a tap, which is one line and not an arrival.
+  const worstVault = [];
+  {
+    const { vaultCapacity } = await import('../splice/vault.js');
+    const { startResequence } = await import('../splice/resequencer.js');
+    const { GRADES } = await import('../splice/grades.js');
+    const top = GRADES[GRADES.length - 1].id;
+    const levels = (simContent.facility?.extractor?.levels ?? []).map((l) => l.level);
+    const partIds = Object.keys(simContent.parts);
+    const partSpecies = [...new Set(partIds.map((id) => simContent.parts[id].species))];
+    const species = [...new Set([...partSpecies, ...Object.keys(simContent.species)])];
+    const trait = Object.keys(simContent.traits ?? {})[0];
+    // The least-missed card's own sentence, read off the copy file, is how
+    // this pass knows R182's card is on screen.
+    const spareLine = JSON.parse(readFileSync(join(root, 'data', 'copy.json'), 'utf8')).vault?.spare_none ?? '';
+    if (!spareLine) problems.push('the worst-case Vault could not read the least-missed card\'s sentence to look for');
+    const donor = (sp) => ({ name: 'Worst Case', species: sp, stars: 5, extractedAt: PINNED_NOW - 3600000 });
+    const vialOf = (sp, i) => ({ id: `wv${i}`, species: sp, donorName: 'Worst Case', stars: 5,
+      extractedAt: PINNED_NOW - 3600000, potential: { hp: 5, power: 5, armor: 5, speed: 5, stamina: 5 }, genotype: {} });
+    if (levels.length < 2) problems.push(`the worst-case Vault found ${levels.length} Extractor levels to build at`);
+    // TWO SHELVES, because R182's card and the render-duplicates row are
+    // exclusive and either can be the taller: `spares` holds plain duplicates,
+    // so the Vault offers to render them; `none` gives every token a gene, so
+    // nothing is a spare and the least-missed card shows instead. The first
+    // draft gave only the duplicates a gene, and `surplusParts` kept the gene
+    // carrier as the one of its anatomy and called the plain original a spare
+    // — so the card never showed at the top two levels, which the check below
+    // exists to notice.
+    for (const level of levels) {
+      for (const fill of ['tight', 'full']) {
+        for (const shelf of ['none', 'spares']) {
+          const w = structuredClone(save);
+          w.facility = { ...(w.facility ?? {}), extractor: level };
+          w.funds = 1e9;
+          w.resequencer = null;
+          w.ui = { ...(w.ui ?? {}), collapsed: Object.fromEntries(
+            Object.entries(w.ui?.collapsed ?? {}).filter(([k]) => !k.startsWith('vault-'))) };
+          const cap = vaultCapacity(w, simContent);
+          const want = fill === 'full' ? cap.parts : Math.floor(cap.parts * 0.85);
+          // One of each species first, so the smallest shelf still shows every
+          // bay; then every other anatomy once (or, for `spares`, duplicates).
+          const firsts = partSpecies.map((sp) => partIds.find((id) => simContent.parts[id].species === sp));
+          const order = shelf === 'none' ? [...firsts, ...partIds.filter((id) => !firsts.includes(id))] : firsts;
+          const parts = [];
+          for (let i = 0; parts.length < want; i++) {
+            const partId = order[i % order.length];
+            parts.push({ id: `wp${i}`, partId, grade: top, traits: shelf === 'none' ? [trait] : [],
+              donor: donor(simContent.parts[partId].species) });
+          }
+          const vials = Array.from({ length: cap.vials }, (_, i) => vialOf(species[i % species.length], i));
+          w.inventory = { ...(w.inventory ?? {}), parts, vials };
+          const run = startResequence(w, vials[vials.length - 1].id, simContent, PINNED_NOW);
+          if (!run.ok) problems.push(`the worst-case Vault (level ${level}, ${fill}, ${shelf}) could not start a resequence: ${run.msg}`);
+          await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(w))})`);
+          await send('Page.navigate', { url });
+          await sleep(400);
+          if (!(await settle('main > .screen:not([hidden])', { deadline: 20000 })).settled) {
+            stalled(`vault@${level}`, 'the worst-case save never booted');
+          }
+          await show('vault', { id: `vault@${level}/${fill}/${shelf}` });
+          const seen = JSON.parse(await evaluate(`JSON.stringify((() => {
+            const scr = document.querySelector('#screen-vault');
+            return { bays: scr?.querySelectorAll('.vault-species').length ?? 0,
+              open: scr?.querySelectorAll('.vault-species.is-open').length ?? 0,
+              render: !!scr?.querySelector('[data-render-surplus]'),
+              text: scr?.innerText ?? '' };
+          })())`));
+          const reached = {
+            'every bay': seen.bays >= Math.min(species.length, parts.length + vials.length),
+            'every bay shut': seen.open === 0,
+            ...(shelf === 'none'
+              ? { 'the least-missed card': !!spareLine && seen.text.includes(spareLine.slice(0, 40)) }
+              : { 'the render-duplicates row': seen.render }),
+          };
+          for (const [what, ok] of Object.entries(reached)) {
+            if (!ok) problems.push(`the worst-case Vault (level ${level}, ${fill}, ${shelf}) never reached ${what}`
+              + ` (${seen.bays} bays, ${seen.open} open) — the bound is only as good as the case it measured`);
+          }
+          worstVault.push({ level, fill, shelf, px: await heightOf('#screen-vault'), words: await wordsOf('#screen-vault'), bays: seen.bays });
+        }
+      }
+    }
+    const px = Math.max(0, ...worstVault.map((r) => r.px));
+    const words = Math.max(0, ...worstVault.map((r) => r.words));
+    if (px > BUDGET.vault.folded) {
+      problems.push(`the Vault's worst case is ${px}px shut, over its ${BUDGET.vault.folded}px bound`);
+    }
+    if (words > WORDS.vault.folded) {
+      problems.push(`the Vault's worst case says ${words} words shut, over its ${WORDS.vault.folded}-word bound`);
+    }
+    if (REPORT) {
+      for (const r of worstVault) console.log(`  vault worst case · extractor ${r.level} · ${r.fill.padEnd(5)} · ${r.shelf.padEnd(6)} ${String(r.px).padStart(5)}px  ${String(r.words).padStart(4)} words  ${r.bays} bays`);
+      console.log('');
     }
   }
 } finally {

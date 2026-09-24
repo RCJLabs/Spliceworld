@@ -3924,6 +3924,12 @@ const BREAKS = [
     // `flex: 0 0 auto`, so without the wrap the row ran 86px past its card at
     // 150%. It fits perfectly at 100%, which is why one reading at one size on
     // one screen reported this layout as clean.
+    // R187 — MISSED in R180's rot check and caught in R186's, with nothing
+    // about the rule changed: whether the day-180 walk left a held node whose
+    // row overflows was the whole answer. It is now held by a11y's 1h2 pass,
+    // which holds EVERY node in each of the three Spar states and reads 154px
+    // on this break ("no-one fit") where the walk's lap reads 86. BLIND AGAIN
+    // IF the Spar button grows a fourth state 1h2 does not build.
     n: 372, gate: A11Y, name: 'a held node row stops wrapping, and runs off the card at 150% text',
     file: 'style.css',
     anchor: '  flex-wrap: wrap;\n  justify-content: space-between;\n  align-items: center;\n  gap: 8px;\n  padding: 8px 9px;',
@@ -4105,6 +4111,12 @@ const BREAKS = [
     // fell from 411 distinct phrasings to 381, under R109's floor of 400.
     // The daily line is what pays that back, so a gate that watched only
     // the board would never know the wire depended on it.
+    // R187 — MISSED in R180's rot check and again in R186's full battery:
+    // the county says 446 phrasings with the line and 423 without it, and the
+    // floor is 400. It is now held where the line is written — a week on a
+    // retainer files eight, a second visit the same day none — in the
+    // Operations block, which runs in every shard. BLIND AGAIN IF a contract
+    // starts filing its line by some route other than `settleContracts`.
     n: 388, gate: SHARD_D, name: 'the retainer stops filing its daily line, and the county runs out of things to say',
     file: 'campaign/operations.js',
     anchor: '    if (headline) news.push(headline);\n  }\n  c.saidOn = day;',
@@ -4120,6 +4132,12 @@ const BREAKS = [
     // here so the next shift in that sample is not what re-finds it: every
     // other reader in the game goes through `rivalRecord`, which defaults a
     // missing or junk record, and this one now does too.
+    // R187 — caught in R186's battery by a lottery with 12% odds: the fuzz's
+    // 200 draws over 560 paths land a `null` on a rival record with p = 6.4e-4
+    // each. It is now held by smoke's 6d, which junks every record map a
+    // day-180 save carries, at a real key and at one nobody names, and fails
+    // on this break with the fuzz switched off. BLIND AGAIN IF a save stops
+    // carrying its records as an id-keyed map (467 holds the detector).
     n: 389, gate: SHARD_B, name: 'the guide reads the rival map raw, and one junk record stops the Ranch rendering',
     file: 'ranch/onboarding.js',
     anchor: '  rivalBeaten: (state, content) => rivalStatus(state, content).some((r) => r.record.defeats > 0),',
@@ -5345,12 +5363,13 @@ const BREAKS = [
     // stopped opening, which is why 198 went MISSED the first time.
     // R143 moved `tallest` 4100 -> 4120 (the shelf summarises a different
     // spread), so the anchor follows the number it sits beside, and R186
-    // moved it again for R182's least-missed card. What the break aims at is
-    // `opens`, which is untouched.
+    // moved it again for R182's least-missed card. R187 restated it as a
+    // bound measured on the worst case, so it should now move only when a
+    // species ships. What the break aims at is `opens`, which is untouched.
     n: 199, gate: HEIGHT, name: 'the height gate stops asking whether a folding screen still opens',
     file: 'tools/height.js',
-    anchor: '  vault:          { folded: 2800,  tallest: 4440, opens: 20 },',
-    to: '  vault:          { folded: 2800,  tallest: 4440 },',
+    anchor: '  vault:          { folded: 3300,  tallest: 4440, opens: 20 },',
+    to: '  vault:          { folded: 3300,  tallest: 4440 },',
   },
   {
     // R137 — the five rows that point at the Ranch go back to navigating to
@@ -6735,6 +6754,56 @@ const BREAKS = [
     file: 'tools/wide.js',
     anchor: "  const BOOTED = 'main > .screen:not([hidden])';",
     to: "  const BOOTED = 'main';",
+  },
+  // R187 — THE GATES THAT MEASURE A FIXTURE INSTEAD OF A BOUND. Each rule
+  // below was rewritten to BUILD the state it guards rather than wait for the
+  // day-180 walk to produce it, and each of these proves the rewrite holds
+  // on a state the walk does not reach.
+  {
+    // THE VAULT'S BOUND SEES WHAT THE WALK CANNOT. The day-180 shelf has
+    // nothing spare, so it never shows the render-duplicates row; only the
+    // worst-case pass's `spares` shelf does. A row that starts listing every
+    // duplicate it offers adds sixty token lines there and none on the walk,
+    // so the day-180 budget stays green and the bound is the only witness.
+    // BLIND AGAIN IF the worst-case pass stops building a `spares` shelf.
+    n: 465, gate: HEIGHT, name: 'the render-duplicates row lists every duplicate, on a shelf the day-180 walk never holds',
+    file: 'splice/vault-ui.js',
+    anchor: '      <p class="fine-print">Duplicates only, worst grade first — never the last of an anatomy and never one carrying a gene. The vat pays cash and asks nothing.</p>` : \'\'}',
+    to: '      <p class="fine-print">Duplicates only, worst grade first — never the last of an anatomy and never one carrying a gene. The vat pays cash and asks nothing.</p><ul class="token-list">${surplus.map(tokenRow).join(\'\')}</ul>` : \'\'}',
+  },
+  {
+    // THE HELD-ROW PASS OPENS WHAT IT MEASURES. A held row inside a shut
+    // region card is in the DOM with no box, CONTAINED skips it, and the first
+    // draft of this pass counted every row while measuring none. The pass now
+    // counts rows with a box, so shutting the cards is a note, not a pass.
+    // BLIND AGAIN IF the count goes back to reading the DOM rather than the
+    // screen.
+    n: 466, gate: A11Y, name: 'the held-row worst case leaves every region card shut and measures rows with no box',
+    file: 'tools/a11y.js',
+    anchor: "            ...Object.fromEntries(Object.keys(worstContent.regions ?? {}).map((id) => [`region:${id}`, false])) } };",
+    to: "            ...Object.fromEntries(Object.keys(worstContent.regions ?? {}).map((id) => [`region:${id}`, true])) } };",
+  },
+  {
+    // THE RECORD-MAP PASS HAS TO FIND A MAP. If its detector stops matching,
+    // it junks nothing and passes, which is exactly the lottery it replaced
+    // wearing a deterministic face. The count is asserted, so it cannot.
+    // BLIND AGAIN IF a save carries its records in some shape other than an
+    // id-keyed object; the note in smoke's 6d says which.
+    n: 467, gate: SHARD_B, name: 'the record-map pass finds no map to junk, and passes on nothing',
+    file: 'tools/smoke.js',
+    anchor: '        if (vals.length && vals.every(isRecord)) maps.push(at);',
+    to: '        if (vals.length && vals.every((v) => !isRecord(v))) maps.push(at);',
+  },
+  {
+    // A MONTH AWAY BURIES THE WIRE. The retainer's line is once a day and
+    // capped, because a player back after two months should hear that the
+    // arrangement ran, not fifty-three copies of it. Nothing on the walk is
+    // ever away that long, so only the long-absence assertion sees the cap.
+    // BLIND AGAIN IF that assertion's absence shrinks under the cap.
+    n: 468, gate: SHARD_B, name: 'a long absence files a ledger line for every day away and buries the wire',
+    file: 'campaign/operations.js',
+    anchor: '  for (let d = last + 1; d <= day && news.length < CONTRACT_LINES_MAX; d++) {',
+    to: '  for (let d = last + 1; d <= day; d++) {',
   },
 ];
 
