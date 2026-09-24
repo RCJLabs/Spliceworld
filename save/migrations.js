@@ -22,6 +22,13 @@
 // anything needing content/RNG (e.g. starter herd) happens on boot via
 // seeded flags (see ranch.ensureRanchSeeded).
 export const migrations = {
+  // R181 — the payroll arrives EMPTY. Nobody is hired on a player's behalf:
+  // a wage the player never agreed to is a bill, not a henchman.
+  62: (save) => {
+    save.staff ??= {};
+    save.staff.hired ??= [];
+    return save;
+  },
   // R180 — the mission slot, and the two places a live save can now grow a
   // creature it did not have. `conscripts` and `setback` are NOT seeded here:
   // they hang off a rival's record, which is created on first contact, and

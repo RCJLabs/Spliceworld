@@ -156,16 +156,25 @@ export function applyElapsed(state, content, now, since = null) {
   // R105 — the season scales the drift. The floor is untouched, so a season
   // still cannot break an animal (R65's promise, one multiplier later).
   const drift = TUNING.decayPerHour * seasonOf(state, content, now).decayScale;
-  for (const animal of state.ranch.stock) {
+  // R181 — a hand takes `rate` of the drift off the first `reach` pens.
+  const hand = onDuty(state, content, 'care');
+  let upkeep = 0;
+  state.ranch.stock.forEach((animal, i) => {
+    const owned = ownedMs(animal.birthAt);
+    const on = hand ? ownedMs(Math.max(hand.rec.at, animal.birthAt ?? 0)) / DAY : 0;
+    const fed = i < hand?.h.reach ? on : 0;
     animal.condition = Math.max(
       TUNING.conditionFloor,
-      animal.condition - drift * (ownedMs(animal.birthAt) / HOUR)
+      animal.condition - drift * (owned / HOUR - 24 * fed * (hand?.h.rate ?? 0))
     );
-  }
-  let upkeep = 0;
-  for (const animal of state.ranch.stock) {
-    upkeep += speciesOf(content, animal.species).upkeepPerDay * (ownedMs(animal.birthAt) / DAY);
-  }
+    upkeep += speciesOf(content, animal.species).upkeepPerDay * (owned / DAY);
+    if (hand) {
+      hand.rec.done += fed;
+      hand.rec.missed += on - fed;
+      upkeep += fed * hand.h.fee;
+    }
+  });
+  for (const rec of state.staff?.hired ?? []) upkeep += wageOf(state, content, rec) * ownedMs(rec.at) / DAY;
   for (const chimera of state.chimeras ?? []) {
     upkeep += chimeraUpkeep(chimera, content) * (ownedMs(chimera.createdAt) / DAY);
   }
@@ -452,5 +461,35 @@ export function upkeepPerDay(state, content) {
   return stockUpkeepPerDay(state, content)
     + chimeraUpkeepPerDay(state, content)
     + territoryUpkeepPerDay(state, content)
-    + facilityUpkeepPerDay(state, content);
+    + facilityUpkeepPerDay(state, content)
+    + (state.staff?.hired ?? []).reduce((n, rec) => n + wageOf(state, content, rec), 0);
+}
+
+// R181 — the payroll. See ROADMAP R181 and data/notes/henchmen.md.
+export function onDuty(state, content, duty) {
+  const rec = state.staff?.hired?.find((r) => content.henchmen?.[r.id]?.duty === duty);
+  return rec && { h: content.henchmen[rec.id], rec };
+}
+
+export function wageOf(state, content, rec) {
+  const size = state.ranch.stock.length + (state.chimeras?.length ?? 0) + (state.campaign?.heldNodes?.length ?? 0);
+  return (content.henchmen?.[rec.id]?.wage ?? 0) * Math.max(content.henchmenMeta?.minSize ?? 0, size);
+}
+
+export function treatInjuries(state, content, now, since) {
+  const vet = onDuty(state, content, 'infirmary');
+  const from = Math.max(since ?? now, vet?.rec.at ?? now);
+  const dt = now - from;
+  for (const c of dt > 0 ? state.chimeras ?? [] : []) {
+    const left = (c.injury?.until ?? 0) - from;
+    if (left <= 0) continue;
+    if (c.instability > vet.h.ceiling) {
+      vet.rec.missed += Math.min(left, dt) / HOUR;
+      continue;
+    }
+    const on = Math.min(dt, left / vet.h.rate);
+    c.injury.until = Math.round(c.injury.until - (vet.h.rate - 1) * on);
+    vet.rec.done += (vet.h.rate - 1) * on / HOUR;
+    state.funds = Math.max(0, state.funds - vet.h.fee * on / HOUR);
+  }
 }

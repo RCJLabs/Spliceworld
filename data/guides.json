@@ -927,6 +927,28 @@
           "default": 0
         }
       ]
+    },
+    {
+      "id": "henchmen",
+      "screen": "battle",
+      "order": 75,
+      "icon": "handshake",
+      "title": "Somebody to mind the shop",
+      "body": "A henchman takes ONE standing job and works it on the clock, whether you open the app or not: a hand slows the herd's slide while you are out, a vet halves the Infirmary clock. Nobody is simply better. Every hire has a quirk that costs you something, and the welcome-back card says what they did and what they left undone. Wages are priced per head of the operation, so the bill grows with the empire. Slots are few: one to start, one more as the map grows.",
+      "reachable": [
+        {
+          "path": "campaign.heldNodes",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "staff.hired",
+          "min": 1,
+          "default": 0
+        }
+      ]
     }
   ]
 }

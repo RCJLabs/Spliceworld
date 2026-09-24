@@ -52,6 +52,7 @@ import { createBattle } from './flown.js';
 import { recordingRoot, installDom, memoryStorage, fakeEvent, attrsOfFire, dataAttrsIn } from './domstub.js';
 import { moduleFiles } from './scopecheck.js';
 import { stripComments } from './source.js';
+import { hire, hireRoster } from '../campaign/staff.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const HOUR = 3600000;
@@ -234,6 +235,12 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
       const retainer = contractList(content)[0];
       if (retainer) signContract(s, retainer.id, content, now);
     }
+
+    // R181 — one hire on the books and a slot still open, so the payroll
+    // paints BOTH verbs: `data-staff-fire` exists only for somebody hired and
+    // `data-staff-hire` only for somebody who could be. Hired through the
+    // real `hire`, for the reason the visitor below is imported for real.
+    hire(s, content, now, hireRoster(content).find((h) => h.duty === 'care').id);
 
     // R108 — a visitor signed in at the gate, so the War Room paints its
     // Answer and Show-it-out buttons. Built by exporting one of the fixture's

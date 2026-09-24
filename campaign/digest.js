@@ -15,6 +15,8 @@
 // "nothing happened" rows, no fixed order of headings with blanks in them —
 // a digest that always says the same twelve things is the wire again.
 
+import { fill } from '../util/text.js';
+
 // Six hours. The ROADMAP asks for "over six hours"; the acceptance criterion
 // asks for "never under an hour", and six satisfies both. Time, not movement:
 // an hour away already moves funds on every save measured, so a rule keyed on
@@ -99,7 +101,7 @@ const LINES = [
 // because of, and "the wire moved" is not news. `tick` is the repaint
 // heartbeat R104 added, not an event.
 
-export function awayDigest(before, after, dtMs, _content) {
+export function awayDigest(before, after, dtMs, content) {
   if (!(dtMs >= AWAY_MIN_MS) || !before || !after) return [];
   const lines = [];
   for (const { key, say } of LINES) {
@@ -108,8 +110,32 @@ export function awayDigest(before, after, dtMs, _content) {
     if (a === b) continue;
     lines.push({ key, delta: b - a, text: say(b - a, a, b, after) });
   }
-  return lines;
+  return lines.concat(staffLines(before, after, content));
 }
+
+// R181 — ONE LINE PER HIRE WHOSE TALLIES MOVED, in that henchman's own words
+// from data/henchmen.json, so both sides of the quirk are on the card: what
+// they did (`done`), what they left undone (`missed`), and what it cost
+// (`billed`, which is `done` at the henchman's own fee and so is not stored
+// twice). A retired henchman is skipped rather than printed as an id: the
+// digest is for people, and the save still settles without them.
+const staffLines = (before, after, content) => {
+  const out = [];
+  for (const key of Object.keys(after)) {
+    const m = /^hire:(.+):done$/.exec(key);
+    const h = m && content?.henchmen?.[m[1]];
+    if (!h?.report) continue;
+    const miss = `hire:${m[1]}:missed`;
+    const done = after[key] - (before[key] ?? 0);
+    const missed = (after[miss] ?? 0) - (before[miss] ?? 0);
+    if (!done && !missed) continue;
+    // The vet's fee is by the hour spent treating, which is the hours saved
+    // over the speed-up it bought; the hand's is by the meal.
+    const perDone = h.duty === 'infirmary' ? (h.fee ?? 0) / Math.max(1e-9, (h.rate ?? 2) - 1) : (h.fee ?? 0);
+    out.push({ key, delta: done, text: fill(h.report, { name: h.name, done, missed, billed: money(done * perDone) }) });
+  }
+  return out;
+};
 
 // How long the player was away, phrased the way a person would say it. Used
 // for the card's heading; separate from the lines so the shell can show a

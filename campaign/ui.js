@@ -46,6 +46,7 @@ import {
 } from './expedition.js';
 import { findsFor, findsBeyond, expeditionOdds, startExpedition } from './outfit.js';
 import { missionTuning, activeMission, missionCandidates } from './mission.js';
+import { hireRoster, slotsOf, nextSlotAt, hiredOf, hireBlock, hire, letGo, wageNow } from './staff.js';
 import {
   missionsFor, missionHours, missionReadyAt, missionRemainingMs,
   recallMission, missionOdds, missionTargets, startMission, missionAptitude,
@@ -135,7 +136,7 @@ function warSubtabBar(state) {
 function upkeepBreakdown(upkeep, parts) {
   const named = [
     ['stock', parts?.stock], ['stable', parts?.chimeras],
-    ['garrisons', parts?.territory], ['plant', parts?.facility],
+    ['garrisons', parts?.territory], ['plant', parts?.facility], ['wages', parts?.wages],
   ].filter(([, v]) => v > 0);
   if (named.length < 2) return `after ${fmtMoney(upkeep)} upkeep`;
   return `after ${fmtMoney(upkeep)} upkeep — ${named.map(([k, v]) => `${fmtMoney(v)} ${k}`).join(', ')}`;
@@ -497,7 +498,7 @@ function renderMap(root, ctx) {
 
   const views = {
     map: regions,
-    jobs: `${expeditionCard(state, ctx, t)}${missionCard(state, ctx, t)}${jobsCard(state, ctx, t)}`,
+    jobs: `${staffCard(state, ctx)}${expeditionCard(state, ctx, t)}${missionCard(state, ctx, t)}${jobsCard(state, ctx, t)}`,
     labs: `
       ${releaseCard}
       ${dossier}
@@ -1080,6 +1081,49 @@ function missionCard(state, ctx, t) {
     </section>`;
 }
 
+// R181 — THE PAYROLL. First on the tab because it is the one card here that
+// keeps working after the app is closed. Every row prints the quirk and the
+// wage at TODAY's size, from the same function the clock bills with, and a
+// refusal says what would change it (R161) instead of greying a button.
+function staffCard(state, ctx) {
+  const { content } = ctx;
+  const roster = hireRoster(content);
+  if (!roster.length) return '';
+  const hired = hiredOf(state);
+  const next = nextSlotAt(state, content);
+  const row = (h, action) => `
+      <div class="op-row">
+        <div><strong>${esc(h.name)}</strong> &middot; ${esc(h.title ?? '')}<br>
+        <span class="fine-print">${esc(h.quirk ?? '')}</span><br>
+        <span class="fine-print">${copy(content, 'staff.wage', { wage: fmtMoney(wageNow(state, content, h.id)) })}${action.tally ?? ''}</span></div>
+        ${action.html}
+      </div>`;
+  const rows = roster.map((h) => {
+    const rec = hired.find((r) => r.id === h.id);
+    if (rec) {
+      const vars = { done: Math.floor(rec.done ?? 0), missed: Math.floor(rec.missed ?? 0) };
+      return row(h, {
+        tally: ` &middot; ${h.duty === 'infirmary' ? copy(content, 'staff.tally_infirmary', vars) : copy(content, 'staff.tally_care', vars)}`,
+        html: `<button type="button" data-staff-fire="${h.id}">${copy(content, 'staff.let_go_button')}</button>`,
+      });
+    }
+    const block = hireBlock(state, content, h.id);
+    return row(h, {
+      html: block
+        ? `<span class="locked-tag">${esc(block)}</span>`
+        : `<button type="button" data-staff-hire="${h.id}">${copy(content, 'staff.hire')}</button>`,
+    });
+  }).join('');
+  return `
+    <section class="card jobs-card">
+      <h3>${renderIcon('handshake')} ${copy(content, 'staff.heading')}</h3>
+      <p class="fine-print">${copy(content, 'staff.card_blurb')}</p>
+      <p class="fine-print">${copy(content, 'staff.slots', { used: hired.length, slots: slotsOf(state, content) })}${
+    next ? ` ${copy(content, 'staff.slot_more', { nodes: next })}` : ''}</p>
+      ${rows}
+    </section>`;
+}
+
 function jobsCard(state, ctx, t) {
   const { content } = ctx;
   const jobs = boardOps(content);
@@ -1295,6 +1339,20 @@ function bindJobs(root, ctx, redraw) {
   root.querySelectorAll('button[data-abort]').forEach((btn) => {
     btn.addEventListener('click', () => {
       lastAftermath = abortOperation(state, content, btn.dataset.abort, ctx.now()).msg;
+      ctx.save();
+      redraw();
+    });
+  });
+  root.querySelectorAll('button[data-staff-hire]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      lastAftermath = hire(state, content, ctx.now(), btn.dataset.staffHire).msg;
+      ctx.save();
+      redraw();
+    });
+  });
+  root.querySelectorAll('button[data-staff-fire]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      lastAftermath = letGo(state, content, btn.dataset.staffFire).msg;
       ctx.save();
       redraw();
     });

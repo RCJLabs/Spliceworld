@@ -14,7 +14,7 @@
 // clock. DOM-free, and the harness walks the campaign through it too, so a
 // tick in the browser and a tick in the walk are the same tick.
 
-import { applyElapsed } from '../ranch/ranch.js';
+import { applyElapsed, treatInjuries } from '../ranch/ranch.js';
 import { tickVat } from '../splice/chaos.js';
 import { tickResequencer } from '../splice/resequencer.js';
 import { ensureTemperaments } from '../splice/temperament.js';
@@ -46,6 +46,8 @@ export function tickWorld(state, content, now) {
   // it necessary is the one that arrives holding 9,451 tokens.
   const consolidated = consolidateVault(state, content);
   if (consolidated) emitNews(state, content, 'rendered', consolidated);
+  // R181 — before the campaign tick: the vet treats what the window found.
+  treatInjuries(state, content, now, since);
   // Income first, so the one clamp in applyElapsed sees the whole ledger.
   tickCampaign(state, content, now, since);
   applyElapsed(state, content, now, since);
@@ -160,7 +162,14 @@ export function worldSnapshot(state, now = state?.lastTickAt ?? 0) {
   }
   const counting = (r.eggs?.length ?? 0) + (state?.vat ? 1 : 0) + (state?.resequencer ? 1 : 0)
     + settling + (c.contested?.length ?? 0);
+  // R181 — each hire's tallies, in whole units.
+  const staff = {};
+  for (const h of state?.staff?.hired ?? []) {
+    staff[`hire:${h.id}:done`] = Math.floor(h.done ?? 0);
+    staff[`hire:${h.id}:missed`] = Math.floor(h.missed ?? 0);
+  }
   return {
+    ...staff,
     funds: Math.round(state?.funds ?? 0),
     notoriety: Math.round(c.notoriety ?? 0),
     heldNodes: c.heldNodes?.length ?? 0,
