@@ -429,7 +429,22 @@ const REPORT = process.argv.includes('--report');
 // restored and R116 kept. The next milestone to want this should re-measure
 // before it types a number, because the lesson of R112 is that half of a
 // raise can be invisible drift.
-const FIRST_PAINT_KB = 1121;
+// R180 — 1121 -> 1136, measured at 1127, and re-measured before typing it as
+// the note above asks. The six kilobytes are content, not code, and the
+// itemisation matters because R112's lesson is that half a raise can be
+// invisible drift: data/missions.json is 1.8, the thirty-six mission copy
+// lines are 2.4, the four news events are 0.9, and the guide, the Yearbook
+// row and the note registry are the rest.
+//
+// missions.json stays in CORE rather than moving LATE, which was the obvious
+// dodge. R81's split is "what things ARE" against "what they LOOK LIKE", and
+// a mission's odds and risks are definitional — the tick reads them to name
+// what happened. Buying six kilobytes of first paint by putting a definition
+// behind the geometry fetch would be gaming this gate rather than passing it.
+//
+// The slack is nine kilobytes again, which is what R169 asked for, R112
+// restored and R116 kept.
+const FIRST_PAINT_KB = 1136;
 
 // R169 — AND IT STAYS AT 1034, measured at 1016. Every previous milestone
 // either raised this number or brought it down to sit just above the

@@ -5340,8 +5340,8 @@ const BREAKS = [
     // break aims at is `opens`, which is untouched.
     n: 199, gate: HEIGHT, name: 'the height gate stops asking whether a folding screen still opens',
     file: 'tools/height.js',
-    anchor: '  vault:          { folded: 2560,  tallest: 4140, opens: 20 },',
-    to: '  vault:          { folded: 2560,  tallest: 4140 },',
+    anchor: '  vault:          { folded: 2560,  tallest: 4200, opens: 20 },',
+    to: '  vault:          { folded: 2560,  tallest: 4200 },',
   },
   {
     // R137 — the five rows that point at the Ranch go back to navigating to
@@ -6280,6 +6280,104 @@ const BREAKS = [
     file: 'tools/sim.js',
     anchor: '    const spare = bench.slice(0, Math.max(0, bench.length - fullTeam()));',
     to: '    const spare = bench.slice(0, Math.max(0, bench.length - fullTeam() - 99));',
+  },
+  // R180 — the mission board. One break per rule the milestone added, and
+  // every one of them aims at a line that would look like a reasonable edit
+  // to somebody who had not read the note.
+  {
+    n: 413, gate: SHARD_A, name: 'a conscript is restored rather than re-derived, and a caught creature fights with numbers the engine has retired',
+    file: 'campaign/rivals.js',
+    // A MULTI-LINE ANCHOR, because the single-line one did not bite. The
+    // first cut inserted `powerScale: 1` beside `name:` — earlier in the
+    // same object literal than the real `powerScale,` key, so the later one
+    // won and the break was a no-op that reported MISSED. `      powerScale,`
+    // on its own appears twice in this file, so the anchor carries enough of
+    // the conscript's call to be unique.
+    anchor: "      name: taken.name || 'Reassigned Specimen',\n      frame: taken.frame,\n      tokens,\n      powerScale,",
+    to: "      name: taken.name || 'Reassigned Specimen',\n      frame: taken.frame,\n      tokens,\n      powerScale: 1,",
+  },
+  {
+    n: 414, gate: SHARD_A, name: 'the lab forgets what it took, and a sabotage that cost you a creature costs them nothing',
+    file: 'campaign/rivals.js',
+    anchor: '  for (const [n, taken] of conscriptsOf(state, rival.id).entries()) {',
+    to: '  for (const [n, taken] of [].entries()) {',
+  },
+  {
+    n: 415, gate: SHARD_A, name: 'renewal hands the specimen back, and the loudest mission in the game costs nothing',
+    file: 'campaign/caper.js',
+    anchor: "  if (mission.alwaysSpends) fate = 'released';",
+    to: "  if (false) fate = 'released';",
+  },
+  {
+    n: 416, gate: SHARD_A, name: 'armour stops cancelling camouflage, and a plated bruiser is as quiet as a chameleon',
+    file: 'campaign/caper.js',
+    anchor: "  const camo = hidden ? clamp01(camoParts / Math.max(1, a.camoCeil)) : 0;",
+    to: "  const camo = clamp01(camoParts / Math.max(1, a.camoCeil));",
+  },
+  {
+    n: 417, gate: SHARD_A, name: 'the mass scale goes back to the guess, and every creature in the game reads zero on a third of the blend',
+    file: 'data/missions.json',
+    // Aimed at the CEILING, not the floor. R180's first cut aimed this at
+    // massFloor and the break was MISSED: real builds run 88 to 216, so with
+    // the ceiling still at 165 the term kept discriminating and the gate was
+    // right not to complain. 68 is the number from the pre-measurement guess,
+    // and it is the one that put every creature in the game under the floor
+    // and read zero for all of them.
+    anchor: '      "massCeil": 165',
+    to: '      "massCeil": 68',
+  },
+  {
+    n: 418, gate: SHARD_A, name: 'the outcome is rolled at the tick instead of sealed at launch, and a reload re-rolls a job that went badly',
+    file: 'campaign/mission.js',
+    anchor: '  const out = run.outcome ?? {};',
+    to: '  const out = {};',
+  },
+  // R180, second pass — the four rules the first pass did not have.
+  {
+    // The walker goes back to scoring odds per hour, which is arithmetically
+    // incapable of picking anything but the shortest run of the shortest
+    // mission. Two of three missions become unreachable and the new reach
+    // rule in the `empire` block says so. This is the break that did not
+    // exist while the defect was live, which is the whole point of writing it.
+    n: 419, gate: SHARD_A, name: 'the walker scores capers on odds per hour again, and runs nothing but the short espionage',
+    file: 'tools/sim.js',
+    anchor: '      const hours = mission ? Math.min(...missionHours(mission)) : 0;',
+    to: '      const hours = mission ? Math.max(...missionHours(mission)) * 99 : 0;',
+  },
+  {
+    // Renewal goes back to resting for the board's own eleven hours. The
+    // walker then runs it twelve to nineteen times a campaign, the ranch
+    // launders its weakest animal for cash on a loop, and R93's late-game
+    // ceiling catches it at 90.5% of post-dominion defences held.
+    n: 420, gate: SHARD_A, name: 'renewal rests as briefly as a burglary, and selling your worst animal becomes the answer to being broke',
+    file: 'data/missions.json',
+    anchor: '      "cooldownHours": 336,',
+    to: '      "cooldownHours": 11,',
+  },
+  {
+    // The trim comes off and a lab holds every creature it has ever taken.
+    //
+    // AIMED AT SHARD A, NOT AT `tools/vault.js`, AND THE FIRST CUT WAS AIMED
+    // WRONG. The vault gate is where the real defect was found, so pointing
+    // the break at it looked obvious — and it went MISSED, because that gate
+    // reads a day-180 WALK and a walk produces nought to two conscripts. An
+    // array under its bound is an array under its bound whether or not
+    // anything trims it. The rule that can see this is the fixture in the
+    // `capers` block, which puts five through the tick on purpose.
+    n: 421, gate: SHARD_A, name: 'a lab keeps every creature it ever took, and the save array has no ceiling',
+    file: 'campaign/mission.js',
+    anchor: '    record.conscripts = [...(record.conscripts ?? []), out.conscript].slice(-cap);',
+    to: '    record.conscripts = [...(record.conscripts ?? []), out.conscript];',
+  },
+  {
+    // `?? []` back in place of the array check. It reads as a guard and is
+    // not one: a `conscripts` field that is PRESENT and not an array sails
+    // through it and reaches `.entries()`. R114's fuzzer is what caught this
+    // for real, on a save nobody would write by hand except an attacker.
+    n: 422, gate: SHARD_A, name: 'a conscripts field that is a string passes for an array, and a hand-edited save takes down the battle render',
+    file: 'campaign/mission.js',
+    anchor: '  const c = state.campaign?.rivals?.[rivalId]?.conscripts;\n  return Array.isArray(c) ? c : [];',
+    to: '  const c = state.campaign?.rivals?.[rivalId]?.conscripts;\n  return c ?? [];',
   },
 ];
 

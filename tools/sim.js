@@ -1173,6 +1173,8 @@ import {
   expTuning, expeditionHours, expeditionRegions, expeditionCandidates, expeditionCrew,
 } from '../campaign/expedition.js';
 import { findsFor, expeditionOdds, startExpedition } from '../campaign/outfit.js';
+import { activeMission, missionCandidates } from '../campaign/mission.js';
+import { missionsFor, missionHours, missionTargets, missionAptitude, startMission, missionCommitted } from '../campaign/caper.js';
 
 const WALK_HOUR = 3600000;
 const WALK_DAY = 24 * WALK_HOUR;
@@ -2032,6 +2034,119 @@ function walkAct(state, content, now, open, opts = {}) {
         crew: best.crew.length,
         won: sent.run.outcome.success,
         found: sent.run.outcome.species ?? null,
+      });
+    }
+  }
+  if (has('mission')) {
+    // R180 — A POLICY, and the same shape of one as the expedition above
+    // because the price is the same shape: a specimen is committed for the
+    // whole run. Four rules:
+    //
+    //   1. THE A-TEAM STAYS HOME, for the expedition's reason. A caper takes
+    //      its specimen out of jobs and fights, and a stable with nobody
+    //      spare runs nothing.
+    //   2. IT SENDS THE QUIETEST ANIMAL IT HAS. The aptitude is the whole
+    //      design, so the walker sorts the bench by it rather than by
+    //      quality — which is the one place in this file where the WORST
+    //      fighter is the right pick, and the gate that checks the ordering
+    //      would be decoration if nothing ever chose on it.
+    //   3. IT DOES NOT SPEND A CREATURE IT CANNOT REPLACE. Renewal costs
+    //      the specimen outright, so the walker only runs one when it has a
+    //      body to lose: more chimeras than a full team needs.
+    //   4. IT PICKS THE MISSION FOR THE SITUATION, because odds cannot pick
+    //      one at all. The first cut scored `odds.chance / hours` and called
+    //      that "prefers the job its specimen is good at". Measured: 154
+    //      capers across the four walk seeds, and all 154 were espionage —
+    //      every one of them the three-hour option. The arithmetic makes it
+    //      certain rather than likely: `chance` only moves from 0.649 to
+    //      0.679 across every mission and every hour option a good
+    //      infiltrator can pick, so the score is 1/hours and the shortest
+    //      run of the shortest mission always wins. Sabotage and renewal
+    //      were unreachable by the harness, and with them the conscription
+    //      fate, the setback, and the release to the loose board — three of
+    //      the consequences this milestone shipped, which only a hand-built
+    //      fixture had ever touched.
+    //
+    //      So it chooses on what the ranch needs, which is what a player
+    //      does. The three rules read PROPERTIES rather than ids, so a
+    //      fourth mission in data is picked up rather than ignored:
+    //        - the one that SPENDS the specimen, when the bank is under its
+    //          upkeep reserve and there is a body to lose. It is the biggest
+    //          payout per hour in the game and it costs the animal.
+    //        - the one that GRANTS A SETBACK, against a lab that is beating
+    //          you — and only while the setback still has something to
+    //          subtract, because it comes off defeats you already have and
+    //          is worth nothing against a lab you have never beaten.
+    //        - otherwise the quietest one: lowest notoriety, no body spent.
+    //
+    //      Hours stay SHORT for all three, and that is a measurement rather
+    //      than laziness: expected funds per hour committed is 8.4 at three
+    //      hours and 8.8 at eighteen, so the long run buys 5% more income
+    //      for six times the commitment. A player takes the short one and
+    //      keeps the animal available for the thing that turns up tomorrow.
+    const busyCap = new Set([
+      ...activeOps(state).map((r) => r.chimeraId).filter(Boolean),
+      ...missionCommitted(state),
+    ]);
+    const benchCap = missionCandidates(state, now, busyCap)
+      .map((c) => ({ c, apt: missionAptitude(content, c).score }))
+      .sort((a, b) => b.apt - a.apt);
+    // RULE 3, AND IT HAD TO BE MEASURED RATHER THAN REASONED. The first cut
+    // ran a caper whenever there was one body over a full team, and the Task
+    // Force raid gate went red: held fell from 24 of 32 to 20 of 32 across
+    // five seeds, every seed level or worse, because a committed specimen is
+    // one fewer defender and the board offers a caper roughly twice a day.
+    // One spare body is not spare when the State is coming for the ranch.
+    //
+    // So the margin is two, and spending one outright needs three. That is
+    // what a player does: you do not send your reserve out on the night the
+    // convoy is due, and you certainly do not feed it to a city block.
+    const spareCap = Math.max(0, (state.chimeras ?? []).length - fullTeam() - 1);
+    let pick = null;
+    if (!activeMission(state) && spareCap > 0 && benchCap.length) {
+      const who = benchCap[0].c;
+      // The lab that is beating you hardest, and whether a setback would
+      // still come off anything. `wall` is its wins over you minus yours
+      // over it; `undone` is false once the setbacks already banked cancel
+      // every defeat, which is the point at which sabotaging it again buys
+      // nothing. Ties fall to ladder order — the order the campaign
+      // introduces them, which is the order a player meets them in.
+      const targets = missionTargets(state, content).map((rival) => {
+        const rec = rivalRecord(state, rival.id);
+        const defeats = rec.defeats ?? 0;
+        return {
+          rival,
+          wall: (rec.losses ?? 0) - defeats,
+          undone: Math.min(rec.setback ?? 0, defeats) < defeats,
+        };
+      });
+      const wall = [...targets].sort((a, b) => b.wall - a.wall)[0];
+      const all = missionsFor(content);
+      const spender = all.find((m) => m.alwaysSpends);
+      const weakener = all.find((m) => m.grants === 'setback');
+      const quietest = all.filter((m) => !m.alwaysSpends)
+        .sort((a, b) => (a.notoriety ?? 0) - (b.notoriety ?? 0))[0];
+      // Rule 3: a mission that spends the specimen needs a spare body, and
+      // one that only risks it does not.
+      const thin = !canSpend(0);
+      const mission = (thin && spareCap >= 2 && spender) ? spender
+        : (wall && wall.wall > 0 && wall.undone && weakener) ? weakener
+        : quietest;
+      // The setback play goes at the lab that is beating you; everything
+      // else goes at the one the ladder put in front of you.
+      const rival = (mission === weakener && wall) ? wall.rival : targets[0]?.rival;
+      const hours = mission ? Math.min(...missionHours(mission)) : 0;
+      if (mission && rival && hours > 0) pick = { mission, rival, hours, who };
+    }
+    const ran = pick && startMission(state, content, now, pick.mission.id, pick.rival.id, pick.who.id, pick.hours);
+    if (ran?.ok) {
+      did('mission', {
+        mission: pick.mission.id,
+        rival: pick.rival.id,
+        hours: pick.hours,
+        apt: Number(missionAptitude(content, pick.who).score.toFixed(3)),
+        won: ran.run.outcome.success,
+        fate: ran.run.outcome.fate,
       });
     }
   }

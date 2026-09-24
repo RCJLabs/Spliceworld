@@ -28,7 +28,7 @@
 // which is R122's original bug report — a phone stuck on a broken build.
 // `tools/release.js` is the answer and exists for this: CACHE is checked
 // against SAVE_VERSION by a gate rather than by anybody remembering.
-const CACHE = 'spliceworld-v60-441e8b1b';
+const CACHE = 'spliceworld-v61-847e0380';
 
 const SHELL = [
   '.',
@@ -109,9 +109,11 @@ const SHELL = [
   'campaign/map.js',
   'campaign/monologue.js',
   'campaign/identity.js',
+  'campaign/caper.js',
   'campaign/expedition.js',
   'campaign/operations.js',
   'campaign/outfit.js',
+  'campaign/mission.js',
   'campaign/rehab.js',
   'campaign/taskforce.js',
   'campaign/legacy.js',
@@ -161,6 +163,7 @@ const SHELL = [
   'data/combos.json',
   'data/enemies.json',
   'data/keywords.json',
+  'data/missions.json',
   'data/regions.json',
   'data/traits.json',
   'data/classes.json',

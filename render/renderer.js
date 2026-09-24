@@ -85,6 +85,11 @@ export function indexContent(raw) {
     // words, and every refusal sentence the importer can print. Flat tuning
     // again, read whole by splice/card.js. Same lesson, third payment.
     cards: raw.cards ?? null,
+    // R180 — the mission board: a keyed collection AND a flat tuning block,
+    // so it splits the way regions and feral do. Adding it to CONTENT_FILES
+    // is NOT enough — R41's lesson, and the fourth milestone to pay it.
+    missions: raw.missions ? raw.missions.missions : {},
+    missionMeta: raw.missions?.tuning ?? null,
     // R82: the breakout's whole tuning is one flat object, so it is
     // indexed as one rather than split into a list and a meta block.
     breakoutMeta: raw.breakout ?? null,

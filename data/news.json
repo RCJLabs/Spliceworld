@@ -152,6 +152,30 @@
       "lines": [
         "The {region} party is back. They send their regards and an expenses claim."
       ]
+    },
+    "mission_landed": {
+      "lines": [
+        "{rival} reports a break-in. Nothing was taken that they are willing to describe.",
+        "A filing cabinet at {rival} was read cover to cover and put back tidier than it was found."
+      ]
+    },
+    "mission_missed": {
+      "lines": [
+        "{rival} has upgraded their locks. Somebody gave them a reason to.",
+        "Security at {rival} had an interesting night and would rather not discuss it."
+      ]
+    },
+    "mission_conscripted": {
+      "lines": [
+        "{creature} has accepted a position at {rival}. The paperwork was not optional.",
+        "{rival} introduces its newest staff member. You have met {creature} before."
+      ]
+    },
+    "mission_released": {
+      "lines": [
+        "Three city blocks have been reclassified as a wildlife corridor. {creature} is the wildlife.",
+        "Demolition crews arrive downtown to find the job done and {creature} accepting applause."
+      ]
     }
   },
   "ticker": [

@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 60;
+export const SAVE_VERSION = 61;
 // R101 — exported for `save/slots.js`, which was carved out of this file
 // and still addresses the same keys. Nothing outside the save system
 // reads either one.
@@ -83,6 +83,11 @@ export function newGameState() {
       // rather than a list; `expeditionReadyAt` is the van coming back, and
       // zero means ready now, the way every other refill time here does.
       expedition: null, expeditionReadyAt: 0, expeditionCount: 0, expeditionReport: null,
+      // R180 — the mission slot, the same four fields for the same reasons:
+      // one at a time so it is a record rather than a list, a readiness
+      // stamp of zero so a live save can mount one immediately, a counter
+      // for the seeded stream, and a report the War Room badges.
+      mission: null, missionReadyAt: 0, missionCount: 0, missionReport: null,
       // R87: the Compliance Task Force. `raid` is the one at the gate,
       // `nextRaidAt` the schedule R9's rule requires, and the counters are
       // what the escalation and the wire read.

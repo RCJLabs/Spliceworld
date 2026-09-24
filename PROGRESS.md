@@ -1,5 +1,160 @@
 # PROGRESS
 
+## Session 207 — R180: Espionage, sabotage, and unscheduled urban renewal ✅
+
+**Five labs you could only ever fight. Now there are three ways to use one
+without a battle, and the best animal for the job is the one that gave up
+its armour.**
+
+### The verb
+
+    campaign/mission.js   EAGER   who is committed · is one running · the settle
+    campaign/caper.js     LAZY    the board · the odds · the three consequences
+
+Same split as R179 and for the same reason, but this one had to earn it
+twice: the first cut put ten exports in the eager half and blew all four
+budgets at once. Six of them are read by the War Room and by nothing the
+first frame runs, so they moved. A seventh, `missionReady`, turned out to
+be dead on arrival and was deleted rather than re-imported.
+
+The three prices are the design. Espionage risks TIME. Sabotage risks the
+CREATURE — lose it and the lab keeps it, and `rivalTeam` appends it to that
+lab's roster so you meet your own animal in the next fight. Renewal does not
+risk the creature at all; it spends it, onto the loose board, where it can
+be hunted back.
+
+### What the measurement changed
+
+I built the aptitude to the roadmap's description — Camo, speed, low mass —
+and then measured it before believing it. Chameleon 0.071, rhino 0.018. Two
+points of odds between the best and worst animal in the game.
+
+Three things were wrong and two of them meant a term could never fire at
+all. Mass runs 88–216 across the 39 purebreds against a scale written
+14–68. Speed runs 1–13 against a ceiling of 34. And every one of the 43
+hides carries armour while `camoTags` strips Camo the moment armour is above
+zero — so half the blend was dead for every buildable creature, the
+chameleon included, its own hide cancelling its own Camo.
+
+That last one is the build, not the bug. The only way to be hidden is to
+wear nothing:
+
+    INFILTRATOR chameleon, no hide   0.883   70.3% at 12h
+    chameleon wearing its own hide   0.369   48.7%
+    BRUISER rhino, full              0.050   35.3%
+
+Thirty-five points, and 21.6 for the decision to put a hide back on. None of
+that is enforced here. It falls out of a rule R32 shipped.
+
+### Known issues
+
+- Four eager budgets moved in one milestone (MODULE_CAP 51, KB_CAP 332,
+  PROSE_CAP 261, FIRST_PAINT 1136), which is the largest single-milestone
+  raise this repo has taken. The eviction came first and the notes argue
+  each number in place, but the cheap evictions are now gone. The next
+  milestone that wants eager bytes has a harder question to answer.
+- Two of the six breaks MISSED on their first run and both were my aim, not
+  the code: 417 pointed at `massFloor` when the CEILING is what killed the
+  term, and 413's gate tested "has moves and a genome", which is true of a
+  restored stat block too. Both re-aimed; the conscript gate now asserts the
+  specimen GROWS when the lab holding it does.
+
+### Second pass — what the gates found once the walker actually played it
+
+**The walker could only ever pick one of the three missions, and nothing
+went red.** Rule 4 scored `odds.chance / hours`. Measured: 154 capers across
+four seeds, all espionage, every one the three-hour option — `chance` only
+moves 0.649 to 0.679 across every mission and hour a good infiltrator can
+pick, so the score is `1/hours` and the shortest run of the shortest mission
+always wins. Sabotage and renewal were unreachable, and with them the
+conscription fate, the setback and the release. The `capers` gate asserted
+all three consequences on HAND-BUILT FIXTURES and was green the whole time.
+That is the aptitude finding again in a new place: a thing only a fixture
+reaches is a thing nothing measures. The policy now reads mission
+properties, and a new rule in `empire` says every mission the board offers
+has to be one the walker runs (espionage 1166 / sabotage 31 / renewal 11).
+
+**Renewal charged no price.** On the board's shared eleven hours the walker
+ran it 19/12/10/16/12 times a campaign — sell the animal you least want,
+splice a better one, repeat. R93's late-game rule caught it: post-dominion
+defences 85.0% held before this milestone, 90.5% with renewal on the shared
+cooldown, over the 90% ceiling. Isolated: espionage and sabotage alone read
+83.7%, so it is renewal and it is FREQUENCY, not payout. A fortnight
+cooldown lands at 85.6% and one to four runs a campaign, which is what the
+brief describes. Sixteen seeds: raids held 79/99 → 91/113 (80% → 81%, flat),
+breakouts 306 → 464.
+
+**Three gates were reading the fixture rather than the screen.** R152's
+scaling rule asserted `median <= 0` with no tolerance on a ±1.5pp statistic
+whose own lever is non-monotone — 0.0075 reads +0.18, 0.009 reads −2.94,
+0.0105 reads +1.03, and buying a pass at 0.009 costs every campaign five
+points of kept gross. Re-derived (Evan's call) on the sign across seeds:
+both breaks read 5 of 5 positive, the shipped tree 3 of 5. The vault height
+grew while the hoard SHRANK, because the species spread widened one bay. The
+Dex combos budget moved with no new row: a fixture holding both halves of
+every combo measures 3116px, BELOW the 3131 a twenty-combo fixture reads, so
+the driver is which part names wrap.
+
+**Two real bugs, both from gates rather than from reading the code.**
+`tools/vault.js`: a lab's `conscripts` had no ceiling, which is a save array
+that grows forever AND a rival roster that does, since `rivalTeam` fields
+every one. Capped at three in data, trimmed at the tick, the bound derived
+from that dial. R114's fuzzer: `conscriptsOf` returned whatever the save
+held, and `?? []` does not guard a field that is present and not an array —
+a hand-edited save took the battle render down on `.entries()`.
+
+**And the MODULE_CAP raise had argued for two things that were not true.**
+`missionCommitted` was said to be read by "the tick and the roster" and was
+read by neither; `conscriptsOf` was said to be eager because
+`campaign/rivals.js` needs it, while rivals.js read the array inline and
+never called it — two homes for one read. Both fixed; the argument rewritten
+to the three exports that are actually irreducible.
+
+### Known issues (second pass)
+
+- Break 421 went MISSED twice: first because a walk produces nought to two
+  conscripts so the trim never fires, then because I aimed it at
+  `tools/vault.js`, which reads that same walk. Both the cap and the R114
+  guard are now exercised on a fixture in the `capers` block.
+- `data/missions.json` gained `maxConscripts` and a per-mission
+  `cooldownHours`; `missionCooldownMs` is their one home, which R180's first
+  pass shipped written out twice.
+- KB_CAP 332 → 333 after the eviction was done twice over. The two R114
+  guards are what would not fit; the note says so rather than pretending the
+  budget was always going to hold.
+- CLAUDE.md's break count was stale by six before this milestone touched it
+  (404 against a tree carrying 410). It reads 414 now, numbered to 422 —
+  and says to trust `--anchors` over the sentence.
+
+### The rot check, and the three findings filed out of it
+
+414 breaks in four chunks, 4h37m. **410 caught, 4 missed.** Judged on
+`BATTERY_EXIT` rather than the summary line, which mattered twice: chunk 2
+read "104 caught, 0 missed" on top of a RED baseline, and that baseline was
+my own doing — the driver double-forked and two batteries shared the box, so
+three browser gates false-red exactly the way R159 documents. Re-run alone
+they all pass, including the `theater` measurement that looked real.
+
+The four misses, re-run on an idle box and then against `main`:
+
+    347  breeding pairs favour a line owing the Dex a variant   main ✓  here ✗
+    372  a held node row wraps at 150% text                     main ✓  here ✗
+    388  the retainer files its daily line                      main ✗  here ✗
+    389  the guide reads the rival map raw                      main ✗  here ✗
+
+347 is fixed (see above). 372, 388 and 389 are filed as **R187**, together
+with the pattern connecting them and the two height budgets: a rule whose
+threshold was set beside one reading of the day-180 walk goes blind the next
+time anybody changes the economy. 372's diagnosis is written down — R180's
+richer ranch means more creatures are fit, so the Spar button renders its
+SHORT label and the 86px overflow the rule is about never happens.
+
+### Next session's first task
+
+R181 — Henchmen, and the end of being one person. Read ROADMAP §9.30's third
+phase; a henchman can also run an R180 mission, so the board built here is
+the thing it plugs into.
+
 ## Session 206 — R179: Expeditions, and the first creature money cannot buy ✅
 
 **Forty-one species, forty-one prices. The forty-second is not for sale at

@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 60
+- save version: 61
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**5 entries queued.** R180, R181, R182, R184, R186.
+**5 entries queued.** R181, R182, R184, R186, R187.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -6693,6 +6693,51 @@ triangle working, and each region genuinely asks a different question)*.
   and say why the data-key option could only ever have paid half.
 
 
+- **R187 — The gates that measure a fixture instead of a bound.** R180's rot
+  check turned up four breaks going MISSED, and chasing them found the same
+  defect wearing four costumes: a rule whose threshold was set beside one
+  reading of the day-180 walk, so the next milestone that touches the economy
+  moves the fixture out from under it and the rule goes quietly blind. It is
+  not drift and it is not a bad threshold — the rules are all still asking
+  true questions. They have simply stopped being able to SEE the state they
+  are about.
+
+  Four measured instances, all from one evening:
+  * **R152's scaling median** asserted `<= 0` with no tolerance on a
+    statistic whose per-seed spread is ±1.5pp, and whose own lever
+    (`garrisonPerNode`) does not move it monotonically — 0.0075 reads +0.18,
+    0.009 reads −2.94, 0.0105 reads +1.03. Re-derived on the sign across
+    every seed, which separates 5-of-5 from 3-of-5.
+  * **The vault height budget** grew while the hoard SHRANK, 351 parts to
+    325, because the species spread widened one bay and the shut shelf
+    summarises kinds.
+  * **The Dex combos budget** moved with no new row at all: a fixture holding
+    both halves of every combo measures 3116px, BELOW the 3131 a
+    twenty-combo fixture reads, so the driver is which part names wrap.
+  * **R95's variant-line rule**, eroded from below for the THIRD time
+    (R177 → R116 → R180) because each milestone that improves breeding
+    shrinks what deleting the pair-sort costs. Its own note now says that
+    when the census statistic runs out too, retire break 347 rather than
+    invent a fourth number.
+
+  *Still open and filed here rather than fixed:* **break 372** (a held node
+  row wraps at 150% text — R180's richer ranch means more creatures are fit,
+  so the Spar button lands on the short label and the 86px overflow the rule
+  is about never happens), and **breaks 388 and 389**, which MISS on `main`
+  too and are therefore older rot that R180 only surfaced.
+
+  *The decision:* this is a harness milestone, not a game one. The question
+  is whether a gate can state the WORST CASE it guards rather than the case
+  the walk happened to produce — a longest-label row, a fullest tab, a
+  fixture pinned to the state under test — and which of the existing rules
+  can be rewritten that way without becoming a rule that cannot fail. The
+  four above are the worked examples; `tools/height.js` and `tools/a11y.js`
+  are where most of the rest live.
+  *Done when: breaks 372, 388 and 389 go red again on a clean tree; at least
+  one existing budget is restated as a bound with its worst case measured
+  rather than assumed; and the battery's own notes say, for each rule
+  touched, what would make it blind again.*
+
 - **R186 — The rare, the unique, and the run that remembers one.** R179
   shipped the machinery and one uncommon; this is the content the machinery
   was built to carry. **Rare**: a second tier behind a longer, fuller trip,
@@ -6817,30 +6862,118 @@ adds is a CHOICE rather than another button that is always available.
   carries would be a rule no trip this game offers can satisfy, which is the
   dead-content failure one level up from the one `tools/reach.js` exists for.
 
-- **R180 — Espionage, sabotage, and unscheduled urban renewal.** The rival
-  ladder is five labs the player can only ever FIGHT. Three escalating
-  missions that use them without a battle, each priced differently:
-  **(1) Espionage** — infiltrate, steal research or intel. Resolved on
-  Camo, speed and low mass, which is the half of the stat sheet combat
-  under-rewards: R148 and R149 both shipped because the Rumbler and the
-  Scamper had no reason to be built, and an infiltrator is a reason.
-  **(2) Sabotage** — break something of theirs; your creature can be CAUGHT,
-  and a caught creature lands in *their* containment, which is the mirror of
-  R8's Reorientation Wing. They can talk it round and field it against you.
-  **(3) Unscheduled urban renewal** — release a chimera into a city node.
-  It leaves the roster permanently and joins the loose board the breakout
-  engine already runs (`maxLoose` is 4), so the price of the mission is a
-  complication you will meet again.
-  *The tone constraint is load-bearing and needs saying out loud:* CLAUDE.md
-  forbids death language, so a flattened city is **evacuated, condemned and
-  rezoned**, buildings "retire loudly" the way vehicles already do, and the
-  only casualties are an insurance adjuster's afternoon and several
-  municipal bylaws. Every line of this goes through the R110 tone gate.
+- **R180 — Espionage, sabotage, and unscheduled urban renewal.** ✅ The rival
+  ladder was five labs the player could only ever FIGHT: the War Room
+  dispatched seven target kinds and every one was a battle, and a rival's
+  record on the save held `defeats`, `losses` and `lastMetAt` and nothing
+  else. Three missions in `data/missions.json` add the other verb, and what
+  makes each a decision rather than a dice roll is that they charge three
+  different prices. **Espionage** risks time — a failure is a night in a
+  holding pen and a stern letter. **Sabotage** risks the creature: lose it
+  and the lab KEEPS it, which is R8's Reorientation Wing pointed back at the
+  player, and `rivalTeam` now appends it to that lab's roster so your own
+  animal is in the next fight. **Unscheduled urban renewal** does not risk
+  the creature at all — it spends it, and the specimen joins the loose board
+  the breakout engine already runs, where it can be hunted back.
+
+  *THE APTITUDE WAS DECORATION UNTIL IT WAS MEASURED, and that is the
+  finding.* The entry said espionage should resolve on Camo, speed and low
+  mass. Built to that description and measured, a chameleon scored 0.071 and
+  a rhino 0.018 — 2.2 points of odds between the best and worst animal in
+  the game, which is a rounding error rather than a reason to build
+  anything. Three things were wrong and two meant a term could never fire:
+  mass across the 39 purebred builds runs **88 to 216** against a scale
+  written 14 to 68, so every creature clamped to zero; speed runs 1 to 13
+  against a ceiling of 34; and **all 43 hides in the game carry armour**
+  while `camoTags` strips Camo the moment armour exceeds zero, so half the
+  blend was dead for every buildable creature — including the chameleon,
+  whose own hide cancelled its own Camo.
+
+  The last one is not a defect but the build. Since no hide is armour-free,
+  the only way to be hidden is to leave the hide socket EMPTY: the best
+  infiltrator in the game is a creature that gave up its armour entirely,
+  and nothing in this milestone enforces that — it falls out of a rule R32
+  shipped and nobody has touched since. Re-derived from the distribution
+  (camo 4, speed 12, mass 95–165): **infiltrator 0.883 / 70.3% at 12h,
+  chameleon in its own hide 0.369 / 48.7%, tiger 0.260 / 44.1%, rhino 0.050
+  / 35.3%** — a 35-point spread, and 21.6 for the decision to put a hide
+  back on. The gate locks the ORDERING and not the values, and separately
+  asserts each of the three terms is LIVE for a real creature, because the
+  first cut would have passed an ordering check with two terms reading zero.
+
+  A conscript is stored as a GENOME and re-derived through `unitFromGenome`
+  on every read (R108: a saved stat block is a promise about a fight the
+  engine has stopped making). Break 413 proved that gate too weak on its
+  first cut — "carries moves and a genome" is true of a restored block too —
+  so it now asserts the conscript GROWS when the lab holding it does.
+
+  *FOUR EAGER BUDGETS MOVED, which is the largest single-milestone raise in
+  this repo and the notes say so.* The eviction came first, because
+  `MODULE_CAP`'s own note asked for it: `campaign/mission.js` was exactly
+  the R169 blind spot it names — a module boot pulled in for one function —
+  so six of its ten exports moved to the lazy `campaign/caper.js` and a
+  seventh was dead and deleted. What stayed is irreducible: `tickMissions`
+  must be eager or a released chimera does not reach the loose board until
+  somebody opens a screen. Then MODULE_CAP 50→51 (51), KB_CAP 327→332
+  (331.0), PROSE_CAP 258→261 (260.3) and FIRST_PAINT 1121→1136 (1127), each
+  measured after the trim and each argued in place. `missions.json` stays in
+  CORE rather than moving LATE, which was the obvious dodge: R81's split is
+  what things ARE against what they LOOK LIKE, and a mission's odds are
+  definitional. SAVE_VERSION 61 with its migration and fixture.
+  *AND THE SECOND PASS FOUND THAT THE WALKER COULD ONLY EVER PICK ONE OF THE
+  THREE, which is the same finding as the aptitude one and was invisible for
+  the same reason.* The walker's policy scored `odds.chance / hours` and
+  called that "prefers the job its specimen is good at". Measured: 154 capers
+  across four seeds, all 154 espionage, every one the three-hour option —
+  `chance` only moves from 0.649 to 0.679 across every mission and hour a
+  good infiltrator can pick, so the score is 1/hours and the shortest run of
+  the shortest mission always wins. Sabotage and renewal were unreachable,
+  and with them the conscription fate, the setback and the release. **Nothing
+  went red**: the `capers` gate asserts all three consequences on hand-built
+  fixtures, so it was green against a walker that never chose two of them.
+  The policy now reads mission PROPERTIES — spend a body when the bank is
+  thin, buy a setback against a lab that is beating you, otherwise the
+  quietest job — and a new rule in the `empire` block says every mission the
+  board offers must be one the walker actually runs (espionage 1166 /
+  sabotage 31 / renewal 11 across five campaigns).
+
+  *RENEWAL CHARGED NO PRICE, AND R93's LATE-GAME RULE SAID SO.* "Your
+  specimen does not come home" reads like a price and was not one: on the
+  board's shared eleven-hour cooldown the walker ran it 19/12/10/16/12 times
+  a campaign, because selling the animal you least want and splicing a
+  better one is the obvious answer to being short of cash. Post-dominion
+  defences went from 85.0% held on `60f5941` to 90.5%, over the 90% ceiling
+  R93 exists to hold. The cause is FREQUENCY, not payout — espionage and
+  sabotage alone leave the late game where they found it at 83.7% — so
+  renewal rests a fortnight (`cooldownHours` in data, one to four a campaign,
+  85.6% held). Raids across sixteen seeds: 79/99 held before, 91/113 after,
+  the rate flat at 80→81% while breakouts rose 306 → 464 because a released
+  specimen feeds the loose board.
+
+  *AND THREE GATES WERE READING A FIXTURE RATHER THAN THE THING THEY CLAIM
+  TO GUARD*, which is one finding wearing three hats. R152's scaling rule
+  asserted `median <= 0` with no tolerance on a statistic whose per-seed
+  spread is ±1.5pp, and whose own lever is non-monotone (`garrisonPerNode`
+  0.0075 → +0.18, 0.009 → −2.94, 0.0105 → +1.03); it is re-derived on what
+  actually separates the defect from the noise, which is the SIGN ON EVERY
+  SEED — both breaks read 5 of 5 positive against the shipped tree's 3 of 5.
+  The vault height budget moved because the hoard SHRANK and the species
+  spread widened by one bay. The Dex combos budget moved with no new row at
+  all: a fixture holding both halves of every combo measures 3116px, BELOW
+  the 3131 a twenty-combo fixture reads, so the driver is which part names
+  wrap.
+
   *Done when: a mission resolves without a battle and reads as a decision
   rather than a dice roll; a creature caught on sabotage appears in that
   rival's roster and can be met in a later fight; a released chimera appears
   on the loose board and can be hunted back; and the tone gate passes on
-  every word of it.*
+  every word of it.* ✅ All four, the aptitude spread is 35 points rather
+  than the 2.2 the first cut shipped, and all three missions are reachable
+  by something other than a fixture. Ten breaks (413-422); a lab holds at
+  most three conscripts, bounded in data and enforced at the tick, after
+  `tools/vault.js` found the array had no ceiling at all; and `conscriptsOf`
+  guards its own field after R114's fuzzer took the battle render down with
+  a `conscripts` that was a string.
 
 - **R181 — Henchmen, and the end of being one person.** Every lane in this
   game is capped because the player is a single pair of hands: the solo job

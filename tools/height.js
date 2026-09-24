@@ -258,7 +258,14 @@ const BUDGET = {
   // and will move again the next time anybody touches prices. It is arithmetic
   // over a fixture, not a ratchet against growth — the growth guard is R91's
   // 260-part cap, and that is what actually bounds this screen.
-  vault:          { folded: 2560,  tallest: 4140, opens: 20 },
+  // R180: 4140 -> 4200, measured at 4159, and it is the SAME mechanism a
+  // third time, which the note above predicted in as many words. The hoard
+  // shrank — 351 parts on `60f5941` against 325 here — and the screen grew
+  // anyway, because the species SPREAD widened from 40 bays to 41 and the
+  // shut shelf summarises what kinds of thing are on it. One bay is 81px of
+  // summary line and fold. The growth guard is still R91's part cap, not
+  // this number.
+  vault:          { folded: 2560,  tallest: 4200, opens: 20 },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
   // R117 — 1100 -> 1150, and `dex:genes` below by the same 50, which is the
   // SHARED CHROME rather than the tab: the Dex's six-tab bar goes to two
@@ -316,7 +323,32 @@ const BUDGET = {
   // multiplication and a content milestone moves it by exactly one row.
   // The SHUT half is untouched at 550 — the folds are what keep this tab
   // flat against a list that grows, and they still do.
-  'dex:combos':   { folded: 550,   tallest: 3100, opens: 2 },
+  // R180: 3100 -> 3250 open and 600 -> 630 words, measured at 3131 and 607,
+  // and this raise is a DIFFERENT SHAPE from R179's above — which matters,
+  // because R136 left a standing instruction to page this tab rather than
+  // move the number again, and R179 spent it once already on a real new row.
+  //
+  // There is no new row here. The tab is 28 rows on both trees, one per
+  // combo, exactly as R136 said. What moved is which BAND each row sits in:
+  // the fixture holds both halves of 20 combos where the base tree held 16.
+  // The obvious reading — a "ready" row is taller, so the ceiling is all 28
+  // ready — was measured and is FALSE: a fixture with every combo ready
+  // reads 3116px and 600 words, BELOW the 3131 this tree reads at twenty.
+  //
+  // So the driver is not the band split. It is WHICH PARTS the campaign
+  // happens to be holding, because a row is a part name and a long name
+  // wraps to a second line. Three fixtures, three readings: 3036 / 3116 /
+  // 3131, a 95px spread with no new content behind any of it. A budget set
+  // 2% over one of those is a budget that reads the fixture rather than the
+  // screen, and it will go red on the next milestone that touches prices
+  // for reasons that have nothing to do with this tab.
+  //
+  // 3250 is R136's own ~4% convention applied to the TOP of the measured
+  // spread rather than to a single reading. R136's instruction stands and
+  // is now the stated answer: if a fixture ever pushes past this band, page
+  // the tab the way R131 paged the Vault. The SHUT half is untouched at 550
+  // and reads 491, which is what a player actually arrives at.
+  'dex:combos':   { folded: 550,   tallest: 3250, opens: 2 },
   // R129 FOLDS IT, WHICH BRINGS THE SHUT HALF DOWN AND BUDGETS THE FOLD:
   // 1100/1100 -> 400 shut (measured 291) and 1250 open (measured 1185).
   // Twelve genes could only be learned by breeding for them, so this tab
@@ -459,7 +491,15 @@ const WORDS = {
   // tab had no fold to hide behind; it has three now, so the shut number is
   // the one that matters and it is a fourteenth of what it was. The open
   // half grew by the three summary lines the folds carry.
-  'dex:combos':   { folded: 150,  open: 600 },
+  // R180: 600 -> 630 open, measured at 607, and the SHUT half is untouched
+  // at 150 against 66 measured — which is the point. The open words are
+  // inventory rather than prose: one line per combo naming the two parts,
+  // so the count tracks which parts the fixture is holding and not what
+  // anybody wrote. Three fixtures read 582 / 600 / 607, including one that
+  // holds both halves of every combo, and none of them adds a sentence.
+  // See the height budget above for the full derivation and for R136's
+  // standing instruction, which this honours rather than spends.
+  'dex:combos':   { folded: 150,  open: 630 },
   // R129: 200/200 -> 100 shut (measured 50) and 250 open (measured 221).
   // See the height note above — the words are the twelve descriptions, and
   // they are now behind the fold that holds them.

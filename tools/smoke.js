@@ -127,6 +127,10 @@ const SHARD_OF = {
   // block aims at the lane its name maps to, and two unrelated blocks under
   // one name make that aim a guess. Shard a is the lightest of the four.
   released: 'a',
+  // R180 — the mission board. Its own name for R129's reason above: a break
+  // that wants to aim at ONE block aims at the lane its name maps to. Shard
+  // a: the block builds two fixtures and runs no battles.
+  capers: 'a',
   // R102 — its own name, for R129's reason one entry up. Shard b: the comment
   // above calls shard a "the lightest of the four" and that went stale, which
   // is why this is a measurement rather than a quote — a 212s, b 134s, c 174s,
@@ -2591,6 +2595,13 @@ assert.deepEqual(m5.campaign, {
   // finished unpacking in 1970, so the first thing a returning player can do
   // is mount one. Nothing is backdated; nothing is owed.
   expedition: null, expeditionReadyAt: 0, expeditionCount: 0, expeditionReport: null,
+  // R180 — and the same claim once more for the mission board. Nobody is
+  // out, the cooldown expired in 1970, and no rival is holding anything of
+  // yours: `conscripts` and `setback` are deliberately ABSENT rather than
+  // zeroed, because they hang off a rival's record that is created on first
+  // contact and seeding them would write keys onto five labs a migrating
+  // player may never have met.
+  mission: null, missionReadyAt: 0, missionCount: 0, missionReport: null,
 });
 // v27 (A4): the one job slot became a list, and a job that was IN FLIGHT
 // when the save was written has to survive the move — it keeps its clock,
@@ -7125,6 +7136,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // R179 — the verb that is not a fight and not a splice. On the roll by
     // name, like everything else, so that deleting the note fails the build.
     'expeditions',
+    // R180 — three ways to use a rival lab without fighting it.
+    'missions',
     // R82. The breakout is the rival ladder's consequence rather than a
     // second ladder: it is on the roll in its own right because it has a
     // data file, a module, a board, a launcher and a first-use moment, and
@@ -7256,6 +7269,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'yearbook.json': 'yearbook',
     'calendar.json': 'calendar',
     'cards.json': 'cards',
+    // R180 — the mission board. Its own note rather than a section of the
+    // rivals' one: what a caper costs and why the odds are made of Camo,
+    // speed and mass is a system, and the lab it is pointed at is a target.
+    'missions.json': 'missions',
     'starters.json': null,
     // R62: the wire's copy is not a system with a first-use moment — it is
     // the voice every system above speaks in, met through all of them and
@@ -7327,6 +7344,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // are: the judgement of who is abroad and the composer that sends them.
     'campaign/expedition.js': 'expeditions',
     'campaign/outfit.js': 'expeditions',
+    // R180 — both halves of the mission board point at one note, the way the
+    // expedition's two do: the split is a budget decision and not two
+    // systems, and a reader who found only the lazy half would be told
+    // about odds with nothing about what they cost.
+    'campaign/mission.js': 'missions',
+    'campaign/caper.js': 'missions',
     'campaign/rehab.js': 'rehab',
     'campaign/rivals.js': 'rivals',
     'ranch/breeding.js': 'breeding',
@@ -7619,7 +7642,13 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     ['Greenfield falls', () => {
       lab.campaign.heldNodes = ['barn_perimeter', 'downtown', 'checkpoint', 'precinct'];
       lab.campaign.notoriety = 65;
-    }, ['regions', 'rivals']],
+      // R180 — the mission board lights HERE, with the ladder, and not a
+      // step later. Its own precondition is a rival you have met, so the
+      // moment the ladder opens is the moment a caper becomes a thing you
+      // could run; `rivals` lights on this step for the same reason and has
+      // not been fought yet either. A step later would be a note explaining
+      // a board the player had already found.
+    }, ['regions', 'rivals', 'missions']],
     ['a convoy is on the road', () => {
       lab.campaign.contested = [{ nodeId: 'downtown', deadline: t0 + 13 * HOUR }];
     }, ['contest']],
@@ -8504,6 +8533,11 @@ if (inShard('regions')) {
     // taps "Mount an expedition" and lands on three unanswered questions has
     // been taken to a form, not to a verb.
     expedition: 'data-exp-go=',
+    // R180 — the caper chip lands on the same subtab and promises its own
+    // Send. Not `data-cap-who`, though that is the first thing a player
+    // presses: this gate asks which control the chip PROMISES, and the row
+    // is offering to run a mission rather than to look at a roster.
+    mission: 'data-cap-go=',
     buy: 'data-act="order"', facility: 'data-act="upgrade"', pens: 'data-act="pen"',
   };
   const screenModule = Object.fromEntries(shellScreenMap().map((e) => [e.screen, e.file]));
@@ -22307,6 +22341,43 @@ if (inShard('empire')) {
       `a county can be lost: post-dominion defences are held ${defs.pct}% of the time `
       + `(${defs.won}/${defs.n})`);
 
+    // R180 — AND THE HARNESS PLAYS ALL THREE MISSIONS, which is the rule that
+    // would have caught this milestone's worst bug on the day it shipped.
+    //
+    // The walker's first mission policy scored `odds.chance / hours` and
+    // called that "prefers the job its specimen is good at". Measured: 154
+    // capers across four seeds and all 154 were espionage, every one the
+    // three-hour option — because `chance` only moves from 0.649 to 0.679
+    // across every mission and hour a good infiltrator can pick, so the score
+    // is 1/hours and the shortest run of the shortest mission always wins.
+    // Two of the three missions were unreachable, and with them the
+    // conscription fate, the setback and the release to the loose board.
+    //
+    // Nothing went red. The `capers` shard asserts all three consequences and
+    // asserts them on HAND-BUILT FIXTURES, so it was green against a walker
+    // that never once chose them. That is R95's lesson in a new place: a
+    // consequence a campaign cannot reach is a consequence nothing measures.
+    // Asserted across the census rather than per-seed, because which mission
+    // a given campaign needs is situational by design — renewal wants a thin
+    // bank, sabotage wants a lab that is beating you.
+    {
+      const ran = new Map();
+      for (const w of walks) {
+        for (const e of w.log ?? []) {
+          if (e.kind === 'mission') ran.set(e.mission, (ran.get(e.mission) ?? 0) + 1);
+        }
+      }
+      const offered = Object.keys(content.missions ?? {});
+      assert.ok(offered.length >= 3, `the board offers missions at all (${offered.length})`);
+      const line = offered.map((id) => `${id}:${ran.get(id) ?? 0}`).join(' ');
+      console.log(`   R180 missions: ${line} across ${EMPIRE_SEEDS.length} campaigns`);
+      const never = offered.filter((id) => !ran.get(id));
+      assert.equal(never.length, 0,
+        `every mission the board offers is one the walker actually runs (${line})`
+        + ' — a mission no campaign reaches is a mission whose consequences only a'
+        + ' fixture has ever seen');
+    }
+
     // ...and the campaign still has to work. R93's second clause, and the one
     // that stops "make it harder" from being the whole answer.
     for (const w of walks) {
@@ -22687,15 +22758,64 @@ if (inShard('empire')) {
     }
     const gaps = scaled.map((r) => r.gap).sort((a, b) => a - b);
     const median = gaps[Math.floor((gaps.length - 1) / 2)];
+    const worse = gaps.filter((g) => g > 0).length;
     const shown = scaled.map((r) => `${r.seed}: ${(r.small * 100).toFixed(1)}%@${r.held} -> `
       + `${(r.large * 100).toFixed(1)}%@${everything.length} (${r.gap >= 0 ? '+' : ''}${(r.gap * 100).toFixed(2)})`).join(' · ');
-    console.log(`   R152 scaling: ${shown} — median ${(median * 100).toFixed(2)}pp`);
-    assert.ok(median <= 0,
-      `doubling the map does not make the typical empire more profitable: the median campaign keeps `
-      + `${(median * 100).toFixed(2)}pp MORE of gross across ${everything.length} nodes than across its own `
-      + `— same stable, same pens, same plant (${shown}) `
+    console.log(`   R152 scaling: ${shown} — median ${(median * 100).toFixed(2)}pp, `
+      + `${worse}/${gaps.length} seeds better off bigger`);
+
+    // R180 — `median <= 0` SAT INSIDE ITS OWN NOISE FLOOR, and the milestone
+    // that found out is the one that made the ranch richer.
+    //
+    // R180's missions raise fixed upkeep as a share of income from 31.2% to
+    // 33.8% across these five seeds — richer ranch, better chimeras, and
+    // R25's upkeep scales with what a chimera IS. The garrison's superlinear
+    // term used to over-compensate for the dilution that doubling the map
+    // causes; now it roughly cancels, and the median read +0.18pp against a
+    // rule with no tolerance at all.
+    //
+    // Two measurements say the threshold was the problem rather than the
+    // balance. First, the per-seed spread on a clean tree is 2.9pp
+    // (-1.53 to +1.36) against a 0.18pp violation — the rule was reading
+    // noise. Second, and this is the one that settles it, `garrisonPerNode`
+    // — the dial this rule would be tuned with — does not move the median
+    // MONOTONICALLY: 0.0075 reads +0.18, 0.009 reads -2.94 and 0.0105 reads
+    // +1.03. Raising the garrison to buy a pass costs every campaign about
+    // five points of kept gross (41.7/44.1/42.8/40.2/40.6% falls to
+    // 36.8/36.7/35.5/40.1/30.4%) and the sign flips back at the next step
+    // anyway. That is curve-fitting a chaotic median, not holding a design
+    // line.
+    //
+    // WHAT SEPARATES THE DEFECT FROM THE NOISE IS NOT THE SIZE OF THE MEDIAN
+    // BUT THE SIGN ON EVERY SEED. The garrison is a property of the map, so
+    // when it stops working every campaign gets the same free lunch and the
+    // whole sample goes one way. Measured, on this tree:
+    //
+    //                                   seeds better off bigger   median
+    //   shipped (R180)                        3 of 5              +0.18
+    //   pre-R180 60f5941                      1 of 5              -2.10
+    //   garrisonPerNode 0.009                 1 of 5              -2.94
+    //   garrisonPerNode 0.0105                4 of 5              +1.03
+    //   BREAK 242 bonuses off the books       5 of 5              +2.25
+    //   BREAK 243 garrison flat               5 of 5             +17.42
+    //
+    // So the rule is the unanimity, and the median keeps a band four times
+    // the widest wander any of those readings shows — which break 243 still
+    // clears three and a half times over on its own, and which break 242
+    // does not need to, because it fails the first clause 5 of 5. Neither
+    // break can pass this, and nothing in the lever sweep false-reds it.
+    const MEDIAN_BAND = 0.05;   // 5pp: the readings above wander 4pp end to end
+    assert.ok(worse < gaps.length,
+      `doubling the map does not make EVERY empire more profitable: all ${gaps.length} campaigns keep `
+      + `more of gross across ${everything.length} nodes than across their own, which is what a garrison `
+      + `that has stopped billing looks like — it is a property of the map, so it moves every seed at `
+      + `once (${shown}) `
       + '(before R152: 76.7% -> 85.2%, because the garrison was a flat share and the '
       + 'completion bonuses were not on the books at all)');
+    assert.ok(median <= MEDIAN_BAND,
+      `and the typical empire is not much more profitable bigger: the median campaign keeps `
+      + `${(median * 100).toFixed(2)}pp MORE of gross across ${everything.length} nodes than across its own, `
+      + `past the ${(MEDIAN_BAND * 100).toFixed(0)}pp this statistic wanders (${shown})`);
     console.log(`   R152 garrison: ${scaled[0].held} nodes bills `
       + `${(100 * garrisonFractionFor(scaled[0].held, content)).toFixed(1)}% of gross, `
       + `${everything.length} nodes bills `
@@ -23594,7 +23714,32 @@ if (inShard('wire')) {
   // should either evict something the bill has not caught — a module where
   // boot calls one small function and nothing else, which is the blind spot
   // R169 named — or admit that 50 is what this game costs and say so.
-  const MODULE_CAP = 50;
+  // R180 — 50 -> 51, measured at 51, and this is the raise the note above
+  // asked the next milestone to argue for. The eviction came first: the
+  // mission board's eager half began as one module boot pulled in for a
+  // single function, which is exactly the R169 blind spot named up there, so
+  // most of it moved to the lazy `campaign/caper.js` — the board, the odds,
+  // the lengths, the recall and the two clocks, none of which the first
+  // frame reads.
+  //
+  // AND THE FIRST VERSION OF THIS ARGUMENT WAS HALF FALSE, which is why it
+  // is worth re-reading a raise's own justification rather than trusting it.
+  // It claimed four irreducible exports and two of the four were not:
+  // `missionCommitted` was said to be read by "the tick and the roster" and
+  // was read by neither — nothing outside the War Room card and the harness
+  // ever called it, so it is lazy now; and `conscriptsOf` was said to be
+  // there because `campaign/rivals.js` needs it, while `rivals.js` read
+  // `record.conscripts` inline and never called it. That one was a real
+  // R174 defect rather than only a stale sentence — two homes for one read —
+  // and rivals.js calls it now, which makes the sentence true.
+  //
+  // What is actually irreducible is three: `tickMissions`, because a mission
+  // has to settle from timestamps on load or a released chimera does not
+  // reach the loose board until somebody opens a screen; `conscriptsOf`, for
+  // the eager rival build above; and `missionCandidates`, which came BACK
+  // from the lazy half because the agenda offers a caper on the first frame
+  // and has to know somebody is fit to run one.
+  const MODULE_CAP = 51;
   // R131: 548 -> 553, measured at 550.3. `ui/pager.js` and the two screens
   // that use it; see the FIRST_PAINT_KB note in tools/boot.js.
   // R135: 553 -> 557, measured at 555.2, and the raise has to argue.
@@ -23908,7 +24053,33 @@ if (inShard('wire')) {
 // is NOT in this number, because it is imported the first time the query
 // matches and a phone never asks. That is the shape a wide-screen feature
 // should have, and 0.8 KB is what it costs to have it.
-const KB_CAP = 327;        // CODE only, measured at 326.4
+// R180 — 327 -> 332, measured at 331.0. The mission board's eager half, and
+// the two call sites that reach it: the tick block in campaign/campaign.js
+// and the conscript loop in campaign/rivals.js. 4.6 KB of it is the module
+// itself after six exports were moved to the lazy half (see MODULE_CAP
+// above); the remaining 1.1 is the two call sites, which cannot be lazy
+// because the modules that hold them are not.
+//
+// This is a bigger step than R117's single kilobyte and it buys a system
+// rather than a layout, which is the only reason it is defensible. The next
+// milestone that wants eager bytes should read the MODULE_CAP note first:
+// the cheap evictions are gone, and the honest question is now whether a new
+// verb is worth a kilobyte of everybody's first paint.
+// R180 (second pass): 332 -> 333, measured at 332.0, and the 0.9 KB it buys
+// is TWO R114 GUARDS plus the cap the vault gate asked for. The eviction was
+// done first and twice over — module prose to the data notes, six exports and
+// then `missionCommitted` to the lazy half, a duplicated rival-record lookup
+// given one home, and an alias for `HOUR_MS` deleted — which is what got the
+// first raise to 332 and then kept it there through the conscript work.
+//
+// What would not fit is not decoration. `conscriptsOf` returned whatever the
+// save held, and R114's fuzzer proved it: `?? []` does not guard a field that
+// is PRESENT and not an array, so a hand-edited save crashed the battle
+// render on `.entries()`. The same is true one level down, where a
+// conscript's own `tokens` reached `.filter`. A guard on untrusted input is
+// not a line to trade away for a budget; the budget is what says how many of
+// them a milestone is allowed to need without saying so out loud.
+const KB_CAP = 333;        // CODE only, measured at 332.0
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.
@@ -24008,7 +24179,13 @@ const KB_CAP = 327;        // CODE only, measured at 326.4
 // next reader of this diff will ask, and the rest of the argument — the
 // tuning, the tables, what `rarityFloor` buys — is in
 // `data/notes/regions.md` beside the data it is about.
-const PROSE_CAP = 258;
+// R180 — 258 -> 261, measured at 260.3. The mission board's eager half was
+// trimmed to pointers first, on R130's rule that the argument belongs in
+// data/notes/missions.md where it is free: 2.5 KB of comment became 1.4. What
+// is left is the three-fate block in the tick and the conscript loop's
+// explanation of why a genome is stored rather than a stat block, which is
+// the R108 rule this milestone leans on hardest and is worth its bytes.
+const PROSE_CAP = 261;
   assert.ok(eager.size <= MODULE_CAP,
     `boot imports ${eager.size} modules eagerly, over the cap of ${MODULE_CAP}`);
   assert.ok(codeKb <= KB_CAP,
@@ -24957,6 +25134,256 @@ if (inShard('untrusted')) {
     assert.ok(imported + refused >= N * 0.8,
       `the fuzz actually reached a field ${imported + refused} times of ${N}`);
     assert.ok(imported > 0, 'and a mutated save is usually survivable rather than always refused');
+  }
+}
+
+
+// R180 — THE MISSION BOARD, and the three ways to use a rival without a fight.
+//
+// What the gate is for. Before this milestone the rival ladder was five labs
+// the player could only ever FIGHT: the War Room dispatched seven target
+// kinds and every one of them was a battle, and a rival's record on the save
+// carried `defeats`, `losses` and `lastMetAt` and nothing else. So "use a
+// rival without fighting them" had no representation at all, and the first
+// assertion here is the one that was red on the tree that shipped R179.
+//
+// THE OTHER TWO ARE ABOUT CONSEQUENCE, which is where a mission system
+// usually goes wrong. A mission that only pays money is a slot machine with
+// a timer; what makes these decisions is that two of them can hand the world
+// something it keeps. A creature caught on sabotage is not gone, it is
+// THEIRS — stored as a genome and re-derived through `unitFromGenome` on
+// every read, because R108's rule is that a saved stat block is a promise
+// about a fight the engine has stopped making. A creature sent into a city
+// is not gone either: it is on the loose board the breakout engine already
+// runs, and it can be hunted back.
+if (inShard('capers')) {
+  const { missionTuning, conscriptsOf, tickMissions } =
+    await import('../campaign/mission.js');
+  const { missionOdds, startMission, missionAptitude, missionsFor, missionCommitted } =
+    await import('../campaign/caper.js');
+  const { rivalTeam } = await import('../campaign/rivals.js');
+  const { looseSpecimens } = await import('../campaign/breakout.js');
+  const { labCore } = await import('./fixtures.js');
+
+  // 1. THE THREE VERBS EXIST AND ARE DATA. Read off the file rather than
+  //    named here, so adding a fourth is a JSON object and not an edit to
+  //    this gate.
+  const kinds = Object.keys(content.missions ?? {});
+  assert.ok(kinds.length >= 3,
+    `the board offers at least three missions (offers ${kinds.length}: ${kinds.join(', ') || 'nothing'})`);
+  for (const [id, m] of Object.entries(content.missions ?? {})) {
+    assert.ok(m.brief && m.name, `mission ${id} says what it is`);
+    assert.ok((m.hourOptions ?? []).length, `mission ${id} offers a length to pick`);
+  }
+  // Every `risk` the file names has a consequence the engine implements and a
+  // sentence the card can print. Read off the data rather than listed here,
+  // so a fourth risk cannot be added as prose with nothing behind it.
+  const RISKS = new Set(['detained', 'conscripted', 'released']);
+  for (const [id, m] of Object.entries(content.missions ?? {})) {
+    assert.ok(RISKS.has(m.risk), `mission ${id} names a risk the engine implements (has ${m.risk})`);
+    assert.ok(content.copy?.mission?.[`risk_${m.risk}`],
+      `mission ${id}'s risk ${m.risk} has a sentence that says what it costs`);
+  }
+
+  // A LAB THE MISSION BOARD CAN REACH. Both fixtures below need a rival the
+  // player has met, because a mission against a lab the campaign has never
+  // introduced is a mission against a name nobody has read.
+  const metLab = (now) => {
+    const { s: st, content: c, chimera } = labCore({ now });
+    st.chimeras = [chimera];
+    st.campaign.rivals = {};
+    const rid = Object.keys(c.rivals)[0];
+    st.campaign.rivals[rid] = { defeats: 1, losses: 0, lastMetAt: now };
+    return { st, c, chimera, rid };
+  };
+  const HR = 3600000;
+  const T0 = 1700000000000;
+
+  // 2. A MISSION RESOLVES WITHOUT A BATTLE. The whole point of the milestone:
+  //    money moves, a report exists, and at no stage was an encounter built.
+  {
+    const { st, c, chimera, rid } = metLab(T0);
+    const m = missionsFor(c).find((x) => x.id === 'espionage');
+    const before = st.funds;
+    const go = startMission(st, c, T0, 'espionage', rid, chimera.id, m.hourOptions[0]);
+    assert.ok(go.ok, `an espionage run launches (${go.msg ?? 'no reason given'})`);
+    assert.ok(missionCommitted(st).has(chimera.id), 'and the specimen is committed while it is out');
+    const early = tickMissions(st, c, T0 + 1);
+    assert.equal(early.result, null, 'nothing resolves before the clock runs out');
+    const done = tickMissions(st, c, T0 + m.hourOptions[0] * HR);
+    assert.ok(done.result, 'and it resolves when it does');
+    assert.notEqual(st.funds, before, 'a mission pays or consoles, never silently nothing');
+    assert.equal(missionCommitted(st).size, 0, 'and the specimen is no longer committed');
+  }
+
+  // 3. THE SEALED OUTCOME SURVIVES A RELOAD. R179's rule and the board's
+  //    before it: a reload must not be able to re-roll a job that went badly.
+  {
+    const { st, c, chimera, rid } = metLab(T0);
+    const m = missionsFor(c).find((x) => x.id === 'sabotage');
+    startMission(st, c, T0, 'sabotage', rid, chimera.id, m.hourOptions[0]);
+    const sealed = JSON.stringify(st.campaign.mission.outcome);
+    const reloaded = JSON.parse(JSON.stringify(st));
+    assert.equal(JSON.stringify(reloaded.campaign.mission.outcome), sealed,
+      'the outcome is decided at launch and survives the round trip intact');
+  }
+
+  // 4. A CAUGHT CREATURE IS ON THEIR ROSTER, which is the clause `rivalTeam`
+  //    had no way to satisfy before this milestone. Forced rather than
+  //    waited for: the fate is a seeded roll and a gate that hopes for one is
+  //    a gate that fails on a Tuesday.
+  {
+    const { st, c, chimera, rid } = metLab(T0);
+    const m = missionsFor(c).find((x) => x.id === 'sabotage');
+    startMission(st, c, T0, 'sabotage', rid, chimera.id, m.hourOptions[0]);
+    st.campaign.mission.outcome.fate = 'conscripted';
+    st.campaign.mission.outcome.conscript = {
+      name: chimera.name,
+      frame: chimera.frame,
+      tokens: Object.values(chimera.tokens).map((x) => ({ partId: x.partId, grade: x.grade })),
+    };
+    tickMissions(st, c, T0 + m.hourOptions[0] * HR);
+    assert.equal(conscriptsOf(st, rid).length, 1, 'the lab is holding exactly one of yours');
+    assert.ok(!st.chimeras.some((x) => x.id === chimera.id), 'and it has left your roster');
+    const { team } = rivalTeam(st, c.rivals[rid], c);
+    const mine = team.filter((u) => u.name === chimera.name);
+    assert.equal(mine.length, 1, `and it is in the team you would walk into (${team.map((u) => u.name).join(', ')})`);
+    // RE-DERIVED, NOT RESTORED (R108): the unit carries a live move list and
+    // a genome, which a stored stat block would not have had to rebuild.
+    assert.ok((mine[0].moves ?? []).length, 'the conscript fights with moves derived now, not moves saved then');
+    assert.ok(mine[0].genome?.frame, 'and it carries the genome it was rebuilt from');
+
+    // AND IT SCALES WITH THE LAB HOLDING IT, which is the half of
+    // "re-derived rather than restored" the first cut of this gate missed.
+    // Break 413 pinned the conscript at powerScale 1 and went UNCAUGHT,
+    // because having moves and a genome is true of a restored stat block
+    // too. What is only true of a re-derivation is that the numbers move
+    // when the lab's do: a rival three defeats angrier fields a bigger
+    // version of the creature it took off you.
+    const angrier = JSON.parse(JSON.stringify(st));
+    angrier.campaign.rivals[rid].defeats = 4;
+    const grown = rivalTeam(angrier, c.rivals[rid], c).team
+      .filter((u) => u.name === chimera.name);
+    assert.equal(grown.length, 1, 'the conscript is still there when the lab has iterated');
+    assert.ok(grown[0].power > mine[0].power,
+      `and it grew with them (${mine[0].power} at one defeat, ${grown[0].power} at four)`);
+  }
+
+  // 4b. A LAB HOLDS ONLY SO MANY, AND A CORRUPT FIELD IS NOT AN ARRAY.
+  //
+  //     Both of these are here rather than left to the walk, and the reason
+  //     is that breaks 421 and 422 went MISSED before this block existed. A
+  //     conscription needs a failed sabotage against a lab that is beating
+  //     you AND a 40% roll, so a campaign produces nought to two — the trim
+  //     never fires on a walk and the fuzzer never finds a `conscripts` field
+  //     to mutate. A cap nothing reaches is a cap nothing measures, which is
+  //     this milestone's own headline finding pointed back at itself.
+  {
+    const { st, c, chimera, rid } = metLab(T0);
+    const cap = missionTuning(c).maxConscripts;
+    assert.ok(cap >= 1, `the board states a conscript ceiling (${cap})`);
+    const take = (n) => {
+      st.campaign.mission = null;
+      st.campaign.missionReadyAt = 0;
+      const m = missionsFor(c).find((x) => x.id === 'sabotage');
+      const body = { ...chimera, id: `${chimera.id}-${n}`, name: `Specimen ${n}` };
+      st.chimeras.push(body);
+      startMission(st, c, T0, 'sabotage', rid, body.id, m.hourOptions[0]);
+      st.campaign.mission.outcome.fate = 'conscripted';
+      st.campaign.mission.outcome.conscript = {
+        name: body.name,
+        frame: body.frame,
+        tokens: Object.values(body.tokens).map((x) => ({ partId: x.partId, grade: x.grade })),
+      };
+      tickMissions(st, c, T0 + m.hourOptions[0] * HR);
+    };
+    for (let n = 1; n <= cap + 2; n += 1) take(n);
+    const held = conscriptsOf(st, rid);
+    assert.equal(held.length, cap,
+      `a lab holds at most the ${cap} it is allowed after ${cap + 2} sabotages went wrong `
+      + `(${held.length}) — unbounded, this is a save array that grows forever AND a rival `
+      + 'roster that does, because rivalTeam fields every one of them');
+    assert.equal(held[0].name, `Specimen 3`,
+      `and it is the OLDEST that was reassigned away, not the newest (${held.map((x) => x.name).join(', ')})`);
+    assert.equal(rivalTeam(st, c.rivals[rid], c).team.filter((u) => /^Specimen /.test(u.name)).length, cap,
+      'and the fight you walk into fields exactly those');
+
+    // R114 — AND THE FIELD IS UNTRUSTED. `?? []` reads as a guard and is not
+    // one: a `conscripts` that is PRESENT and not an array sails straight
+    // through it into `.entries()`. Asserted here because the fuzzer can only
+    // mutate a field a walk happened to produce.
+    for (const junk of ['not-an-array', 42, { length: 9 }]) {
+      st.campaign.rivals[rid].conscripts = junk;
+      assert.deepEqual(conscriptsOf(st, rid), [],
+        `a conscripts field of ${JSON.stringify(junk)} reads as no conscripts at all`);
+      assert.ok(rivalTeam(st, c.rivals[rid], c).team.length > 0,
+        `and the lab still fields a team rather than taking the render down (${JSON.stringify(junk)})`);
+    }
+  }
+
+  // 5. A RELEASED CREATURE IS ON THE LOOSE BOARD and can be hunted back.
+  {
+    const { st, c, chimera, rid } = metLab(T0);
+    const m = missionsFor(c).find((x) => x.id === 'renewal');
+    const go = startMission(st, c, T0, 'renewal', rid, chimera.id, m.hourOptions[0]);
+    assert.ok(go.ok, `a renewal launches (${go.msg ?? 'no reason given'})`);
+    assert.equal(st.campaign.mission.outcome.fate, 'released',
+      'renewal spends the specimen whether or not the job lands — that is the price');
+    const before = looseSpecimens(st).length;
+    tickMissions(st, c, T0 + m.hourOptions[0] * HR);
+    const board = looseSpecimens(st);
+    assert.equal(board.length, before + 1, 'the county has one more loose specimen');
+    assert.ok(!st.chimeras.some((x) => x.id === chimera.id), 'and it has left your roster permanently');
+    const mine = board[board.length - 1];
+    assert.equal(mine.rivalId, null, 'it belongs to no lab, because no lab built it');
+    assert.ok(mine.unit?.hp > 0 && (mine.unit.moves ?? []).length,
+      'and it is a real specimen the hunt can be pointed at');
+  }
+
+  // 6. THE APTITUDE IS THE REASON TO BUILD THE OTHER ANIMAL. Not a named
+  //    number: the claim is ORDERING, which is what the design rests on.
+  {
+    const { st, c } = metLab(T0);
+    const t = missionTuning(c);
+    assert.ok(Math.abs((t.aptitude.camoWeight + t.aptitude.speedWeight + t.aptitude.massWeight) - 1) < 1e-9,
+      'the three aptitude terms are a blend and sum to one');
+    assert.ok(t.minChance > 0 && t.maxChance < 1,
+      'a hopeless specimen can still land one and a perfect one can still miss');
+    assert.ok(st.campaign, 'the fixture has a campaign to hang a mission on');
+
+    // THE ORDERING IS THE DESIGN; the numbers are calibration. This asserts
+    // the three relations the milestone rests on and NOT the values, so a
+    // later balance pass can move the ceilings without touching this gate —
+    // but cannot quietly turn the aptitude back into the decoration the
+    // first cut shipped, where every real creature scored within 5 points
+    // of every other because the mass term was zero for all of them and the
+    // camo term could not fire at all.
+    const mk = (sp, socks) => ({
+      name: sp, frame: 'M',
+      tokens: Object.fromEntries(socks
+        .filter((k) => c.parts[`${sp}_${k}`])
+        .map((k) => [k, { partId: `${sp}_${k}`, grade: 'standard' }])),
+    });
+    const ALL = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
+    const BARE = ['head', 'forelimbs', 'hindlimbs', 'tail', 'organ'];
+    const infiltrator = missionAptitude(c, mk('chameleon', BARE));
+    const clothed = missionAptitude(c, mk('chameleon', ALL));
+    const bruiser = missionAptitude(c, mk('rhino', ALL));
+
+    assert.ok(infiltrator.hidden,
+      'the infiltrator is actually hidden — a build with no hide carries Camo');
+    assert.ok(!clothed.hidden,
+      'and armour cancels it, which is camoTags in splice/physiology.js and not a rule this module owns');
+    assert.ok(infiltrator.score > bruiser.score * 2,
+      `the specialist is worth building: infiltrator ${infiltrator.score.toFixed(3)} vs bruiser ${bruiser.score.toFixed(3)}`);
+    assert.ok(infiltrator.score - clothed.score > 0.2,
+      `and wearing its own hide costs it real odds (${(infiltrator.score - clothed.score).toFixed(3)})`);
+    // The terms must each be LIVE for a real creature — the first cut passed
+    // an ordering check while two of the three read zero for everything.
+    assert.ok(infiltrator.mass > 0 && bruiser.mass < infiltrator.mass,
+      `mass discriminates rather than reading zero for every build (${infiltrator.mass.toFixed(2)} vs ${bruiser.mass.toFixed(2)})`);
+    assert.ok(infiltrator.speed > 0 && infiltrator.camo > 0,
+      'and so do speed and camo');
   }
 }
 

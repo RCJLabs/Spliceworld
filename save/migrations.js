@@ -22,6 +22,20 @@
 // anything needing content/RNG (e.g. starter herd) happens on boot via
 // seeded flags (see ranch.ensureRanchSeeded).
 export const migrations = {
+  // R180 — the mission slot, and the two places a live save can now grow a
+  // creature it did not have. `conscripts` and `setback` are NOT seeded here:
+  // they hang off a rival's record, which is created on first contact, and
+  // seeding them would write a key onto five labs a player may never have
+  // met. Both readers default, which is the honest shape for a field that
+  // means "nothing has happened yet".
+  61: (save) => {
+    save.campaign ??= {};
+    save.campaign.mission ??= null;
+    save.campaign.missionReadyAt ??= 0;
+    save.campaign.missionCount ??= 0;
+    save.campaign.missionReport ??= null;
+    return save;
+  },
   // R179 — the expedition slot. It arrives EMPTY and READY, which is the
   // only shape that costs a live save nothing: `expeditionReadyAt` of zero
   // is a van that finished unpacking in 1970, so whatever a player was in

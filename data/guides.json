@@ -905,6 +905,28 @@
           "default": 0
         }
       ]
+    },
+    {
+      "id": "missions",
+      "screen": "battle",
+      "order": 70,
+      "icon": "map",
+      "title": "Three ways to ruin a rival's week",
+      "body": "A caper sends ONE specimen against a lab you have met, for real hours, with no battle at the end of it. The odds are its anatomy rather than its power — quiet, quick and light wins here, and plating is the opposite of a disguise. Espionage risks a night in a holding pen. Sabotage risks the specimen itself: lose it and they keep it, and you will meet it again on their side. Renewal does not risk the specimen at all. It spends it.",
+      "reachable": [
+        {
+          "path": "campaign.notoriety",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "campaign.missionCount",
+          "min": 1,
+          "default": 0
+        }
+      ]
     }
   ]
 }

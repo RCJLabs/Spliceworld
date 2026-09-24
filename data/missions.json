@@ -1,0 +1,70 @@
+{
+  "tuning": {
+    "cooldownHours": 11,
+    "maxConscripts": 3,
+    "baseChance": 0.26,
+    "perAptitude": 0.42,
+    "perHour": 0.006,
+    "minChance": 0.1,
+    "maxChance": 0.9,
+    "aptitude": {
+      "camoWeight": 0.5,
+      "speedWeight": 0.3,
+      "massWeight": 0.2,
+      "camoCeil": 4,
+      "speedCeil": 12,
+      "massFloor": 95,
+      "massCeil": 165
+    }
+  },
+  "missions": {
+    "espionage": {
+      "name": "Espionage",
+      "brief": "Somebody quiet walks in, reads the filing cabinet, and walks out. Nothing is broken. That is the entire skill.",
+      "hourOptions": [
+        3,
+        8,
+        18
+      ],
+      "fundsPerHour": 13,
+      "notoriety": 0,
+      "consolation": 0.35,
+      "risk": "detained",
+      "detainHours": 9,
+      "grants": "intel",
+      "order": 1
+    },
+    "sabotage": {
+      "name": "Sabotage",
+      "brief": "Their centrifuge is going to have an unscheduled disagreement with physics. Get in, disagree, get out before anybody signs anything.",
+      "hourOptions": [
+        5,
+        12,
+        24
+      ],
+      "fundsPerHour": 21,
+      "notoriety": 2,
+      "consolation": 0.25,
+      "risk": "conscripted",
+      "catchOnFail": 0.4,
+      "grants": "setback",
+      "setback": 1,
+      "order": 2
+    },
+    "renewal": {
+      "name": "Unscheduled Urban Renewal",
+      "brief": "The block was scheduled for demolition in nine years. We are ahead of schedule and the paperwork will catch up. Your specimen does not come home from this one.",
+      "hourOptions": [
+        6
+      ],
+      "fundsPerHour": 62,
+      "notoriety": 6,
+      "consolation": 0.6,
+      "cooldownHours": 336,
+      "risk": "released",
+      "grants": "none",
+      "alwaysSpends": true,
+      "order": 3
+    }
+  }
+}

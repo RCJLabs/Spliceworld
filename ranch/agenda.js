@@ -42,6 +42,7 @@ import {
 } from '../campaign/operations.js';
 import { reachableEncounterIds, regionStates } from '../campaign/map.js';
 import { expeditionRegions, expeditionReady, expeditionCandidates } from '../campaign/expedition.js';
+import { activeMission, missionCandidates, missionTuning } from '../campaign/mission.js';
 import { enemyOf, speciesOf } from '../data/catalog.js';
 import { contestRemainingMs } from '../campaign/contest.js';
 import { isInjured, fitToFight } from '../battle/statblock.js';
@@ -366,6 +367,22 @@ export const AGENDA = [
     ready: (state, content, now) => expeditionReady(state, now)
       && expeditionRegions(state, content).length > 0
       && expeditionCandidates(state, now, new Set(activeOps(state).map((r) => r.chimeraId))).length > 0,
+  },
+  {
+    // R180 — the other verb that is not a fight. Shown only once a lab has been
+    // MET, because a caper against a name nobody has read is not an offer. The
+    // check does NOT reach the lazy half: the agenda runs on the first frame,
+    // so it asks what the eager module knows and leaves "against whom" to the
+    // card. Why the row exists at all is in data/notes/missions.md.
+    id: 'mission', kind: 'campaign', screen: 'battle', subtab: 'jobs',
+    label: (state, content) => fill(content.copy?.mission?.agenda_label, {}),
+    hint: (state, content, now) => fill(content.copy?.mission?.agenda_hint, {}),
+    ready: (state, content, now) => !activeMission(state)
+      && now >= (state.campaign?.missionReadyAt ?? 0)
+      && Object.values(state.campaign?.rivals ?? {})
+        .some((r) => ((r.defeats ?? 0) + (r.losses ?? 0)) > 0)
+      && missionCandidates(state, now, new Set(activeOps(state).map((r) => r.chimeraId))).length > 0
+      && missionTuning(content).cooldownHours > 0,
   },
   {
     id: 'assault', kind: 'campaign', screen: 'battle', label: 'Take a node',

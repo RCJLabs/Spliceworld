@@ -16,6 +16,7 @@ import { analyze } from '../splice/physiology.js';
 import { rivalLine } from './monologue.js';
 import { newsFor } from './wire.js';
 import { rivalOf } from '../data/catalog.js';
+import { conscriptsOf } from './mission.js';
 
 // Slots a rival will try to fill, in the order they commit to them. Head
 // first (mandatory), then the limbs that carry classAffinity votes.
@@ -316,9 +317,13 @@ export function rivalTeam(state, rival, content) {
 
   const dossier = rivalDossier(state, rival, content);
   const counter = dossier.counterClass;
+  // R180 — a landed sabotage takes a step back off this lab's escalation,
+  // floored so a rival cannot be ground down by a board that never risks a
+  // fight. What that buys and why: data/notes/missions.md.
+  const setback = Math.min(record.setback ?? 0, record.defeats);
   const powerScale = Math.min(
     meta.powerCap,
-    rival.powerScale * (1 + record.defeats * meta.powerPerDefeat)
+    rival.powerScale * (1 + Math.max(0, record.defeats - setback) * meta.powerPerDefeat)
   );
   const size = Math.min(
     meta.teamCap,
@@ -331,6 +336,23 @@ export function rivalTeam(state, rival, content) {
     team.push(rivalSpecimen(rival, content, {
       rng, meta, defeats: record.defeats, index: i, dossier, counter, powerScale, names,
     }));
+  }
+  // R180 — AND ANYBODY THEY CAUGHT, appended AFTER the lab's own build, so the
+  // team reads as what they make followed by what they took from you. The save
+  // holds a genome and this rebuilds the stat block every read — R108's rule,
+  // argued in campaign/visiting.js and data/notes/missions.md. The name stays
+  // because the player knew it by that name.
+  for (const [n, taken] of conscriptsOf(state, rival.id).entries()) {
+    if (!taken?.frame || !Array.isArray(taken.tokens)) continue;
+    const tokens = taken.tokens.filter((t) => content.parts?.[t.partId]);
+    if (!tokens.length) continue;
+    team.push(unitFromGenome({
+      id: `${rival.id}-conscript${n}`,
+      name: taken.name || 'Reassigned Specimen',
+      frame: taken.frame,
+      tokens,
+      powerScale,
+    }, content));
   }
   return { team, powerScale, counterClass: counter, dossier };
 }
