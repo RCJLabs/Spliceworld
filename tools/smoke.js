@@ -131,6 +131,10 @@ const SHARD_OF = {
   // that wants to aim at ONE block aims at the lane its name maps to. Shard
   // a: the block builds two fixtures and runs no battles.
   capers: 'a',
+  // R181 — the henchmen gate. One walk of the care clock and a settle
+  // comparison; no browser, no battles. Shard d is the lightest lane once
+  // R180's `capers` block landed in a.
+  hires: 'd',
   // R102 — its own name, for R129's reason one entry up. Shard b: the comment
   // above calls shard a "the lightest of the four" and that went stale, which
   // is why this is a measurement rather than a quote — a 212s, b 134s, c 174s,
@@ -25156,6 +25160,86 @@ if (inShard('untrusted')) {
 // about a fight the engine has stopped making. A creature sent into a city
 // is not gone either: it is on the loose board the breakout engine already
 // runs, and it can be hunted back.
+// --- R181: the end of being one person ---------------------------------
+//
+// THE GATE FIRST, AND IT IS RED ON THIS TREE ON PURPOSE.
+//
+// Every lane in this game is capped because the player is a single pair of
+// hands, and the entry's premise checked out to the letter: `laneFree`
+// reads `soloOps(state, content).length < 1` — a hard one, with no tuning
+// value behind it and nothing a player can buy to raise it. The crewed lane
+// at least grows with fit chimeras and the paperwork lane is uncapped.
+//
+// But the milestone is not really about lanes, and writing this rule is
+// what showed that. A henchman holds ONE STANDING DUTY WHILE THE PLAYER IS
+// AWAY, so the thing that changes is not how many jobs run at once — it is
+// that something happens during a week nobody opened the app.
+//
+// So the measurable is the care clock. `applyElapsed` drifts every animal's
+// condition down by `decayPerHour` for every hour it has been owned, floored
+// at `conditionFloor`, and there is no way to stop it: care is a button a
+// person presses. A week away costs the whole week, every time, and the
+// hand who "never misses a feed" is the first thing in the game that can
+// answer that.
+//
+// Asserted as a DELTA against the same week with nobody hired, not as an
+// absolute, because R65's `ownedMs` and R105's seasonal `decayScale` both
+// move the raw number and neither is this milestone's business.
+if (inShard('hires')) {
+  const { applyElapsed, TUNING: RANCH_TUNING } = await import('../ranch/ranch.js');
+  const HR = 3600000;
+  const WEEK = 168 * HR;
+  const T0 = Date.UTC(2026, 0, 1);
+
+  const stocked = (seed) => {
+    const st = { ...newGameState(), seed, lastTickAt: T0 };
+    for (const a of st.ranch.stock) { a.birthAt = T0 - 30 * 24 * HR; a.condition = 90; }
+    return st;
+  };
+  assert.ok(stocked(11).ranch.stock.length > 0, 'a fresh lab has stock to neglect');
+
+  // 1. WHAT A WEEK AWAY COSTS TODAY, so the delta below has a baseline that
+  //    is measured rather than assumed.
+  const alone = stocked(11);
+  const beforeCond = alone.ranch.stock.map((a) => a.condition);
+  applyElapsed(alone, content, T0 + WEEK);
+  const afterCond = alone.ranch.stock.map((a) => a.condition);
+  const lost = beforeCond.map((b, i) => b - afterCond[i]);
+  const worst = Math.max(...lost);
+  console.log(`   R181 a week alone: condition ${beforeCond[0]} -> ${afterCond[0].toFixed(1)}`
+    + ` (${worst.toFixed(1)} lost at worst, floor ${RANCH_TUNING.conditionFloor})`);
+  assert.ok(worst > 0,
+    'a week nobody opened the app costs the stock condition — if this is zero the'
+    + ' measurable this milestone is about does not exist and the gate below is theatre');
+
+  // 2. THE SETTLE IS ARITHMETIC, NOT A LOOP. One call for the week has to
+  //    agree with 168 hourly calls, or something is running in between and
+  //    the criterion's first clause is false. This half is GREEN today —
+  //    `applyElapsed` already works this way — and it is here so that the
+  //    henchman settle added below cannot quietly be the one that does not.
+  const stepped = stocked(11);
+  for (let h = 1; h <= 168; h += 1) applyElapsed(stepped, content, T0 + h * HR);
+  stepped.ranch.stock.forEach((a, i) => {
+    assert.ok(Math.abs(a.condition - afterCond[i]) < 0.01,
+      `a week settled in one step equals a week settled hour by hour (${a.condition} vs ${afterCond[i]})`);
+  });
+
+  // 3. AND THE THING THAT IS NOT TRUE YET. Nobody can be hired, so nobody
+  //    holds a duty, so the week above is the ONLY week the game has. When
+  //    this milestone lands, a lab with a hand on the payroll loses
+  //    measurably less over the same week from the same start — settled from
+  //    the same timestamps, with nothing running in between.
+  const staff = await import('../campaign/staff.js').catch(() => null);
+  assert.ok(staff, 'there is a staff module at all — R181 has not shipped yet');
+  const hired = stocked(11);
+  staff.hire(hired, content, T0, staff.hireRoster(content).find((h) => h.duty === 'care').id);
+  applyElapsed(hired, content, T0 + WEEK);
+  const keptMore = hired.ranch.stock.map((a, i) => a.condition - afterCond[i]);
+  assert.ok(Math.min(...keptMore) > 0,
+    `a week with a hand on the payroll costs less than a week without one (${keptMore.map((n) => n.toFixed(1)).join(', ')})`
+    + ' — this is the whole milestone: something happens while nobody is looking, because somebody is paid to do it');
+}
+
 if (inShard('capers')) {
   const { missionTuning, conscriptsOf, tickMissions } =
     await import('../campaign/mission.js');
