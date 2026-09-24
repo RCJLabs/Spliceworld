@@ -168,7 +168,15 @@ const BUDGET = {
   // 2.3 phone screens, past the 2.5 R131 aimed at and could not reach with a
   // page size, because a page only ever shortened the half of this screen
   // that was never the problem.
-  ranch:          { folded: 1900,  tallest: 4450, opens: 20, chrome: 1050 },
+  // R186 — 1900 -> 1980 shut, measured at 1,901, and it is the PAGE'S
+  // HEADINGS, not a taller row. The roster is paged eight at a time in band
+  // order, and there are three bands (ready to graduate, needs care,
+  // growing). `main`'s day-180 fixture put all eight on one band; this one
+  // walks a different campaign (R191's walker renders instead of waiting for
+  // shelf) and its page carries all three — two more headings at 39px each.
+  // Three is the most a page CAN carry, so this is the ceiling state of that
+  // term, and 1,980 is the old budget plus exactly those two headings.
+  ranch:          { folded: 1980,  tallest: 4450, opens: 20, chrome: 1050 },
   // R154 — THE PENS' SHUT HEIGHT IS DERIVED TOO, for R92's reason and
   // R131's cause. This screen is the multiplication R131 named — one folded
   // card per chimera — and, alone among the screens R131 paged, it never got
@@ -265,7 +273,15 @@ const BUDGET = {
   // shut shelf summarises what kinds of thing are on it. One bay is 81px of
   // summary line and fold. The growth guard is still R91's part cap, not
   // this number.
-  vault:          { folded: 2560,  tallest: 4200, opens: 20 },
+  // R186 — 2560 -> 2800 shut and 4200 -> 4440 open, measured at 2,720 and
+  // 4,353, and it is R182's card arriving on the fixture for the first time.
+  // The shelf is `tight` at 85% of 400, which is 340 parts: `main`'s day-180
+  // save ends on 338 and this one on 345, with nothing a spare. That is the
+  // state R182 built the "what the shelf would miss least" card for, and the
+  // gate had never loaded it. The card is 238px and 61 words, measured as the
+  // difference on the same 41-species spread; both numbers here are the old
+  // budget plus exactly that card.
+  vault:          { folded: 2800,  tallest: 4440, opens: 20 },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
   // R117 — 1100 -> 1150, and `dex:genes` below by the same 50, which is the
   // SHARED CHROME rather than the tab: the Dex's six-tab bar goes to two
@@ -348,7 +364,12 @@ const BUDGET = {
   // is now the stated answer: if a fixture ever pushes past this band, page
   // the tab the way R131 paged the Vault. The SHUT half is untouched at 550
   // and reads 491, which is what a player actually arrives at.
-  'dex:combos':   { folded: 550,   tallest: 3250, opens: 2 },
+  // R186 — 3250 -> 3400 open, measured at 3,317 against `main`'s 3,183.
+  // Two combos shipped (The Hitchhiker, Banked Fire), so this is R179's case
+  // twice: a real row is a real row, 67px each. It is NOT R136's case, and
+  // R136's instruction still stands for anything that is not a new row: the
+  // tab is thirty rows now, and paging it is the answer to fixture drift.
+  'dex:combos':   { folded: 550,   tallest: 3400, opens: 2 },
   // R129 FOLDS IT, WHICH BRINGS THE SHUT HALF DOWN AND BUDGETS THE FOLD:
   // 1100/1100 -> 400 shut (measured 291) and 1250 open (measured 1185).
   // Twelve genes could only be learned by breeding for them, so this tab
@@ -483,7 +504,9 @@ const WORDS = {
   // the same ~4% headroom R141 left on `dex:combos` — the shut shelf names
   // the KINDS on it, so a different species spread writes a different number
   // of summary lines. 333 parts against 338, so nothing the player holds grew.
-  vault:          { folded: 375,  open: 5000 },
+  // R186: 375 -> 440, measured at 405. R182's least-missed card, 61 words —
+  // see the height note above. The old budget plus exactly that card.
+  vault:          { folded: 440,  open: 5000 },
   'dex:roster':   { folded: 400,  open: 400 },
   'dex:variants': { folded: 200,  open: 200 },
   // R136: 550/550 -> 150 shut (measured 78) and 600 open (measured 532).
@@ -499,7 +522,9 @@ const WORDS = {
   // holds both halves of every combo, and none of them adds a sentence.
   // See the height budget above for the full derivation and for R136's
   // standing instruction, which this honours rather than spends.
-  'dex:combos':   { folded: 150,  open: 630 },
+  // R186: 630 -> 660 open, measured at 651 against `main`'s 627 — the two
+  // new combo rows at 12 words each. See the height note above.
+  'dex:combos':   { folded: 150,  open: 660 },
   // R129: 200/200 -> 100 shut (measured 50) and 250 open (measured 221).
   // See the height note above — the words are the twelve descriptions, and
   // they are now behind the fold that holds them.

@@ -5348,12 +5348,13 @@ const BREAKS = [
     // budgets alone cannot tell a screen that shrank from a screen that
     // stopped opening, which is why 198 went MISSED the first time.
     // R143 moved `tallest` 4100 -> 4120 (the shelf summarises a different
-    // spread), so the anchor follows the number it sits beside. What the
-    // break aims at is `opens`, which is untouched.
+    // spread), so the anchor follows the number it sits beside, and R186
+    // moved it again for R182's least-missed card. What the break aims at is
+    // `opens`, which is untouched.
     n: 199, gate: HEIGHT, name: 'the height gate stops asking whether a folding screen still opens',
     file: 'tools/height.js',
-    anchor: '  vault:          { folded: 2560,  tallest: 4200, opens: 20 },',
-    to: '  vault:          { folded: 2560,  tallest: 4200 },',
+    anchor: '  vault:          { folded: 2800,  tallest: 4440, opens: 20 },',
+    to: '  vault:          { folded: 2800,  tallest: 4440 },',
   },
   {
     // R137 — the five rows that point at the Ranch go back to navigating to
