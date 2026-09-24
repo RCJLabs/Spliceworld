@@ -6951,7 +6951,19 @@ triangle working, and each region genuinely asks a different question)*.
   CPU-s alone and 41 in a cold suite on both trees, and `main` had been
   passing cold only on its warm headroom. R186 itself adds 149 warm seconds
   and reads 1,191 of 1,425.
-  Breaks 451–463, 443/193/409/441 re-aimed, and a full battery because three
+  The browser height gate moved three budgets by the same rule. This walk
+  is a different campaign from `main`'s, and its day-180 save reaches two
+  states the gate had never loaded: a Ranch page showing all three herd
+  bands, and a tight shelf with no spares, where R182's least-missed card
+  appears. Each budget grew by exactly what it now shows, and the Combos
+  tab by its two new rows.
+  The full battery's first chunk found one more thing, in a gate R186 never
+  touched. `tools/wide.js` clicked tabs as soon as `main` held still, and
+  `main` is static HTML that holds still before boot binds a tab. On a busy
+  box, a screen that never opened read as one that "never went quiet". The
+  gate now waits for a visible screen and proves, on a shell with scripts
+  off, that nothing earlier passes. That proof is break 464.
+  Breaks 451–464, 443/193/409/441/199 re-aimed, and a full battery because three
   existing gates changed their logic.
 
 ### 9.31 A vault full of treasure has no exit (R182) — found closing R116

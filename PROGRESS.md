@@ -75,11 +75,36 @@ remembers her after the lab moves.**
     about 41 inside a cold suite.
   - `main` was only passing cold because its warm headroom paid for walks
     the allowance priced at 16.
+- Height budgets. The baseline's browser `height` gate went red on the
+  day-180 save; `npm test` does not run it. Against `main`'s fixture, each
+  term has a cause, and each budget moved by exactly that cause:
+  - Ranch 1,900 → 1,980 shut (measured 1,901). This campaign's page shows
+    all three herd bands, the most a page can, so two more headings at 39px.
+  - Vault 2,560 → 2,800 shut, 4,200 → 4,440 open, 375 → 440 words (measured
+    2,720 / 4,353 / 405). This is R182's least-missed card. The shelf is
+    tight at 340 parts; `main`'s fixture ends on 338 and this one on 345,
+    with no spares.
+  - Combos tab 3,250 → 3,400 open, 630 → 660 words (measured 3,317 / 651):
+    the two new combo rows, R179's case twice.
+
+### The width gate clicked before boot (found by the full battery)
+
+The first full-battery chunk went red in its baseline: "pens never went
+quiet with a card open at 1920px". The same tree had passed alone 15
+minutes earlier.
+- **Cause.** `tools/wide.js` settled on `main` before clicking a tab, and
+  `main` is static in `index.html`. With scripts off, the shell reads
+  `7:380:765` and settles, the click lands on an unbound tab, and the screen
+  "never goes quiet".
+- **Fix.** The gate waits for a visible screen, which only boot makes, and
+  boot binds the tabs before it shows one. It also loads the shell once with
+  scripts off and fails if anything settles there.
+- **Break 464** reverts the check and goes red every time, not by luck.
 
 ### Gates
 
 - The `tiers` block in `tools/smoke.js` (shard d).
-- Breaks 451-463.
+- Breaks 451-464 (464 is the width gate's readiness check).
 - Re-aimed: 193, 276, 409, 441, 443.
 - A full battery, because three existing gates changed their logic: the
   empire rule, the R182 shelf policy and the rival parts rule.

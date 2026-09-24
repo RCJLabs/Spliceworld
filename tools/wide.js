@@ -151,6 +151,28 @@ try {
     return false;
   };
 
+  // R186 — WAIT FOR THE APP, NOT FOR THE SHELL. Both passes below used to
+  // settle on `main` before clicking a tab, and `main` is in index.html from
+  // the first byte: six hidden screens, a width and a height before a single
+  // module has run. A shell with scripts OFF reads `7:380:765` and settles in
+  // 180ms, the click lands on a tab nobody has bound yet, and the screen it
+  // asked for "never went quiet". That is the whole of the one red R186's
+  // full battery hit (pens at 1920px, in a chunk baseline, on a busy box) and
+  // of a "ranch never went quiet" at 900 and 1280 under eight CPU burners —
+  // on a tree that passes alone every time. A visible screen is the one thing
+  // only boot makes, and boot binds the tabs before it shows one.
+  const BOOTED = 'main > .screen:not([hidden])';
+  // …and the rule refuses the thing it exists to refuse, every run, rather
+  // than by luck: the race above is timing, so a break could only catch a
+  // regression here if the gate itself checks the unbooted page.
+  await send('Emulation.setScriptExecutionDisabled', { value: true });
+  await send('Page.navigate', { url });
+  await sleep(700);
+  if (await settle(BOOTED, { deadline: 1500 })) {
+    fails.push('the readiness check passes on a shell no script has run in, so a tab can be clicked before it is bound');
+  }
+  await send('Emulation.setScriptExecutionDisabled', { value: false });
+
   for (const w of WIDTHS) {
     await send('Emulation.setDeviceMetricsOverride', { width: w, height: 900, deviceScaleFactor: 1, mobile: w < 700 });
     await send('Page.navigate', { url });
@@ -163,8 +185,8 @@ try {
     // a gate asking a question the page cannot answer — the same fault this
     // milestone found in `.agenda` (not a class) and `splice` (not a screen).
     // `main` is in the shell from the first byte and is never hidden.
-    if (!await settle('main', { deadline: 20000 })) {
-      fails.push(`the shell never painted and went quiet within 20s at ${w}px`);
+    if (!await settle(BOOTED, { deadline: 20000 })) {
+      fails.push(`the app never booted and went quiet within 20s at ${w}px`);
       continue;
     }
     const shell = JSON.parse(await evaluate(`JSON.stringify((() => {
@@ -240,7 +262,7 @@ try {
     await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: w < 700 });
     await send('Page.navigate', { url });
     await sleep(700);
-    if (!await settle('main', { deadline: 20000 })) { fails.push(`the in-use save never painted at ${w}px`); continue; }
+    if (!await settle(BOOTED, { deadline: 20000 })) { fails.push(`the in-use save never booted at ${w}px`); continue; }
     const rect = `const R = (n) => { if (!n) return null; const b = n.getBoundingClientRect();
       return { l: Math.round(b.left), r: Math.round(b.right), t: Math.round(b.top), b: Math.round(b.bottom) }; };`;
     await evaluate(`document.querySelector('[data-screen="pens"]')?.click()`);

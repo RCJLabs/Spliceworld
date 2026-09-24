@@ -6729,6 +6729,17 @@ const BREAKS = [
     anchor: '  if (fit.fits || surplusParts(state, content).length || (shelf && state.funds - shelf.level.cost >= reserve)) return null;',
     to: '  if (fit.fits || surplusParts(state, content).length) return null;',
   },
+  {
+    // R186 — found by R186's own full battery. The width gate clicked a tab
+    // as soon as `main` held still, and `main` holds still before boot binds
+    // a single tab, so a busy box read a screen that never opened as one
+    // that "never went quiet". The gate now waits for a visible screen and
+    // checks, on a shell with scripts off, that nothing earlier passes.
+    n: 464, gate: WIDE, name: 'the width gate clicks tabs as soon as the static shell holds still',
+    file: 'tools/wide.js',
+    anchor: "  const BOOTED = 'main > .screen:not([hidden])';",
+    to: "  const BOOTED = 'main';",
+  },
 ];
 
 const pristine = {};
