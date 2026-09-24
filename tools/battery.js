@@ -3582,19 +3582,15 @@ const BREAKS = [
     to: '    vars[key] !== undefined ? String(vars[key]) : whole',
   },
 
-  {
-    // R177 — R95'S PAIR-ORDERING GOES, AND THE VARIANT LINES STOP BEING ROLLED
-    // FOR. This is the break the entry was filed about: deleting one sort line
-    // costs five parts of mean reach and, before R177, NOTHING WENT RED —
-    // 232.1 of 244 is 95.1%, which clears the 0.95 floor, and the union stays
-    // 244/244 because thirteen seeds between them still stumble onto every
-    // line. The variant-line floor is the only clause that sees it, which is
-    // the whole reason it exists.
-    n: 347, gate: REACH, name: "the breeding pairs stop favouring a line that still owes the Dex a variant",
-    file: 'tools/sim.js',
-    anchor: '    pairs.sort((x, y) => (wantsVariant(y[0]) ? 1 : 0) - (wantsVariant(x[0]) ? 1 : 0));',
-    to: '    ',
-  },
+  // R177's break 347 lived here, and R186 retired it on the instruction R180
+  // left beside the census in tools/reach.js. It deleted the walker's
+  // pair-sort toward lines that still owe the Dex a variant. The census it
+  // relied on read 11 lines missed at R177, 6 at R116 and 3 at R180. On
+  // R186's tree it reads 0 of 78, clean AND broken: every seed reaches all six
+  // lines either way, and part reach moves by noise (256.0 against 255.2). The
+  // game grew out of needing the steer. The Incubator door itself is held by
+  // 159, 162 and 193, all caught, so re-aiming this break would only duplicate
+  // them.
 
   // R114 — a save is untrusted input.
   {

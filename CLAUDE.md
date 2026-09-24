@@ -79,10 +79,13 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (~4h40m. R188 is the SIXTH reading, and it disagrees with
+**The full battery (~5h25m. R186 is the SEVENTH reading: 456 breaks at 22m,
+83m, 133m and 86m, which is 324 minutes. It agrees with R118 and R185 below
+and not with R188, so the four chunks cost what they did before R188.
+R188 was the sixth reading, and it disagreed with
 the two below it: 427 breaks at 21m, 74m, 116m and 67m — 278 minutes, with 31
 more breaks than R185 and chunk 3 thirty-five minutes cheaper. The rule below
-says believe the third, so plan on 4h40m. R185 was the FIFTH reading and the
+said believe the third, so this line planned on 4h40m until R186. R185 was the FIFTH reading and the
 FIRST time this number held. R118 measured 390 breaks in four `--only` chunks at 25m,
 81m, 152m and 65m — 323 minutes. R185 ran 396 breaks on the same box at 25m,
 82m, 151m and 67m — 325 minutes, every chunk within a minute of its
@@ -107,9 +110,9 @@ chunk, thirty wasted across four — and that is the right price for a run
 whose partial results survive a container restart. Two full runs were lost at
 R116 before chunking: one to a tree edited underneath it, one to a restart
 twenty-five minutes in. Build the id list from the file, because break
-numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327 are
-retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
-456 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
+numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327, 347
+are retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
+455 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
 gene probe, R183 added 399-401 for the job headline, R185 added 402-404 for
 the Dex tab list, R176 added 405-407 for the lazy synth, R179 added 408-412
 for the expedition, R180 added 413-422 for the mission board, R181 added
@@ -117,7 +120,7 @@ for the expedition, R180 added 413-422 for the mission board, R181 added
 added 436-445 for the Vault's way out, R184 added 446-450 for the room
 inside `main`, and R186 added 451-464 for the rare, the unique and the run
 that remembers one. The count and the top id have not agreed since the
-retirements: 456 breaks, numbered to 464. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
+retirements: 455 breaks, numbered to 464. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
 against a tree carrying 410, because a milestone that adds breaks has to
 remember to come back here and nobody had. Trust `--anchors`, which prints
 the real total, over this sentence. Count with `--anchors`, which

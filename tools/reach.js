@@ -538,6 +538,11 @@ herd at day 180: ${per.map((r) => `${r.seed}:${r.herd}`).join(' ')} (ceiling ${h
     // that point retire break 347 or re-aim it at the Incubator door itself,
     // rather than inventing a fourth number for a defect the game has grown
     // out of noticing.
+    //
+    // R186 — AND THAT POINT ARRIVED. Clean 0 of 78, broken 0 of 78: every seed
+    // reaches all six lines with the pair-sort deleted. Break 347 is retired,
+    // as the paragraph above said it should be; the Incubator door is held by
+    // 159, 162 and 193. All three clauses stay as backstops against a collapse.
     const missed = perLines.reduce((n, r) => n + (ALL_LINES.length - r.lines.size), 0);
     if (REPORT) {
       console.log(`  lines missed across the census: ${missed} of ${ALL_LINES.length * perLines.length}`);

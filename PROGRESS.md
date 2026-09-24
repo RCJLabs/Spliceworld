@@ -105,9 +105,17 @@ minutes earlier.
 
 - The `tiers` block in `tools/smoke.js` (shard d).
 - Breaks 451-464 (464 is the width gate's readiness check).
-- Re-aimed: 193, 276, 409, 441, 443.
+- Re-aimed: 193, 199, 276, 409, 441, 443.
 - A full battery, because three existing gates changed their logic: the
   empire rule, the R182 shelf policy and the rival parts rule.
+  - **Result: 456 breaks in 324 minutes, 454 caught.** Chunks took 22, 83,
+    133 and 86 minutes, and every chunk's baseline was green.
+  - **388 missed.** It is R180's known miss, queued as R187.
+  - **347 missed, and is retired.** It deletes the walker's pair-sort toward
+    unfinished variant lines. The census reads 0 of 78 missed clean and 0 of
+    78 broken, so the game no longer needs the steer. R180's note said to
+    retire it at this point. The Incubator door is still held by 159, 162 and
+    193. The list is 455 breaks, numbered to 464.
 
 ### Known issues
 

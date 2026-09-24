@@ -6963,6 +6963,11 @@ triangle working, and each region genuinely asks a different question)*.
   box, a screen that never opened read as one that "never went quiet". The
   gate now waits for a visible screen and proves, on a shell with scripts
   off, that nothing earlier passes. That proof is break 464.
+  The full battery ran 456 breaks in 324 minutes and caught 454. 388 is
+  R180's known miss, queued as R187. 347 is retired, as R180's note beside
+  the variant-line census said it should be once a broken tree read 2 or
+  fewer: this tree reads 0 of 78 clean and 0 of 78 with the pair-sort
+  deleted.
   Breaks 451–464, 443/193/409/441/199 re-aimed, and a full battery because three
   existing gates changed their logic.
 
