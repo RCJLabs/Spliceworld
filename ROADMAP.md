@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**5 entries queued.** R181, R182, R184, R186, R187.
+**6 entries queued.** R182, R184, R186, R187, R188, R189.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -6693,6 +6693,27 @@ triangle working, and each region genuinely asks a different question)*.
   and say why the data-key option could only ever have paid half.
 
 
+- **R188 — The walker never hires.** R181 shipped the payroll with its
+  whole proof in fixtures: the walk does not touch it, so no campaign
+  number says what a hand or a vet is worth over 180 days, or whether the
+  wage bill really tracks the operation on a real run rather than a
+  doubled fixture. R179 and R180 wired their verbs into the walker in the
+  same milestone; R181 did not, because a walker that hires moves the
+  herd's condition, the Infirmary clock and the bank, and with them the
+  battle count, reach and every walk-calibrated threshold — work the
+  criterion did not cover. *Done when: the walker hires by a stated policy,
+  the cascade is re-derived rather than re-tuned, and the entry reports the
+  day-180 wage share and each hire's tallies.*
+
+- **R189 — A henchman runs a mission.** R181's entry said a henchman "can
+  also run an R180 mission, which is how espionage stops costing a chimera."
+  Not shipped: every mission still sends a creature. The shape is the same
+  as a duty — one hire, one standing job — but the odds are anatomy, and a
+  henchman has none, so it needs its own aptitude and its own risk before it
+  is a choice rather than a free mission. *Done when: a henchman can be sent
+  on a mission, its odds and risk are stated in data, and it is not strictly
+  better than sending the best infiltrator.*
+
 - **R187 — The gates that measure a fixture instead of a bound.** R180's rot
   check turned up four breaks going MISSED, and chasing them found the same
   defect wearing four costumes: a rule whose threshold was set beside one
@@ -6975,7 +6996,7 @@ adds is a CHOICE rather than another button that is always available.
   guards its own field after R114's fuzzer took the battle render down with
   a `conscripts` that was a string.
 
-- **R181 — Henchmen, and the end of being one person.** Every lane in this
+- **R181 — Henchmen, and the end of being one person.** ✅ Every lane in this
   game is capped because the player is a single pair of hands: the solo job
   lane is "exactly one, always", and R116 turned the rest of the board into
   a charge bucket for the same reason. Hires are the way out, and they cost
@@ -6995,6 +7016,52 @@ adds is a CHOICE rather than another button that is always available.
   running in between; every henchman's quirk is legible in the digest; the
   wage bill tracks the size of the operation; and no hire is strictly better
   than another at the same price.*
+
+  **Shipped.** Four hires in `data/henchmen.json`, two duties, two per duty
+  at one price. **Gristle** and **Mopsy** both take 70% of the drift off the
+  herd: Gristle reaches every pen and overfeeds at $2 a meal, Mopsy costs
+  nothing extra and only reaches the front eight. **Doc Sutures** and **Nurse
+  Gauze** both halve the Infirmary clock: Doc is free and refuses anything
+  over 40 instability — a third of the day-180 walk's roster, measured —
+  and Gauze treats anything and bills $20 an hour, about the Infirmary's own
+  rush price. One slot to start, a second at twelve held blocks, one hire
+  per duty.
+
+  *THE MEASURABLE WAS THE CARE CLOCK, NOT THE LANES.* The entry's premise
+  checked out to the letter — `laneFree` reads a hard `< 1` for the solo
+  lane — but writing the gate showed the milestone is not about how many
+  jobs run at once. Before it, a week nobody opened the app cost the herd
+  90 → 26 condition every time, and nothing could answer that. Asserted as a
+  delta against the same week unstaffed, so the season and R65's clock stay
+  out of it.
+
+  *SETTLED FROM TIMESTAMPS.* The hand's shift and the wage run inside
+  `applyElapsed`; the vet's round, `treatInjuries`, runs before the campaign
+  tick so it treats only what was in the Infirmary when the window opened,
+  never a job's injury that came home later in the same window. All three
+  are linear in time, and the gate settles every hire's week in one call and
+  in 168 and compares the herd, the clocks, the bank and the tallies.
+
+  *THE WAGE IS PRICED PER HEAD OF THE OPERATION* — stock, chimeras and held
+  blocks — so doubling the operation doubles the bill, `upkeepPerDay` carries
+  it, the War Room's upkeep line names it, and the card prints the same
+  function the clock bills with. Measured on the walk: ~10 heads on day 5,
+  ~55 from day 30, so a wage of 3 is ~$30/day early and ~$170/day at dominion.
+
+  *NO HIRE DOMINATES, MEASURED ON THE ENGINE.* Each same-price pair works the
+  same wound-up week and is scored on what the duty is for and what it cost;
+  each must win one. The declared axes in `tuning.duties` must agree.
+
+  *LEGIBLE IN THE DIGEST.* Each hire keeps two tallies, `done` and `missed`;
+  `worldSnapshot` reports them in whole units and `awayDigest` prints one line
+  per hire from that henchman's own `report` template, the fee derived from
+  `done` at its price. The gate requires both halves: the money for a quirk
+  that costs money, the count for one that leaves work undone.
+
+  Eager cost: KB_CAP 333 → 334 with the argument beside it; the prose was
+  paid outright from the Task Force header, which repeated its note. Breaks
+  423–430. Not in the Done-when and not shipped: the walker does not hire
+  (R188), and a henchman does not run an R180 mission (R189).
 
 ### 9.29 The ceiling was the map (R152) — queued out of R138
 

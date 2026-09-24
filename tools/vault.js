@@ -181,6 +181,9 @@ const BOUNDS = {
   'campaign.heldNodes':   { max: (c) => (c.nodes ?? c.regions ?? []).length || 40, by: 'the map has as many nodes as it has' },
   'campaign.contested':   { max: (c) => (c.nodes ?? c.regions ?? []).length || 40, by: 'one per held node' },
   'campaign.operations':  { max: (c) => Object.keys(c.operations ?? {}).length || 16, by: 'the jobs board' },
+  // R181 — the payroll. `hireBlock` refuses past `slotsOf`, which never
+  // exceeds `maxSlots`, and one hire per duty besides.
+  'staff.hired':          { max: (c) => c.henchmenMeta?.maxSlots ?? 2, by: '`maxSlots` in henchmen.json; `hireBlock` refuses past it' },
   'campaign.faunaGranted': { max: (c) => Object.keys(c.species ?? {}).length, by: 'the species list' },
   'directorStats.dissections': { max: 40, by: 'one per captive, and captives are capped' },
   'directorStats.announced':   { max: 40, by: 'one per countermeasure the director has' },

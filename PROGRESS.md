@@ -1,5 +1,59 @@
 # PROGRESS
 
+## Session 208 — R181: Henchmen, and the end of being one person ✅
+
+**A week nobody opened the app used to cost the herd 90 → 26 condition,
+every time, and nothing in the game could answer it. Now somebody is paid
+to.**
+
+### What shipped
+
+    data/henchmen.json    four hires, two duties, two per duty at one price
+    ranch/ranch.js        EAGER  the hand's shift, the wage, the vet's round
+    campaign/staff.js     LAZY   roster · slots · hire · let go
+    campaign/digest.js    LAZY   one welcome-back line per hire
+    campaign/ui.js        the Payroll card, first on the War Room's Jobs tab
+
+    Gristle      hand  70% of the drift, every pen, overfeeds at $2 a meal
+    Mopsy        hand  70% of the drift, front eight pens only, $0 extra
+    Doc Sutures  vet   halves the clock, refuses anything over 40 instability
+    Nurse Gauze  vet   halves the clock for anyone, bills $20 an hour
+
+Wages are dollars per day per head of the operation (stock + chimeras +
+held blocks), so the bill doubles when the operation does. One slot to
+start, a second at twelve held blocks, one hire per duty. SAVE_VERSION 62,
+an empty payroll by migration: nobody is hired on a player's behalf.
+
+### The four clauses, and how each is held
+
+- **Settled from timestamps.** Hand and wage inside `applyElapsed`, the vet
+  in `treatInjuries` before the campaign tick. All linear in time; the gate
+  settles every hire's week in one call and in 168 and compares everything.
+- **Legible in the digest.** Two tallies per hire, one line each, from the
+  henchman's own template. The gate requires both halves of every quirk.
+- **Wage tracks the operation.** Double it, the bill doubles; `upkeepPerDay`
+  carries it; a week away charges exactly seven days plus the quirk's fee.
+- **No hire dominates at its price.** Measured on the engine, not read off
+  the JSON: each same-price pair works one week and each must win something.
+
+### Known issues
+
+- KB_CAP 333 → 334 (measured 333.99). The payroll is a clock and boot runs
+  the clock, so it is eager; everything else went lazy. Prose was paid, not
+  raised: the Task Force header gave 1.2 KB back to its data note.
+- The walker does not hire (queued as R188), so no 180-day number exists
+  for what a henchman is worth. Leaving it out was deliberate: a hiring
+  walker moves battle count, reach and every walk-calibrated threshold,
+  which the acceptance criterion does not cover.
+- A henchman cannot run an R180 mission (queued as R189). It was in the
+  entry's prose, not its Done-when.
+- `letGo` does not settle the gap since the last tick before removing the
+  record. Seconds of unpaid shift at most, because every screen ticks first.
+
+### Next session's first task
+
+R188: make the walker hire by a stated policy and re-derive what moves.
+
 ## Session 207 — R180: Espionage, sabotage, and unscheduled urban renewal ✅
 
 **Five labs you could only ever fight. Now there are three ways to use one

@@ -1091,28 +1091,30 @@ function staffCard(state, ctx) {
   if (!roster.length) return '';
   const hired = hiredOf(state);
   const next = nextSlotAt(state, content);
+  // The jobs board's own row: what they are on the left, the one verb on the
+  // right. A refusal is a sentence (R161), so it reads under the quirk rather
+  // than squeezing into a tag beside it.
   const row = (h, action) => `
-      <div class="op-row">
-        <div><strong>${esc(h.name)}</strong> &middot; ${esc(h.title ?? '')}<br>
-        <span class="fine-print">${esc(h.quirk ?? '')}</span><br>
-        <span class="fine-print">${copy(content, 'staff.wage', { wage: fmtMoney(wageNow(state, content, h.id)) })}${action.tally ?? ''}</span></div>
-        ${action.html}
+      <div class="encounter job-row">
+        <div><strong>${esc(h.name)}</strong> <span class="lineage">${esc(h.title ?? '')} &middot; ${
+    copy(content, 'staff.wage', { wage: fmtMoney(wageNow(state, content, h.id)) })}</span>
+        <span class="lineage fine-print">${esc(h.quirk ?? '')}</span>
+        ${action.note ? `<span class="fine-print job-odds">${action.note}</span>` : ''}</div>
+        ${action.html ?? ''}
       </div>`;
   const rows = roster.map((h) => {
     const rec = hired.find((r) => r.id === h.id);
     if (rec) {
       const vars = { done: Math.floor(rec.done ?? 0), missed: Math.floor(rec.missed ?? 0) };
       return row(h, {
-        tally: ` &middot; ${h.duty === 'infirmary' ? copy(content, 'staff.tally_infirmary', vars) : copy(content, 'staff.tally_care', vars)}`,
+        note: h.duty === 'infirmary' ? copy(content, 'staff.tally_infirmary', vars) : copy(content, 'staff.tally_care', vars),
         html: `<button type="button" data-staff-fire="${h.id}">${copy(content, 'staff.let_go_button')}</button>`,
       });
     }
     const block = hireBlock(state, content, h.id);
-    return row(h, {
-      html: block
-        ? `<span class="locked-tag">${esc(block)}</span>`
-        : `<button type="button" data-staff-hire="${h.id}">${copy(content, 'staff.hire')}</button>`,
-    });
+    return row(h, block
+      ? { note: esc(block) }
+      : { html: `<button type="button" data-staff-hire="${h.id}">${copy(content, 'staff.hire')}</button>` });
   }).join('');
   return `
     <section class="card jobs-card">

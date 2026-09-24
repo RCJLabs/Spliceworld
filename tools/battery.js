@@ -5491,12 +5491,14 @@ const BREAKS = [
     // proves the constant is read, and this one proves the SUM is.
     n: 226, gate: EMPIRE, name: 'the ledger stops adding territory and the plant, and only livestock is billed',
     file: 'ranch/ranch.js',
-    anchor: `  return stockUpkeepPerDay(state, content)
-    + chimeraUpkeepPerDay(state, content)
+    // R181 re-aimed: the wage line now follows these two, so the break
+    // deletes exactly them and leaves the payroll standing.
+    anchor: `    + chimeraUpkeepPerDay(state, content)
     + territoryUpkeepPerDay(state, content)
-    + facilityUpkeepPerDay(state, content);`,
-    to: `  return stockUpkeepPerDay(state, content)
-    + chimeraUpkeepPerDay(state, content);`,
+    + facilityUpkeepPerDay(state, content)
+`,
+    to: `    + chimeraUpkeepPerDay(state, content)
+`,
   },
   {
     // R144 — THE EXEMPTION WIDENS AND THE GATE STOPS ASKING ANYTHING. Exactly
