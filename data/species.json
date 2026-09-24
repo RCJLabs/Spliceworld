@@ -1863,6 +1863,93 @@
         }
       },
       "flavor": "Files no flight plan. Arrives anyway."
+    },
+    {
+      "id": "lamprey",
+      "name": "Lamprey",
+      "role": "Poisoner",
+      "rarity": "rare",
+      "tags": [
+        "Aquatic"
+      ],
+      "palette": {
+        "primary": "#6b5a4e",
+        "secondary": "#c9a99a",
+        "accent": "#ff8fa3"
+      },
+      "frame": "A",
+      "bulk": 0.55,
+      "class": "water",
+      "archetype": "jawless fish",
+      "diet": "Whatever it is attached to",
+      "feedCost": 6,
+      "upkeepPerDay": 6,
+      "mailOrderPrice": null,
+      "growthHours": {
+        "adult": 10,
+        "prime": 28,
+        "elder": 90
+      },
+      "thermal": [
+        4,
+        24
+      ],
+      "incubationMinutes": 40,
+      "setBonus": {
+        "name": "Hanger-On",
+        "desc": "Latch hands back half as much again",
+        "effect": {
+          "keywords": {
+            "latch": 1.5
+          }
+        }
+      },
+      "flavor": "Has never once paid for a meal."
+    },
+    {
+      "id": "clinker",
+      "name": "Mother Clinker",
+      "role": "Tank",
+      "rarity": "unique",
+      "tags": [
+        "Armored"
+      ],
+      "palette": {
+        "primary": "#3d3a3f",
+        "secondary": "#8a7f78",
+        "accent": "#ff7a2f"
+      },
+      "frame": "L",
+      "bulk": 1.7,
+      "class": "ground",
+      "archetype": "salamander",
+      "diet": "Coke, slag, and the foreman's sandwiches",
+      "feedCost": 12,
+      "upkeepPerDay": 12,
+      "mailOrderPrice": null,
+      "growthHours": {
+        "adult": 10,
+        "prime": 30,
+        "elder": 100
+      },
+      "thermal": [
+        16,
+        40
+      ],
+      "incubationMinutes": 50,
+      "setBonus": {
+        "name": "Furnace Mother",
+        "desc": "+10% HP, and regeneration runs half as strong again",
+        "effect": {
+          "stats": {
+            "hp": 1.1
+          },
+          "keywords": {
+            "regen": 1.5
+          }
+        }
+      },
+      "flavor": "Has lived in the rolling mill since it closed. Still has opinions about the closure."
     }
   ]
 }

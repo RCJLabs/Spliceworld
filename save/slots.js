@@ -235,7 +235,7 @@ export async function importSave(text) {
 //
 // The list governs BOTH a reset and an import, because two answers to "what
 // is a run" is how the two paths drift apart.
-export const CARRIED_ACROSS_RUNS = ['settings', 'guidesSeen', 'ui'];
+export const CARRIED_ACROSS_RUNS = ['settings', 'guidesSeen', 'ui', 'legends'];
 
 function carryForward(fresh, previous) {
   for (const key of CARRIED_ACROSS_RUNS) {
@@ -244,8 +244,17 @@ function carryForward(fresh, previous) {
   return fresh;
 }
 
+// R186 — AND THE ONE PART OF A RUN THAT IS ALSO PART OF THE NEXT. The uniques
+// this run found (`campaign.legendsFound`, which is run-local so that "once
+// per run" means this run) join the ones every run before it found. Twelve,
+// the wire's own length (campaign/wire.js): a story nobody has told for
+// twelve labs has become folklore, and folklore does not need a save field.
+const LEGENDS_KEPT = 12;
+
 export function startNewRun(state) {
-  return carryForward(newGameState(), state);
+  const fresh = carryForward(newGameState(), state);
+  fresh.legends = [...(fresh.legends ?? []), ...structuredClone(state?.campaign?.legendsFound ?? [])].slice(-LEGENDS_KEPT);
+  return fresh;
 }
 
 // What the confirmation has to say out loud. DOM-free so the numbers a

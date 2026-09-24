@@ -131,20 +131,20 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
      engine at test time, never typed twice. If you change content, this
      block is what tells you the prose above it has gone stale. -->
 
-- species: 42
-- parts: 249
+- species: 44
+- parts: 259
 - frames: 4
 - regions: 5
 - nodes: 23
-- keywords: 29
-- combos: 28
+- keywords: 30
+- combos: 30
 - grades: 4
 - grade multipliers: 1/1.2/1.4/1.65
 - grade move bonus percent: 12
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 62
+- save version: 63
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**5 entries queued.** R186, R187, R189, R190, R191.
+**3 entries queued.** R187, R189, R190.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -6874,7 +6874,7 @@ triangle working, and each region genuinely asks a different question)*.
   rather than assumed; and the battery's own notes say, for each rule
   touched, what would make it blind again.*
 
-- **R186 — The rare, the unique, and the run that remembers one.** R179
+- **R186 — The rare, the unique, and the run that remembers one.** ✅ R179
   shipped the machinery and one uncommon; this is the content the machinery
   was built to carry. **Rare**: a second tier behind a longer, fuller trip,
   with its own `rarityFloor` row and the hours to reach it — the R179 gate
@@ -6896,6 +6896,80 @@ triangle working, and each region genuinely asks a different question)*.
   Dex on the reach census; at least one new combo and one new keyword ship
   with them; and no tier's win rate at equal grade beats a common's by more
   than the noise floor.*
+
+  **Shipped: a Lamprey, Mother Clinker, and the county's memory of her.**
+  The **Lamprey** is the rare: a jawless fish on the Kite, 48 hours and two
+  crew into the Drowned Quarter, and its head carries **Latch** — the 30th
+  keyword and the first swing in the game that heals its owner (half of what
+  it deals, capped at what is missing; Recoil's mirror). **Mother Clinker**
+  is the unique: a salamander the size of a sofa in the Foundry's rolling
+  mill, 48 hours and the full three crew. She arrives under her own name, the
+  run writes her down (`campaign.legendsFound`), and she is off the table for
+  the rest of that run. Two combos ship with them — **The Hitchhiker**
+  (lamprey head + shark hide, Latch) and **Banked Fire** (her Furnace Heart +
+  a tortoise's shell, Regen). SAVE_VERSION 63 adds the two legend fields.
+
+  **The name crosses.** `startNewRun` folds this run's finds into the carried
+  `legends` list (the fourth key `CARRIED_ACROSS_RUNS` has ever held, trimmed
+  to twelve), the relocation ceremony's `recallLegends` puts one line about
+  her and the old lab on the new lab's wire, and the Yearbook's Tenure section
+  gains a Legend row. Two relocations on, she is still there. She is never
+  offered as a bloodline: a unique is somebody, not a line.
+
+  **Rarity is not strength, measured.** The `tiers` block flies every natural
+  species as a purebred at equal grade against every encounter and pools each
+  tier's games; the noise floor is two standard errors of the difference. At
+  standard the rare reads 18.3% against the commons' 32.5 and the unique 26.3;
+  at apex 36.2 and 57.1 against 58.8. Both are BELOW the commons: the Lamprey
+  earns its rarity through Latch on a spliced build, not by winning as itself.
+  The break that triples its set bonus reads 80.8% at apex and goes red —
+  while still under the best common's 86.5, which is why the rule compares
+  tiers rather than asking for a new top of the chart. Mother Clinker had to
+  give something up to pass R179's part rule, and did: she is forty years in
+  a furnace and has no teeth (A Good Gumming, 34 power).
+
+  **Found on the way: the trip was never the only door.** The first reach
+  census had every one of thirteen seeds holding Mother Clinker's anatomy and
+  one of them had ever found her. A rival shopping outside its own lab wore
+  her head, and salvage handed it over — R129's variant-line leak again, one
+  tier up, and it had been true of the Manta since R179 (13/13 seeds held its
+  parts; 9/13 do honestly). `campaign/rivals.js` now keeps anatomy above
+  common off every generated unit. After the fix the Lamprey's parts reach 10
+  of 13 seeds, Mother Clinker's 7 (found on 9), all through a trip.
+
+  **Two gates the cascade moved.** R191 surfaced on seed 808 (98 head against
+  a ceiling of 80) and was folded in — see its entry. And R152's empire rule
+  lost its sign test: `main` read 4 of 5 seeds better off on a doubled map
+  with its holdout at −0.03pp, and this tree reads 5 of 5 with two seeds at
+  +0.22 and +0.24, so the unanimity clause had no clean-side margin left. The
+  5pp median band it kept as a backstop is the rule now, and still separates
+  both breaks: clean +1.19, break 242 +6.63, break 243 +18.32. Budgets moved
+  with stated arguments: first paint 1136 → 1155 KB (measured 1146; 9.5 KB of
+  it content), eager code 334 → 335 KB (measured 334.31, paid down first),
+  and the suite's walk rebuild allowance 16 → 36 CPU-seconds. That last one
+  is not R186's cost. The A/B on `main` measured a rebuilt walk at about 31
+  CPU-s alone and 41 in a cold suite on both trees, and `main` had been
+  passing cold only on its warm headroom. R186 itself adds 149 warm seconds
+  and reads 1,191 of 1,425.
+  The browser height gate moved three budgets by the same rule. This walk
+  is a different campaign from `main`'s, and its day-180 save reaches two
+  states the gate had never loaded: a Ranch page showing all three herd
+  bands, and a tight shelf with no spares, where R182's least-missed card
+  appears. Each budget grew by exactly what it now shows, and the Combos
+  tab by its two new rows.
+  The full battery's first chunk found one more thing, in a gate R186 never
+  touched. `tools/wide.js` clicked tabs as soon as `main` held still, and
+  `main` is static HTML that holds still before boot binds a tab. On a busy
+  box, a screen that never opened read as one that "never went quiet". The
+  gate now waits for a visible screen and proves, on a shell with scripts
+  off, that nothing earlier passes. That proof is break 464.
+  The full battery ran 456 breaks in 324 minutes and caught 454. 388 is
+  R180's known miss, queued as R187. 347 is retired, as R180's note beside
+  the variant-line census said it should be once a broken tree read 2 or
+  fewer: this tree reads 0 of 78 clean and 0 of 78 with the pair-sort
+  deleted.
+  Breaks 451–464, 443/193/409/441/199 re-aimed, and a full battery because three
+  existing gates changed their logic.
 
 ### 9.31 A vault full of treasure has no exit (R182) — found closing R116
 
@@ -6983,7 +7057,7 @@ triangle working, and each region genuinely asks a different question)*.
   end on 18-20 head); the ceiling has one home, `herdCeiling` in
   `tools/fixtures.js`, which both gates import. Breaks 436-445.
 
-- **R191 — Seed 91 waits seventy days for a $160,000 shelf.** Found by R182.
+- **R191 — Seed 91 waits seventy days for a $160,000 shelf.** ✅ Found by R182.
   From day 75 to day 145 seed 91 sits on a full 260-part shelf with nothing
   to spare while the 400-part level costs $160,000 and the bank hovers either
   side of it; R116's rule — while shelf is for sale, save for it — holds the
@@ -6994,6 +7068,20 @@ triangle working, and each region genuinely asks a different question)*.
   weeks. *Done when: the walker weighs rendering against waiting for shelf by
   a stated rule, seed 91's longest refused stretch is measured before and
   after, and the census still ends every seed inside the ceiling.*
+
+  **Shipped inside R186**, by the user's call, because R186's cascade put
+  seed 808 into the same jam past the ceiling (98 head against 80) and the
+  reach census cannot go green around it. **The rule:** the walker saves for
+  a shelf only when THIS VISIT could pay for it (price plus the walker's
+  reserve); otherwise it renders exactly what the next graduation is short,
+  least missed first, and keeps saving — the facility step still buys nothing
+  else while the vault is tight. `canSpend` keeps a reserve, and a bank that
+  circulates below price-plus-reserve never got there, which was the whole
+  defect. **Measured** as the longest run of days with a Prime animal waiting
+  and no graduation: seed 91 goes from 61 days (to day 143) to 0, and ends on
+  20 head; seed 808 reads 2 days on both trees. All thirteen census seeds end
+  inside the ceiling. Break 443 is re-aimed at the wait coming back; break 463
+  is the other half (rendering while a shelf it can afford is for sale).
 
 ### 9.30 Three new verbs (R179–R181) — asked for directly
 

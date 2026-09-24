@@ -582,6 +582,44 @@
           "evasionUp": 1
         }
       }
+    },
+    {
+      "id": "hitchhiker",
+      "name": "The Hitchhiker",
+      "parts": [
+        "lamprey_head",
+        "shark_hide"
+      ],
+      "keyword": "Latch",
+      "desc": "Lampreys have been riding sharks for free since before there were sharks. A proper bite at last, and it drinks the difference back.",
+      "move": {
+        "power": 58,
+        "cost": 26,
+        "acc": 95,
+        "tags": [],
+        "keywords": {
+          "latch": 0.4
+        }
+      }
+    },
+    {
+      "id": "banked_fire",
+      "name": "Banked Fire",
+      "parts": [
+        "clinker_organ",
+        "tortoise_hide"
+      ],
+      "keyword": "Regen",
+      "desc": "A furnace that never goes out, behind a shell that never comes off. It hits, and then it spends the next three turns quietly getting over it.",
+      "move": {
+        "power": 50,
+        "cost": 26,
+        "acc": 95,
+        "tags": [],
+        "keywords": {
+          "regen": 0.05
+        }
+      }
     }
   ]
 }

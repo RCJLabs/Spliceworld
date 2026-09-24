@@ -28,7 +28,7 @@
 // which is R122's original bug report — a phone stuck on a broken build.
 // `tools/release.js` is the answer and exists for this: CACHE is checked
 // against SAVE_VERSION by a gate rather than by anybody remembering.
-const CACHE = 'spliceworld-v62-ea2b51ab';
+const CACHE = 'spliceworld-v63-9f7574e7';
 
 const SHELL = [
   '.',

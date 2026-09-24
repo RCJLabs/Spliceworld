@@ -55,9 +55,11 @@ instruction to distrust it.)
 - `node tools/battery.js --only <the breaks this milestone added>` — the new rules go red on demand.
 - `npm test` — **~5.5 min wall on a warm walk cache, ~1,250 CPU-seconds on
   four lanes, run alone.** R118 read 334s wall / 1,254 CPU-s of 1,425
-  budgeted. A milestone that touches the engine also pays a rebuild allowance
-  (16s a walk) on its FIRST run and not its second, so budget the COLD number
-  (~8 min) when planning an evening, not the warm one.
+  budgeted; R186 read 320s / 1,191 warm. A milestone that touches the engine
+  also pays a rebuild allowance (36s a walk since R186 re-measured it; it said
+  16 and a walk had doubled) on its FIRST run and not its second, so budget
+  the COLD number (~11 min, 1,691 CPU-s at R186) when planning an evening,
+  not the warm one.
   **The budgeted number is not headroom.** R117's "1,126 of 1,342" was 1,150
   plus a 192s cold-walk allowance — real warm headroom, 24 seconds — and R118
   read it the other way and spent an hour attributing an overrun to its own
@@ -77,10 +79,13 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (~4h40m. R188 is the SIXTH reading, and it disagrees with
+**The full battery (~5h25m. R186 is the SEVENTH reading: 456 breaks at 22m,
+83m, 133m and 86m, which is 324 minutes. It agrees with R118 and R185 below
+and not with R188, so the four chunks cost what they did before R188.
+R188 was the sixth reading, and it disagreed with
 the two below it: 427 breaks at 21m, 74m, 116m and 67m — 278 minutes, with 31
 more breaks than R185 and chunk 3 thirty-five minutes cheaper. The rule below
-says believe the third, so plan on 4h40m. R185 was the FIFTH reading and the
+said believe the third, so this line planned on 4h40m until R186. R185 was the FIFTH reading and the
 FIRST time this number held. R118 measured 390 breaks in four `--only` chunks at 25m,
 81m, 152m and 65m — 323 minutes. R185 ran 396 breaks on the same box at 25m,
 82m, 151m and 67m — 325 minutes, every chunk within a minute of its
@@ -105,16 +110,17 @@ chunk, thirty wasted across four — and that is the right price for a run
 whose partial results survive a container restart. Two full runs were lost at
 R116 before chunking: one to a tree edited underneath it, one to a restart
 twenty-five minutes in. Build the id list from the file, because break
-numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327 are
-retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
-442 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
+numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327, 347
+are retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
+455 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
 gene probe, R183 added 399-401 for the job headline, R185 added 402-404 for
 the Dex tab list, R176 added 405-407 for the lazy synth, R179 added 408-412
 for the expedition, R180 added 413-422 for the mission board, R181 added
 423-430 for the payroll, R188 added 431-435 for the walker running it, R182
-added 436-445 for the Vault's way out, and R184 added 446-450 for the room
-inside `main`. The count and the top id have not agreed since the
-retirements: 442 breaks, numbered to 450. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
+added 436-445 for the Vault's way out, R184 added 446-450 for the room
+inside `main`, and R186 added 451-464 for the rare, the unique and the run
+that remembers one. The count and the top id have not agreed since the
+retirements: 455 breaks, numbered to 464. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
 against a tree carrying 410, because a milestone that adds breaks has to
 remember to come back here and nobody had. Trust `--anchors`, which prints
 the real total, over this sentence. Count with `--anchors`, which

@@ -173,6 +173,12 @@
       "name": "Lock-On",
       "desc": "Ignores every way of not being there: evasion stage, Skittish, scars.",
       "effect": "Ignores every way of not being there \u2014 evasion, Skittish, scars. It lands."
+    },
+    {
+      "id": "latch",
+      "name": "Latch",
+      "desc": "The attacker heals by a share of the damage it deals. It does not let go and it does not say thank you.",
+      "effect": "You heal {pct} of the damage you deal."
     }
   ],
   "tagChart": [

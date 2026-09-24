@@ -11,7 +11,7 @@ const HOUR = 3600000;
 
 const DEFAULTS = {
   crewMax: 3,
-  hourOptions: [4, 12, 24],
+  hourOptions: [4, 12, 24, 48],
   baseChance: 0.24,
   perCrew: 0.1,
   perHour: 0.01,
@@ -96,15 +96,16 @@ export function tickExpeditions(state, content, now) {
   // file can put anything in. Every field is read defensively, so a party
   // with no crew list or no sealed outcome resolves to nothing rather than
   // throwing on the first render after load.
-  const { success, funds, species } = run.outcome ?? {};
-  state.funds = (state.funds ?? 0) + (Number.isFinite(funds) ? funds : 0);
+  const { success, funds, species, legend } = run.outcome ?? {};
+  const cash = Number.isFinite(funds) ? funds : 0;
+  state.funds = (state.funds ?? 0) + cash;
   const result = {
     regionId: run.regionId,
     region: region?.name ?? run.regionId,
     hours: run.hours,
     crew: (run.crew ?? []).length,
     success: !!success,
-    funds: Number.isFinite(funds) ? funds : 0,
+    funds: cash,
     animal: null,
     overCapacity: false,
   };
@@ -113,6 +114,12 @@ export function tickExpeditions(state, content, now) {
     // for the board's reason: a reward earned and not visible reads as
     // broken, and upkeep is per head so the cap still has teeth.
     const animal = createAnimal(state, species, content, endedAt);
+    // R186 — a unique arrives as herself, and the run writes her down. The
+    // record was sealed at launch (campaign/outfit.js); this only stamps it.
+    if (legend) {
+      animal.name = String(legend.name);
+      (state.campaign.legendsFound ??= []).push({ ...legend, at: endedAt });
+    }
     state.ranch.stock.push(animal);
     result.animal = animal;
     result.overCapacity = state.ranch.stock.length > state.ranch.penCapacity;

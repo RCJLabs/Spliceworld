@@ -80,6 +80,14 @@ const DERIVE = {
     const name = content?.parts?.[bestId]?.name ?? bestId;
     return `${name} · ${grouped(bestN)}`;
   },
+  // R186 — the unique the county still talks about: this run's if it found
+  // one, otherwise the last one any lab of yours brought home before a
+  // relocation. Who, where, and which lab, because that is the whole story.
+  legend: (state, content) => {
+    const last = [...(state?.legends ?? []), ...(state?.campaign?.legendsFound ?? [])].at(-1);
+    if (!last?.name) return null;
+    return [last.name, content?.regions?.[last.region]?.name, last.lab].filter(Boolean).join(' · ');
+  },
 };
 
 export const DERIVATIONS = Object.keys(DERIVE);

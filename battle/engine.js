@@ -745,6 +745,14 @@ function attack(battle, atk, def, move, events, content, powerScale = 1) {
       atk.hp = Math.max(0, atk.hp - r);
       events.push({ text: copy(content, 'battle.recoil', { name: atk.name, amount: r }), kind: 'damage', actor: from, target: from, amount: r, recoil: true, mult: 1 });
     }
+    // R186 — Latch is Recoil's mirror: a share of the damage dealt comes
+    // back as health instead of going out as a bill. Before thorns, so a
+    // lamprey that bites a porcupine is healed and then pricked.
+    if (move.keywords.latch && atk.hp > 0 && atk.hp < atk.maxHp) {
+      const h = Math.min(atk.maxHp - atk.hp, Math.max(1, Math.round(dmg * move.keywords.latch)));
+      atk.hp += h;
+      events.push({ text: copy(content, 'battle.latch', { name: atk.name, amount: h }), kind: 'heal', target: from, amount: h });
+    }
     // Thorns belongs to the DEFENDER, so it resolves here rather than in the
     // keyword block: whoever chose to touch the porcupine pays for it.
     if (def.status.thorns > 0 && atk.hp > 0) {

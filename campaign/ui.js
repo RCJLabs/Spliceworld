@@ -951,9 +951,9 @@ function expeditionCard(state, ctx, t) {
     ? expDraft.hours : expeditionHours(content)[0];
   const crew = candidates.filter((c) => expDraft.crew.includes(c.id));
   const odds = expeditionOdds(state, content, region, hours, crew);
-  const beyond = findsBeyond(content, region, hours, crew.length)
+  const beyond = findsBeyond(content, region, hours, crew.length, state)
     .map((id) => speciesOf(content, id).name);
-  const carries = findsFor(content, region, hours, crew.length).length;
+  const carries = findsFor(content, region, hours, crew.length, state).length;
 
   const row = (label, cells) => `<p class="fine-print">${label}</p><div class="op-row exp-row">${cells}</div>`;
   return `

@@ -22,6 +22,14 @@
 // anything needing content/RNG (e.g. starter herd) happens on boot via
 // seeded flags (see ranch.ensureRanchSeeded).
 export const migrations = {
+  // R186 — nobody has been found yet, in this run or any before it: a save
+  // from before the uniques existed cannot have met one.
+  63: (save) => {
+    save.legends ??= [];
+    save.campaign ??= {};
+    save.campaign.legendsFound ??= [];
+    return save;
+  },
   // R181 — the payroll arrives EMPTY. Nobody is hired on a player's behalf:
   // a wage the player never agreed to is a bill, not a henchman.
   62: (save) => {

@@ -1,5 +1,134 @@
 # PROGRESS
 
+## Session 212 — R186: The rare, the unique, and the run that remembers one ✅
+
+**R179 built the expedition machinery and shipped one uncommon. This session
+adds a rare, a unique who arrives under her own name, and a county that
+remembers her after the lab moves.**
+
+### What shipped
+
+- **The Lamprey (rare):** a jawless fish on the Kite. The trip is 48 hours
+  and two crew into the Drowned Quarter. Its head carries **Latch**, the 30th
+  keyword: the attacker heals by half the damage it deals, capped at what it
+  is missing.
+- **Mother Clinker (unique):** a salamander the size of a sofa in the
+  Foundry's rolling mill. The trip is 48 hours and all three crew.
+  - She arrives named.
+  - The run writes her down in `campaign.legendsFound`.
+  - She cannot be found again that run.
+  - She is never offered as a bloodline.
+- **Floors climb:** uncommon 12h/1 crew, rare 48h/2 crew, unique 48h/3 crew.
+  The 48-hour option ships with them.
+- **Combos:** The Hitchhiker (lamprey head + shark hide, Latch) and Banked
+  Fire (her Furnace Heart + a tortoise shell, Regen).
+- **The name crosses a relocation:**
+  - `startNewRun` folds the run's finds into a carried `legends` list, trimmed
+    to twelve. It is the fourth key in `CARRIED_ACROSS_RUNS`.
+  - The ceremony's `recallLegends` puts one line on the new lab's wire.
+  - The Yearbook gains a Legend row.
+  - Two relocations later she is still there.
+- **SAVE_VERSION 63**, with migration 63 adding the two legend fields.
+
+### Measured
+
+- **Tier bench.** Every species flies as a purebred at equal grade against
+  every encounter; the noise floor is two standard errors.
+
+  | Grade | Common | Uncommon | Rare | Unique |
+  |---|---|---|---|---|
+  | Standard | 32.5% | 30.1% | 18.3% | 26.3% |
+  | Apex | 58.8% | 56.1% | 36.2% | 57.1% |
+
+  The break that triples the Lamprey's set bonus reads 80.8% and goes red.
+- **Reach census (13 seeds).** Lamprey parts reach 10, Mother Clinker's 7
+  (she is found on 9). All of it arrives through a trip.
+
+### Found on the way
+
+- **Rivals were a second door.** The first census had all 13 seeds holding
+  Mother Clinker's anatomy, but only one had found her. Rivals wore her parts
+  and salvage handed them over. The Manta has had the same leak since R179.
+  `campaign/rivals.js` now keeps anatomy above common off every generated
+  unit, and a smoke sweep over every rival and counter class holds it.
+- **R191 folded in (user's call).** Seed 808 ended at 98 head against a
+  ceiling of 80. `walkMakeRoom` now waits for shelf only when it can afford
+  it and keep the reserve; otherwise it renders.
+  - Seed 91's refused stretch: 61 days → 0.
+  - Break 443 was re-aimed.
+- **R152's empire rule lost its sign test.**
+  - `main` reads 4 of 5 seeds better off; this tree reads 5 of 5, with two
+    seeds at +0.22 and +0.24.
+  - So unanimity had no clean-side margin. The 5pp median band is now the
+    rule: clean +1.19, break 242 +6.63, break 243 +18.32.
+
+### Budgets moved (with arguments in the files)
+
+- First paint: 1,136 → 1,155 KB (measured 1,146).
+- Eager code: 334 → 335 KB (measured 334.31, after paying down the first
+  draft by 71 bytes).
+- Suite walk rebuild allowance: 16 → 36 CPU-s a walk. The first `npm test`
+  was cold and read 1,691 of 1,633. The A/B on `main` read 1,042 warm and
+  1,599 cold, so R186's own cost is 149 warm seconds and fits the warm
+  budget (1,191 of 1,425).
+  - A walk rebuilt costs the same on both trees: about 31 CPU-s alone and
+    about 41 inside a cold suite.
+  - `main` was only passing cold because its warm headroom paid for walks
+    the allowance priced at 16.
+- Height budgets. The baseline's browser `height` gate went red on the
+  day-180 save; `npm test` does not run it. Against `main`'s fixture, each
+  term has a cause, and each budget moved by exactly that cause:
+  - Ranch 1,900 → 1,980 shut (measured 1,901). This campaign's page shows
+    all three herd bands, the most a page can, so two more headings at 39px.
+  - Vault 2,560 → 2,800 shut, 4,200 → 4,440 open, 375 → 440 words (measured
+    2,720 / 4,353 / 405). This is R182's least-missed card. The shelf is
+    tight at 340 parts; `main`'s fixture ends on 338 and this one on 345,
+    with no spares.
+  - Combos tab 3,250 → 3,400 open, 630 → 660 words (measured 3,317 / 651):
+    the two new combo rows, R179's case twice.
+
+### The width gate clicked before boot (found by the full battery)
+
+The first full-battery chunk went red in its baseline: "pens never went
+quiet with a card open at 1920px". The same tree had passed alone 15
+minutes earlier.
+- **Cause.** `tools/wide.js` settled on `main` before clicking a tab, and
+  `main` is static in `index.html`. With scripts off, the shell reads
+  `7:380:765` and settles, the click lands on an unbound tab, and the screen
+  "never goes quiet".
+- **Fix.** The gate waits for a visible screen, which only boot makes, and
+  boot binds the tabs before it shows one. It also loads the shell once with
+  scripts off and fails if anything settles there.
+- **Break 464** reverts the check and goes red every time, not by luck.
+
+### Gates
+
+- The `tiers` block in `tools/smoke.js` (shard d).
+- Breaks 451-464 (464 is the width gate's readiness check).
+- Re-aimed: 193, 199, 276, 409, 441, 443.
+- A full battery, because three existing gates changed their logic: the
+  empire rule, the R182 shelf policy and the rival parts rule.
+  - **Result: 456 breaks in 324 minutes, 454 caught.** Chunks took 22, 83,
+    133 and 86 minutes, and every chunk's baseline was green.
+  - **388 missed.** It is R180's known miss, queued as R187.
+  - **347 missed, and is retired.** It deletes the walker's pair-sort toward
+    unfinished variant lines. The census reads 0 of 78 missed clean and 0 of
+    78 broken, so the game no longer needs the steer. R180's note said to
+    retire it at this point. The Incubator door is still held by 159, 162 and
+    193. The list is 455 breaks, numbered to 464.
+
+### Known issues
+
+- A campaign now takes up to 125 trips, because the 48-hour runs are what
+  the rare and unique cost.
+- The Manta honestly reaches 9 of 13 seeds, not the 13 the leak implied.
+- At 380×640 the arena's HP box still clips your creature by about 6px
+  (carried from R184).
+
+### Next session's first task
+
+The §9.0 queue: R187, R189, R190.
+
 ## Session 211 — R184: The room inside `main` ✅
 
 **At 1,280px the Pens put the open card above the list and a fight let your

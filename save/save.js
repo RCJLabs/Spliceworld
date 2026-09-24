@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 62;
+export const SAVE_VERSION = 63;
 // R101 — exported for `save/slots.js`, which was carved out of this file
 // and still addresses the same keys. Nothing outside the save system
 // reads either one.
@@ -54,6 +54,9 @@ export function newGameState() {
     // `applyLegacy` and read by the ceremony and the opening; see
     // campaign/legacy.js for why it is one and not a list.
     legacy: null,
+    // R186 — every unique any lab of yours has found, carried across every
+    // relocation (save/slots.js), so the next lab can still tell the story.
+    legends: [],
     // R108 — the one card somebody else handed you, or null. A GENOME and
     // not a stat block: the numbers are derived on every read through the
     // same physiology the rivals use, so a visitor cannot carry a promise
@@ -83,6 +86,8 @@ export function newGameState() {
       // rather than a list; `expeditionReadyAt` is the van coming back, and
       // zero means ready now, the way every other refill time here does.
       expedition: null, expeditionReadyAt: 0, expeditionCount: 0, expeditionReport: null,
+      // R186 — the uniques THIS run has found. Not carried: once per run.
+      legendsFound: [],
       // R180 — the mission slot, the same four fields for the same reasons:
       // one at a time so it is a record rather than a list, a readiness
       // stamp of zero so a live save can mount one immediately, a counter

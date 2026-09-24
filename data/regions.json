@@ -310,7 +310,7 @@
       "benchGrade": "prime",
       "completionBonus": 220,
       "expedition": {
-        "brief": "Flooded streets, a sunken multi-storey car park, and something with a wingspan under the pier.",
+        "brief": "Flooded streets, a sunken multi-storey car park, something with a wingspan under the pier and something in the storm drains that will not let go.",
         "finds": [
           {
             "species": "otter",
@@ -350,6 +350,10 @@
           },
           {
             "species": "manta",
+            "weight": 1
+          },
+          {
+            "species": "lamprey",
             "weight": 1
           }
         ]
@@ -443,6 +447,10 @@
           },
           {
             "species": "rhino",
+            "weight": 2
+          },
+          {
+            "species": "clinker",
             "weight": 2
           }
         ]
@@ -595,7 +603,8 @@
     "hourOptions": [
       4,
       12,
-      24
+      24,
+      48
     ],
     "baseChance": 0.24,
     "perCrew": 0.1,
@@ -610,6 +619,14 @@
       "uncommon": {
         "hours": 24,
         "crew": 2
+      },
+      "rare": {
+        "hours": 48,
+        "crew": 2
+      },
+      "unique": {
+        "hours": 48,
+        "crew": 3
       }
     }
   }

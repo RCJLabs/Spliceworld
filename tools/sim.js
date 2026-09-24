@@ -1599,14 +1599,26 @@ function walkHire(state, content, now, did, introduced) {
 //   1. A yield that fits needs nothing.
 //   2. Duplicates go first — the R91 step in `walkAct` presses that button
 //      whenever the shelf is tight, so the next visit fits.
-//   3. While shelf is still for sale, R116's rule saves for it instead.
-//   4. Only then, render exactly as many parts as this graduation is short,
+//   3. While shelf is still for sale AND this visit could pay for it, R116's
+//      rule saves for it instead — the facility step buys it this visit.
+//   4. Otherwise, render exactly as many parts as this graduation is short,
 //      least missed first (`leastMissed`, the same list the Vault shows).
 //      Never more: the shelf is the player's collection, and the walker takes
 //      out only what the next animal needs to fit.
-export function walkMakeRoom(state, content, donor) {
+//
+// R191 (folded into R186) — "THIS VISIT COULD PAY FOR IT" IS THE WHOLE FIX.
+// Step 3 used to wait on any shelf for sale, and `canSpend` keeps a reserve,
+// so a walker whose money circulates below price-plus-reserve waited for ever:
+// seed 91 refused graduations from day 75 to day 145 waiting on a $160,000
+// shelf, and when R186 reshuffled the census, seed 808 did the same from day
+// 50 to the end and finished on 98 head against a ceiling of 80. A player
+// saving for a shelf still renders the odd part so the next animal fits; the
+// facility step keeps buying nothing else while the vault is tight, so the
+// saving is unchanged and the conveyor keeps moving while it happens.
+export function walkMakeRoom(state, content, donor, reserve = 0) {
   const fit = extractionFit(state, donor, content);
-  if (fit.fits || surplusParts(state, content).length || shelfForSale(state, content)) return null;
+  const shelf = shelfForSale(state, content);
+  if (fit.fits || surplusParts(state, content).length || (shelf && state.funds - shelf.level.cost >= reserve)) return null;
   return renderDown(state, content, leastMissed(state, content, fit.short).map((t) => t.id));
 }
 
@@ -1719,7 +1731,7 @@ function walkAct(state, content, now, open, opts = {}) {
       || (over && ageStage(a, content, now) !== 'juvenile')
       || (state.chimeras.length < 3 && ageStage(a, content, now) !== 'juvenile');
     const donor = state.ranch.stock.find(ripe);
-    const room = donor && walkMakeRoom(state, content, donor);
+    const room = donor && walkMakeRoom(state, content, donor, reserve);
     if (room?.ok) did('render', { n: room.count, paid: room.paid, chosen: true });
     if (donor && extractAnimal(state, donor.id, content, now).ok) did('graduate', { species: donor.species });
   }
@@ -2098,7 +2110,8 @@ function walkAct(state, content, now, open, opts = {}) {
       for (const hours of expeditionHours(content)) {
         for (let n = 1; n <= Math.min(crewMax, spare.length); n++) {
           const crew = spare.slice(0, n);
-          const table = findsFor(content, region, hours, n);
+          // R186 — this run's table: a unique already found is off it.
+          const table = findsFor(content, region, hours, n, state);
           const fresh = table.filter((f) => isNewToDex(state, content, f.species)).length;
           if (!fresh) continue;
           const odds = expeditionOdds(state, content, region, hours, crew);

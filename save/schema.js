@@ -78,6 +78,8 @@ const ROW_LISTS = new Set([
   'campaign.loose', 'campaign.operations',
   // R181 — the payroll's records.
   'staff.hired',
+  // R186 — the uniques found, this run and every run before it.
+  'legends', 'campaign.legendsFound',
 ]);
 
 // R111 — SLOTS THAT HOLD ONE THING IN PROGRESS, OR NOTHING. `newGameState`
