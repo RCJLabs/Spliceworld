@@ -6449,6 +6449,53 @@ const BREAKS = [
     anchor: 'if (!Number.isFinite(r[k])) { r[k] = 0;',
     to: 'if (false) { r[k] = 0;',
   },
+  // R188 — the walker runs the payroll. The first four are the `contest`
+  // block's R188 rule in shard B; the fifth is the splice ceiling R188
+  // re-derived in the `empire` block.
+  {
+    // The default goes back to R181's: nobody is ever hired, every walk ends
+    // with an empty payroll, and no campaign number knows what one is worth.
+    n: 431, gate: SHARD_B, name: 'the walker never hires, and no campaign ever finds out what a henchman is worth',
+    file: 'tools/sim.js',
+    anchor: 'stopAtDominion = true, priceBeats = false, from = null, hire: hires = true } = {}) {',
+    to: 'stopAtDominion = true, priceBeats = false, from = null, hire: hires = false } = {}) {',
+  },
+  {
+    // Rule 0 comes off, and the walker hires on its first visit — before the
+    // game has introduced the payroll at all. The introduction is marked by
+    // the walk loop, not by this rule, which is the only reason it can fail.
+    n: 432, gate: SHARD_B, name: 'the walker hires before the game has told anybody they can',
+    file: 'tools/sim.js',
+    anchor: '  if (!introduced) return;',
+    to: '  if (false) return;',
+  },
+  {
+    // Rule 3 comes off: the hand hired for a three-animal herd keeps the job
+    // when the herd is twenty, and ends with more meals missed than given.
+    n: 433, gate: SHARD_B, name: 'a hand hired for a small herd keeps the job long after the herd has outgrown her',
+    file: 'tools/sim.js',
+    anchor: '      if (held.id === want.id || coverage({ ...h, id: held.id }) >= coverage(want) || !affordable(want)) continue;',
+    to: '      if (true) continue;',
+  },
+  {
+    // The payroll priced twenty times over. Every R181 rule still holds —
+    // it doubles with the operation, the card and the clock agree — which is
+    // why only the day-180 bill on a real campaign can see it.
+    n: 434, gate: SHARD_B, name: 'the payroll is priced twenty times over and outweighs the empire it staffs',
+    file: 'ranch/ranch.js',
+    anchor: 'Math.max(content.henchmenMeta?.minSize ?? 0, size);',
+    to: 'Math.max(content.henchmenMeta?.minSize ?? 0, size) * 20;',
+  },
+  {
+    // The walker dismantles its weakest creature every time a better build
+    // is possible at any price — R135's rebuild loop. The per-seed ceiling
+    // R188 moved to double the design number is the rule aimed at this, and
+    // the churn floor beside it sees it too.
+    n: 435, gate: EMPIRE, name: 'the walker rebuilds its roster every visit, and the Theater becomes a conveyor belt',
+    file: 'tools/sim.js',
+    anchor: '        if (plan.score > quality(weakest) + burned) {',
+    to: '        if (true) {',
+  },
 ];
 
 const pristine = {};
