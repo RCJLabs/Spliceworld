@@ -126,6 +126,29 @@ to the three exports that are actually irreducible.
   (404 against a tree carrying 410). It reads 414 now, numbered to 422 —
   and says to trust `--anchors` over the sentence.
 
+### The rot check, and the three findings filed out of it
+
+414 breaks in four chunks, 4h37m. **410 caught, 4 missed.** Judged on
+`BATTERY_EXIT` rather than the summary line, which mattered twice: chunk 2
+read "104 caught, 0 missed" on top of a RED baseline, and that baseline was
+my own doing — the driver double-forked and two batteries shared the box, so
+three browser gates false-red exactly the way R159 documents. Re-run alone
+they all pass, including the `theater` measurement that looked real.
+
+The four misses, re-run on an idle box and then against `main`:
+
+    347  breeding pairs favour a line owing the Dex a variant   main ✓  here ✗
+    372  a held node row wraps at 150% text                     main ✓  here ✗
+    388  the retainer files its daily line                      main ✗  here ✗
+    389  the guide reads the rival map raw                      main ✗  here ✗
+
+347 is fixed (see above). 372, 388 and 389 are filed as **R187**, together
+with the pattern connecting them and the two height budgets: a rule whose
+threshold was set beside one reading of the day-180 walk goes blind the next
+time anybody changes the economy. 372's diagnosis is written down — R180's
+richer ranch means more creatures are fit, so the Spar button renders its
+SHORT label and the 86px overflow the rule is about never happens.
+
 ### Next session's first task
 
 R181 — Henchmen, and the end of being one person. Read ROADMAP §9.30's third

@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**4 entries queued.** R181, R182, R184, R186.
+**5 entries queued.** R181, R182, R184, R186, R187.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -6692,6 +6692,51 @@ triangle working, and each region genuinely asks a different question)*.
   it.* 554 and 1026, from 564 and 1036; both ledgers name `campaign/director.js`
   and say why the data-key option could only ever have paid half.
 
+
+- **R187 — The gates that measure a fixture instead of a bound.** R180's rot
+  check turned up four breaks going MISSED, and chasing them found the same
+  defect wearing four costumes: a rule whose threshold was set beside one
+  reading of the day-180 walk, so the next milestone that touches the economy
+  moves the fixture out from under it and the rule goes quietly blind. It is
+  not drift and it is not a bad threshold — the rules are all still asking
+  true questions. They have simply stopped being able to SEE the state they
+  are about.
+
+  Four measured instances, all from one evening:
+  * **R152's scaling median** asserted `<= 0` with no tolerance on a
+    statistic whose per-seed spread is ±1.5pp, and whose own lever
+    (`garrisonPerNode`) does not move it monotonically — 0.0075 reads +0.18,
+    0.009 reads −2.94, 0.0105 reads +1.03. Re-derived on the sign across
+    every seed, which separates 5-of-5 from 3-of-5.
+  * **The vault height budget** grew while the hoard SHRANK, 351 parts to
+    325, because the species spread widened one bay and the shut shelf
+    summarises kinds.
+  * **The Dex combos budget** moved with no new row at all: a fixture holding
+    both halves of every combo measures 3116px, BELOW the 3131 a
+    twenty-combo fixture reads, so the driver is which part names wrap.
+  * **R95's variant-line rule**, eroded from below for the THIRD time
+    (R177 → R116 → R180) because each milestone that improves breeding
+    shrinks what deleting the pair-sort costs. Its own note now says that
+    when the census statistic runs out too, retire break 347 rather than
+    invent a fourth number.
+
+  *Still open and filed here rather than fixed:* **break 372** (a held node
+  row wraps at 150% text — R180's richer ranch means more creatures are fit,
+  so the Spar button lands on the short label and the 86px overflow the rule
+  is about never happens), and **breaks 388 and 389**, which MISS on `main`
+  too and are therefore older rot that R180 only surfaced.
+
+  *The decision:* this is a harness milestone, not a game one. The question
+  is whether a gate can state the WORST CASE it guards rather than the case
+  the walk happened to produce — a longest-label row, a fullest tab, a
+  fixture pinned to the state under test — and which of the existing rules
+  can be rewritten that way without becoming a rule that cannot fail. The
+  four above are the worked examples; `tools/height.js` and `tools/a11y.js`
+  are where most of the rest live.
+  *Done when: breaks 372, 388 and 389 go red again on a clean tree; at least
+  one existing budget is restated as a bound with its worst case measured
+  rather than assumed; and the battery's own notes say, for each rule
+  touched, what would make it blind again.*
 
 - **R186 — The rare, the unique, and the run that remembers one.** R179
   shipped the machinery and one uncommon; this is the content the machinery
