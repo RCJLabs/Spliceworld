@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**6 entries queued.** R184, R186, R187, R189, R190, R191.
+**5 entries queued.** R186, R187, R189, R190, R191.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -4850,7 +4850,7 @@ suite can check.
   of the wire on the day-180 walk, and a break that freezes `op.news` to its
   first line goes red.*
 
-- **R184 — The room inside `main`.** Cut out of R117 rather than deferred by
+- **R184 — The room inside `main`.** ✅ Cut out of R117 rather than deferred by
   accident, and named here so it is a decision instead of an omission. R117
   gave the game a second column and grew `main` from a 560px cap to **788px
   at 1,280px and 1,108px at 1,920px** — but what is inside `main` is still
@@ -4873,6 +4873,67 @@ suite can check.
   been measured at 380 and 1,280px and its layout at 1,280 is argued for from
   those numbers, `tools/wide.js` is still green at every width, and a break
   that forces the Pens back to the single-column layout goes red.*
+
+  **Shipped.** Measured first, on the day-180 save, with a pen open and a
+  fight in progress — two states `tools/wide.js` had never loaded, because
+  R117 measured every screen at rest.
+
+  *The Pens premise held exactly.* At 1,280px the open card was 749px wide
+  and 374px tall, with the other twelve cards starting under it at y=953. It
+  now sits beside the list at 1,200px and up: the list takes one column, the
+  open card the other (409px at 1,280, 587 at 1,920), starting level with the
+  top of the list. It is CSS over the screen's existing flat children, and
+  that is the design rather than a shortcut: `paintScreen` diffs only a
+  screen's top-level children, so wrapping the roster would have made one tap
+  rebuild every card, which is R104's rule and the a11y gate's check. A
+  `dense` grid puts the open card at the first free cell of column 2, and a
+  negative bottom margin stops it stretching that row, so the list keeps its
+  own rhythm. At 409px the card's portrait-beside-info layout crushed its
+  four sub-tabs into each other, so an open card in that column is a query
+  container and stacks as a phone card does below 480px. At 1,920px it has
+  the room and keeps the row.
+
+  *The fight: measured, and the numbers argue for fixing the scaling, not
+  the layout.* The stage is 360×502 on a 380×900 phone, 768×575 at 1,280 and
+  1,088×575 at 1,920. Its height is the viewport's, but the creatures were
+  sized by its WIDTH alone. So your creature's share of the stage's height
+  went 49% → **91% at 1,280**, covering the enemy's HP box and running 14px
+  out of the stage, → **130% at 1,920**, where its top 141px was cut off.
+  It was already wrong on phones too: **64% at 380×780**, the a11y gate's
+  viewport, and 92% at 380×640, both on the enemy's HP box.
+  - Height is the scarce axis everywhere past the phone. The column of stage,
+    message, telegraph and commands already fits 850px exactly, and at 1,280
+    the move buttons are 381px wide. Putting the commands beside the stage
+    would buy width the stage does not need, at the cost of height it does.
+  - So the arena keeps its column, and the slots size by `min(width%,
+    height)` through container units on the stage. The factors (31 and 38cqh)
+    leave 380×900 exactly as it was.
+  - Your creature is now **49% of the stage at every viewport measured**
+    (380×780, 1,280 and 1,920). Both HP boxes are clear everywhere but
+    380×640, where the enemy's fixed-height box still clips it by about 6px.
+    That line R103 wrote about short phones, "the creatures get smaller,
+    nothing gets cut off", is now true.
+
+  *Paid for, not raised.* First paint had 70 bytes of headroom (1,135.93 KB
+  against 1,136). The new rules cost 807 bytes. Two R116 comments in
+  `style.css` whose story is in R116's entry came down by 1.6 KB, so the
+  stylesheet ends **347 bytes smaller than it started** and first paint
+  reads 1,135.59.
+
+  *The gate.* `tools/wide.js` gains an in-use pass that loads the walked
+  campaign with a pen open and a fight running. It checks at 380×780, 1,280
+  and 1,920 that:
+  - the open card sits beside the list at the laptop and up;
+  - the phone keeps its single column;
+  - each creature stays inside the stage;
+  - your creature is off the enemy's HP box;
+  - the pass measured every view it declares, including the phone and the
+    laptop.
+
+  It went red on the old stylesheet with seven findings. Breaks 446-450.
+  Break 276, aimed at this entry's title, was re-aimed at R186 BEFORE the
+  tick, which is the order R188's note asked for. The Ranch's animal cards,
+  which the entry also named, are not in the Done-when and stay one column.
 
 - **R185 — The height gate walks five of the Dex's six tabs.** ✅ *Shipped —
   and for once every premise in the entry held exactly as written.*

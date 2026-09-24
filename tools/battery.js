@@ -4428,10 +4428,12 @@ const BREAKS = [
     // the longest-queued entry, and `--anchors` has learned to say so when an
     // append-style break's target already carries the append — so the next
     // milestone that ships R184 is told the day it ticks it.
+    //
+    // R184 shipped and was told before it ticked anything: re-aimed at R186.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: '- **R184 — The room inside `main`.**',
-    to: '- **R184 — The room inside `main`.** ✅',
+    anchor: '- **R186 — The rare, the unique, and the run that remembers one.**',
+    to: '- **R186 — The rare, the unique, and the run that remembers one.** ✅',
   },
   {
     // The other direction: the count beside the list stops matching the list.
@@ -6568,6 +6570,41 @@ const BREAKS = [
     file: 'tools/sim.js',
     anchor: "    if (donor && extractAnimal(state, donor.id, content, now).ok) did('graduate', { species: donor.species });",
     to: "    if (false && donor && extractAnimal(state, donor.id, content, now).ok) did('graduate', { species: donor.species });",
+  },
+  // R184 — THE ROOM INSIDE `main`. The Pens puts the open card beside the
+  // list at 1,200px and up, and the arena sizes its creatures by the stage's
+  // height as well as its width. Both are asked by `tools/wide.js`'s in-use
+  // pass, which loads the walked campaign with a pen open and a fight running
+  // — R117 only ever measured the screens at rest.
+  {
+    n: 446, gate: WIDE, name: 'the Pens goes back to one column on a laptop, and the open card sits above the list again',
+    file: 'style.css',
+    anchor: '  #screen-pens:has(> .pen-fold.is-open) {',
+    to: '  #screen-pens:has(> .pen-fold.is-open):not(*) {',
+  },
+  {
+    n: 447, gate: WIDE, name: 'the arena sizes your creature by the stage\'s width alone, and it swallows the stage',
+    file: 'style.css',
+    anchor: '.slot-me { left: 0%; bottom: 4%; width: min(52%, 38cqh); }',
+    to: '.slot-me { left: 0%; bottom: 4%; width: 52%; }',
+  },
+  {
+    n: 448, gate: WIDE, name: 'the stage stops being a container, and its height units read the viewport instead',
+    file: 'style.css',
+    anchor: '  container-type: size;',
+    to: '  container-type: normal;',
+  },
+  {
+    n: 449, gate: WIDE, name: 'the in-use pass loads the resting save, and measures a Pens with nothing open and a War Room with no fight',
+    file: 'tools/wide.js',
+    anchor: "  await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(play))})`);",
+    to: "  await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(save))})`);",
+  },
+  {
+    n: 450, gate: WIDE, name: 'the open card grows its own row, and the list starts underneath it again',
+    file: 'style.css',
+    anchor: '    margin-bottom: -9999px;',
+    to: '    margin-bottom: 0;',
   },
 ];
 

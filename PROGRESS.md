@@ -1,5 +1,52 @@
 # PROGRESS
 
+## Session 211 — R184: The room inside `main` ✅
+
+**At 1,280px the Pens put the open card above the list and a fight let your
+creature swallow the stage. The open card now sits beside the list, and the
+arena sizes creatures by the stage's height as well as its width.**
+
+### Measured first (day-180 save, a pen open, a fight in progress)
+
+- **Pens at 1,280:** the open card was 749×374px above the list, and the
+  twelve shut cards started at y=953.
+- **Arena:** the stage is 360×502 on a 380×900 phone and 768×575 at 1,280.
+  Sprites were sized by its width, so your creature's share of the stage's
+  height was:
+  - 49% on a 380×900 phone;
+  - 64% on a 380×780 phone, on the enemy's HP box;
+  - 91% at 1,280, on the HP box and 14px out of the stage;
+  - 130% at 1,920, with 141px clipped.
+
+### What shipped
+
+- **Pens:** at 1,200px and up, an open card puts the screen into a two-column
+  grid, CSS only. `paintScreen` diffs top-level children, so wrapping the
+  roster would have broken R104's one-card-per-tap rule. In that column the
+  card stacks as a phone card does, via a container query below 480px.
+- **Arena:** slots are `min(width%, 31/38cqh)` of the stage, which is a size
+  container. 380×900 is unchanged; 380×780, 1,280 and 1,920 all read 49%.
+  The column layout stays, because height is the scarce axis at every width
+  past the phone.
+- **First paint:** the new rules cost 807 bytes against 70 of headroom, and
+  two R116 comments gave back 1.6 KB. `style.css` ends 347 bytes smaller,
+  and first paint reads 1,135.59 of 1,136 KB. No budget was raised.
+- **Gate:** `tools/wide.js` has an in-use pass (a pen open, a fight running)
+  at 380×780, 1,280 and 1,920. It was red on the old stylesheet with seven
+  findings. Breaks 446-450.
+- **Break 276:** re-aimed from R184 to R186 BEFORE the tick.
+
+### Known issues
+
+- At 380×640 the enemy's fixed-height HP box still clips your creature by
+  about 6px. The gate measures 380×780, the a11y gate's phone.
+- The Ranch's animal cards, which the entry also named, are not in the
+  Done-when and are still one column at 1,280.
+
+### Next session's first task
+
+The §9.0 queue: R186, R187, R189, R190, R191.
+
 ## Session 210 — R182: The Vault's way out ✅
 
 **A full shelf with nothing to spare and no shelf left to buy used to refuse
