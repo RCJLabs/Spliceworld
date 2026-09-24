@@ -808,6 +808,8 @@ body.in-battle .ticker { font-size: 0.75rem; }
      makes the column shrink predictably now that the floor has room. */
   flex: 1 1 0;
   min-height: 210px;
+  /* R184 — the slots below size by this box's height as well as its width. */
+  container-type: size;
   border: 1px solid var(--line);
   border-radius: 14px;
   overflow: hidden;
@@ -863,8 +865,10 @@ body.in-battle .ticker { font-size: 0.75rem; }
   position: absolute;
   transition: opacity 0.4s;
 }
-.slot-foe { right: 2%; top: 8%; width: 42%; }
-.slot-me { left: 0%; bottom: 4%; width: 52%; }
+/* R184 — by the stage's HEIGHT too: width alone made you 91% of a 1,280px
+   stage and 130% of a 1,920px one. 31/38cqh leave 380x900 unchanged. */
+.slot-foe { right: 2%; top: 8%; width: min(42%, 31cqh); }
+.slot-me { left: 0%; bottom: 4%; width: min(52%, 38cqh); }
 .slot.is-down { opacity: 0.25; }
 
 .platform {
@@ -1776,18 +1780,8 @@ footer {
      inherits it — the a11y gate measured this one starting 98px into its own
      348px line. A ragged left edge on a list you scan by name. */
   justify-content: flex-start;
-  /* R116 — AND IT WRAPS AT 150% TEXT. This row carries a caret, a species
-     name, a count, a star badge and a grade badge, and none of them can
-     shrink: a `.grade-badge` is an inline-block of uppercase letters with
-     letter-spacing. At 100% they fit; at 150% "PRISMATIC" left the card by
-     30px and the a11y gate said so. At 150% the badge now drops to a second
-     line inside the card instead of over its edge. This first shipped
-     claiming "nothing changes at 100% — there is nothing to wrap", and the
-     height gate falsified that in the same hour: something did.
-     Found by R116 because the milestone changed what a day-180 vault HOLDS,
-     not how it draws: a campaign that now collects all 244 parts shows a
-     prismatic shelf where it used to show a shorter word.
-     AND IT IS NOT FREE ON ITS OWN — see `.lineage` below. */
+  /* R116 — wraps at 150% text, so a PRISMATIC badge drops a line instead
+     of leaving the card. Not free on its own: see `.lineage` below. */
   flex-wrap: wrap;
   gap: 8px;
   width: 100%;
@@ -1801,20 +1795,8 @@ footer {
   cursor: pointer;
 }
 .vault-species > .bay-head .fold-caret { color: var(--muted); }
-/* R116 — AND THIS IS WHAT MAKES THE WRAP FREE AT 100%.
-   `flex-wrap: wrap` on its own cost 36px of shut Vault — the height gate read
-   4,141px against a 4,140px budget, and the whole overrun was this rule. A
-   wrapping flex line breaks on an item's MAX-CONTENT width, and `.lineage`
-   ("116 vials · 101 parts") is the one child here long enough to matter: at
-   100% it used to wrap its own text inside a 42px row, and the moment the row
-   could wrap it stayed on one line and pushed the grade badge down instead —
-   54px, on the three bays that hold most of the hoard.
-   `flex-basis: 0` makes its hypothetical size zero, so the caret, name and
-   both badges are laid out first and `.lineage` wraps into whatever is left,
-   which is exactly the 42px row from before. Measured on the day-180 save at
-   380px: shut shelf 2,538 -> 2,502, the same number `flex-wrap: nowrap` gives,
-   and the 150% overflow this pair exists to fix stays fixed (0 leaks against
-   the 2 — "Prismatic" by 9px and by 30px — that nowrap still prints). */
+/* R116 — basis 0 lets `.lineage` wrap its own text into what the badges
+   leave, so the row above wraps for free at 100% (story in ROADMAP R116). */
 .vault-species > .bay-head .lineage { flex: 1 1 0; min-width: 0; }
 .vault-species .token-list { margin-top: 0; }
 .vault-species .token-list li { background: var(--panel); font-size: 0.75rem; }
@@ -3130,4 +3112,26 @@ header > *:not(.sky-layer) { position: relative; z-index: 1; }
     border-right: none;
     border-radius: 10px 0 0 10px;
   }
+  /* R184 — the open pen card beside the list, not above it. `dense` puts it
+     at the first free cell of column 2, the top of the list; the negative
+     margin stops it growing that row, so the list keeps its own rhythm. */
+  #screen-pens:has(> .pen-fold.is-open) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    grid-auto-flow: row dense;
+    column-gap: 12px;
+    align-items: start;
+  }
+  #screen-pens:has(> .pen-fold.is-open) > * { grid-column: 1 / -1; }
+  #screen-pens:has(> .pen-fold.is-open) > :is(.list-group, .pen-fold) { grid-column: 1; }
+  #screen-pens:has(> .pen-fold.is-open) > .pen-fold.is-open {
+    grid-column: 2;
+    margin-bottom: -9999px;
+    container-type: inline-size;
+  }
+}
+/* …and a card that narrow stacks as a phone card does (R184). */
+@container (max-width: 480px) {
+  .animal-card { align-items: stretch; flex-direction: column; }
+  .portrait { align-self: center; flex-basis: auto; width: 100%; max-width: 220px; }
 }

@@ -43,6 +43,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { sleep, serve, findChrome, connect } from './cdp.js';
 import { walkedSave } from './fixtures.js';
+import { loadSimContent } from './sim.js';
+import { createBattle } from '../battle/engine.js';
 
 const REPORT = process.argv.includes('--report');
 
@@ -66,6 +68,24 @@ const PINNED_NOW = save.lastTickAt;
 // for why a height floor could not do that job on its own.
 const WALKED = { stock: save.ranch.stock.length, news: save.news.length };
 
+// R184 — THE SAME CAMPAIGN, IN USE. R117 measured every screen at rest, so
+// the two layouts R184 is about had never been in front of this gate: a pen
+// card OPEN (every card is shut on the fixture, and a shut roster has
+// nothing to put beside it) and a fight IN PROGRESS (the War Room shows the
+// map unless `state.battle` is set). A battle is plain serializable state,
+// as R80's fixture found, so both are one edit to the save.
+// The phone is measured at R73's 780px height, the a11y gate's, because that
+// is where the arena was already wrong: your creature was 64% of the stage and
+// sat on the enemy's HP box on the most ordinary phone there is.
+const PLAY_VIEWS = [{ w: PHONE, h: 780 }, { w: LAPTOP, h: 900 }, { w: 1920, h: 900 }];
+const play = structuredClone(save);
+play.ui = { ...(play.ui ?? {}), collapsed: { ...(play.ui?.collapsed ?? {}), [`pen-${play.chimeras[0].id}`]: false } };
+{
+  const content = loadSimContent();
+  const enc = content.encounters.patrol_2 ?? Object.values(content.encounters)[0];
+  play.battle = createBattle(play.chimeras.slice(0, 3), enc, content, 7, PINNED_NOW, { kind: 'node', nodeId: null });
+}
+
 const { server, port } = await serve();
 const chrome = findChrome();
 if (!chrome) {
@@ -80,6 +100,7 @@ const proc = spawn(chrome, ['--headless=new', `--remote-debugging-port=${cdpPort
 
 const fails = [];
 const rows = [];
+const playRows = [];
 try {
   const { send, evaluate } = await connect(cdpPort);
   await send('Runtime.enable');
@@ -211,6 +232,33 @@ try {
       rows.push({ w, sc, ...m, ...shell });
     }
   }
+
+  // R184 — the in-use pass. One save with a pen open and a fight running,
+  // at the phone, the laptop and the widest screen R117 measured.
+  await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(play))})`);
+  for (const { w, h } of PLAY_VIEWS) {
+    await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: w < 700 });
+    await send('Page.navigate', { url });
+    await sleep(700);
+    if (!await settle('main', { deadline: 20000 })) { fails.push(`the in-use save never painted at ${w}px`); continue; }
+    const rect = `const R = (n) => { if (!n) return null; const b = n.getBoundingClientRect();
+      return { l: Math.round(b.left), r: Math.round(b.right), t: Math.round(b.top), b: Math.round(b.bottom) }; };`;
+    await evaluate(`document.querySelector('[data-screen="pens"]')?.click()`);
+    if (!await settle('#screen-pens')) { fails.push(`pens never went quiet with a card open at ${w}px`); continue; }
+    const pens = JSON.parse(await evaluate(`JSON.stringify((() => { ${rect}
+      const scr = document.querySelector('#screen-pens');
+      const shut = [...scr.querySelectorAll(':scope > .pen-fold.is-shut')];
+      return { open: R(scr.querySelector(':scope > .pen-fold.is-open')), first: R(shut[0]), last: R(shut[shut.length - 1]), shut: shut.length };
+    })())`));
+    await evaluate(`document.querySelector('[data-screen="battle"]')?.click()`);
+    if (!await settle('#screen-battle')) { fails.push(`the arena never went quiet at ${w}px`); continue; }
+    const fight = JSON.parse(await evaluate(`JSON.stringify((() => { ${rect}
+      return { stage: R(document.querySelector('.stage')), me: R(document.querySelector('#me-sprite svg')),
+               foe: R(document.querySelector('#foe-sprite svg')), foeHp: R(document.querySelector('.hp-foe')),
+               meHp: R(document.querySelector('.hp-me')) };
+    })())`));
+    playRows.push({ w, h, pens, fight });
+  }
 } finally {
   proc.kill();
   server.close();
@@ -295,7 +343,67 @@ for (const r of rows.filter((x) => x.w === LAPTOP && x.hscroll)) {
   }
 }
 
+// R184 — and the in-use pass MEASURED what it declares, or rules 6 and 7
+// below are loops over nothing and pass by having nothing to look at.
+if (playRows.length !== PLAY_VIEWS.length || ![PHONE, LAPTOP].every((w) => playRows.some((p) => p.w === w))) {
+  fails.push(`the in-use pass measured ${playRows.length} of ${PLAY_VIEWS.length} views`
+    + ` (${playRows.map((p) => p.w).join('/') || 'none'}); it has to reach the phone and the laptop`);
+}
+
+// 6. R184 — THE OPEN CARD BESIDE THE LIST, at the laptop. R117 gave `main`
+//    788px there and the Pens used it as a phone does: the open dossier
+//    above the roster, the other eleven cards pushed under it. Beside means
+//    both halves of it: the open card starts to the RIGHT of the list, and
+//    it shares the list's height rather than sitting above its first card.
+//    And the phone keeps its one column, or the rule is met by breaking 380.
+for (const p of playRows) {
+  const { open, first, last, shut } = p.pens;
+  if (!open || !first) { fails.push(`the in-use Pens at ${p.w}px has no open card or no list (${shut} shut)`); continue; }
+  if (p.w === PHONE && open.l > first.l + 2) {
+    fails.push(`at ${PHONE}px the open card sits beside the list (x=${open.l} against ${first.l}) — the phone lost its single column`);
+  }
+  if (p.w >= LAPTOP) {
+    const beside = open.l >= first.r - 1;
+    const alongside = open.t < last.b && open.b > first.t;
+    if (!beside || !alongside) {
+      fails.push(`at ${p.w}px the open pen card is not beside the list: card x ${open.l}-${open.r} y ${open.t}-${open.b},`
+        + ` list x ${first.l}-${first.r} y ${first.t}-${last.b}`
+        + (open.b <= first.t ? ' — it sits ABOVE it, the phone\'s layout on a laptop' : ''));
+    }
+  }
+}
+
+// 7. R184 — A FIGHT IN PROGRESS FITS ITS STAGE. Measured before this rule
+//    existed: the sprites were sized by the stage's WIDTH and the stage's
+//    height is the viewport's, so your creature was 49% of the stage's height
+//    on a 380x900 phone, 64% on a 380x780 one (on the enemy's HP box), 91% at
+//    1,280px (on it again) and 130% at 1,920px, where the top 141px of it was
+//    cut off. Both halves are asked at
+//    every width: each creature stays inside the stage top to bottom, and
+//    yours does not sit on the enemy's HP box.
+const inter = (a, b) => a && b && a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
+for (const p of playRows) {
+  const f = p.fight;
+  if (!f.stage || !f.me || !f.foe) { fails.push(`the arena at ${p.w}px has no stage or no creatures to measure`); continue; }
+  for (const [who, box] of [['your creature', f.me], ['the enemy', f.foe]]) {
+    if (box.t < f.stage.t - 2 || box.b > f.stage.b + 2) {
+      fails.push(`at ${p.w}px ${who} runs out of the stage (${box.t}-${box.b} against ${f.stage.t}-${f.stage.b})`);
+    }
+  }
+  if (inter(f.me, f.foeHp)) {
+    fails.push(`at ${p.w}px your creature covers the enemy's HP box`);
+  }
+}
+
 if (REPORT) {
+  for (const p of playRows) {
+    const f = p.fight;
+    const sh = (b) => (b && f.stage ? `${Math.round(100 * (b.b - b.t) / (f.stage.b - f.stage.t))}%` : '?');
+    console.log(`\n${p.w}px in use: open card x ${p.pens.open?.l}-${p.pens.open?.r} y ${p.pens.open?.t},`
+      + ` list x ${p.pens.first?.l}-${p.pens.first?.r} y ${p.pens.first?.t}-${p.pens.last?.b}`
+      + ` · stage ${f.stage ? `${f.stage.r - f.stage.l}x${f.stage.b - f.stage.t}` : '?'},`
+      + ` your creature ${sh(f.me)} of its height, the enemy ${sh(f.foe)}`);
+  }
   for (const w of WIDTHS) {
     const here = rows.filter((r) => r.w === w);
     if (!here.length) continue;
@@ -317,6 +425,7 @@ if (fails.length) {
 }
 const at = rows.find((r) => r.w === LAPTOP) ?? { share: 0, mainW: 0 };
 console.log(`wide ✓  ${SCREENS.length} screens at ${WIDTHS.join('/')}px · `
-  + `nothing scrolls sideways on a phone or a laptop · the agenda and the wire are `
+  + `nothing scrolls sideways on a phone or a laptop · the open pen card sits beside the list `
+  + `at ${LAPTOP}px and up · a fight fits its stage at ${PLAY_VIEWS.map((v) => `${v.w}x${v.h}`).join('/')} · the agenda and the wire are `
   + `on screen at ${LAPTOP}px on every one · the game uses ${at.share}% of a ${LAPTOP}px viewport `
   + `(main ${at.mainW}px)`);
