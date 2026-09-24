@@ -1,5 +1,93 @@
 # PROGRESS
 
+## Session 212 — R186: The rare, the unique, and the run that remembers one ✅
+
+**R179 built the expedition machinery and shipped one uncommon. This session
+adds a rare, a unique who arrives under her own name, and a county that
+remembers her after the lab moves.**
+
+### What shipped
+
+- **The Lamprey (rare):** a jawless fish on the Kite. The trip is 48 hours
+  and two crew into the Drowned Quarter. Its head carries **Latch**, the 30th
+  keyword: the attacker heals by half the damage it deals, capped at what it
+  is missing.
+- **Mother Clinker (unique):** a salamander the size of a sofa in the
+  Foundry's rolling mill. The trip is 48 hours and all three crew.
+  - She arrives named.
+  - The run writes her down in `campaign.legendsFound`.
+  - She cannot be found again that run.
+  - She is never offered as a bloodline.
+- **Floors climb:** uncommon 12h/1 crew, rare 48h/2 crew, unique 48h/3 crew.
+  The 48-hour option ships with them.
+- **Combos:** The Hitchhiker (lamprey head + shark hide, Latch) and Banked
+  Fire (her Furnace Heart + a tortoise shell, Regen).
+- **The name crosses a relocation:**
+  - `startNewRun` folds the run's finds into a carried `legends` list, trimmed
+    to twelve. It is the fourth key in `CARRIED_ACROSS_RUNS`.
+  - The ceremony's `recallLegends` puts one line on the new lab's wire.
+  - The Yearbook gains a Legend row.
+  - Two relocations later she is still there.
+- **SAVE_VERSION 63**, with migration 63 adding the two legend fields.
+
+### Measured
+
+- **Tier bench.** Every species flies as a purebred at equal grade against
+  every encounter; the noise floor is two standard errors.
+
+  | Grade | Common | Uncommon | Rare | Unique |
+  |---|---|---|---|---|
+  | Standard | 32.5% | 30.1% | 18.3% | 26.3% |
+  | Apex | 58.8% | 56.1% | 36.2% | 57.1% |
+
+  The break that triples the Lamprey's set bonus reads 80.8% and goes red.
+- **Reach census (13 seeds).** Lamprey parts reach 10, Mother Clinker's 7
+  (she is found on 9). All of it arrives through a trip.
+
+### Found on the way
+
+- **Rivals were a second door.** The first census had all 13 seeds holding
+  Mother Clinker's anatomy, but only one had found her. Rivals wore her parts
+  and salvage handed them over. The Manta has had the same leak since R179.
+  `campaign/rivals.js` now keeps anatomy above common off every generated
+  unit, and a smoke sweep over every rival and counter class holds it.
+- **R191 folded in (user's call).** Seed 808 ended at 98 head against a
+  ceiling of 80. `walkMakeRoom` now waits for shelf only when it can afford
+  it and keep the reserve; otherwise it renders.
+  - Seed 91's refused stretch: 61 days → 0.
+  - Break 443 was re-aimed.
+- **R152's empire rule lost its sign test.**
+  - `main` reads 4 of 5 seeds better off; this tree reads 5 of 5, with two
+    seeds at +0.22 and +0.24.
+  - So unanimity had no clean-side margin. The 5pp median band is now the
+    rule: clean +1.19, break 242 +6.63, break 243 +18.32.
+
+### Budgets moved (with arguments in the files)
+
+- First paint: 1,136 → 1,155 KB (measured 1,146).
+- Eager code: 334 → 335 KB (measured 334.31, after paying down the first
+  draft by 71 bytes).
+
+### Gates
+
+- The `tiers` block in `tools/smoke.js` (shard d).
+- Breaks 451-463.
+- Re-aimed: 193, 276, 409, 441, 443.
+- A full battery, because three existing gates changed their logic: the
+  empire rule, the R182 shelf policy and the rival parts rule.
+
+### Known issues
+
+- A campaign now takes up to 125 trips, because the 48-hour runs are what
+  the rare and unique cost.
+- The Manta honestly reaches 9 of 13 seeds, not the 13 the leak implied.
+- At 380×640 the arena's HP box still clips your creature by about 6px
+  (carried from R184).
+
+### Next session's first task
+
+The §9.0 queue: R187, R189, R190.
+
 ## Session 211 — R184: The room inside `main` ✅
 
 **At 1,280px the Pens put the open card above the list and a fight let your

@@ -84,6 +84,18 @@ const BUILD = {
   manta:        B(['fish',{teeth:false,gills:true,eyeR:13}], ['membrane',{span:104}], null, ['finTail',{len:64}], 'camo', '#9fd0ff', 'wave'),
   pufferfish:   B(['fish',{teeth:true,gills:true,eyeR:14}], ['fin',{len:40}], ['fin',{len:42}], ['finTail',{len:50}], 'spine', '#ffe86b', 'drip'),
   armadillo:    B(['mammal',{snout:26,ear:'pointed',skull:24,eyeR:9}], ['paw',{mass:15,len:44,claws:3}], ['paw',{mass:16,len:42,claws:2}], ['scute',{len:56}], 'band', '#d8b98a', 'howl'),
+  // R186 — THE RARE. A jawless fish is a fish head with no limbs at all, so
+  // it rides the Kite the way the cobra does and loses both limb sockets for
+  // the same reason. The whip tail votes nothing, which leaves the head's
+  // gills as the only vote: Water, as declared. Four parts, the fewest the
+  // balance pool will still call a purebred.
+  lamprey:      B(['fish',{teeth:true,gills:true,eyeR:9}], null, null, ['whip',{len:60}], 'slick', '#ff8fa3', 'drip'),
+  // R186 — THE UNIQUE. A salamander the size of a sofa, drawn from families
+  // that already exist: an amphibian head on four stubby paws and a rudder.
+  // The paws vote Ground two to the rudder's one Water, which is the class
+  // she is declared — something that has lived in a furnace for forty years
+  // is not a pond animal any more, whatever her grandmother was.
+  clinker:      B(['amphib',{eyeR:10}], ['paw',{mass:16,len:40,claws:2}], ['paw',{mass:17,len:42,claws:2}], ['rudder',{len:62}], 'scale', '#ff7a2f', 'spark'),
 };
 
 // Signature abilities from ROADMAP §4.1: [slot, part name, ability, move].
@@ -129,6 +141,14 @@ const SIGNATURE = {
   manta:        ['forelimbs', 'Manta Wings', 'Wingover', M(44, 22, 100, ['Airborne'], { evasionUp: 1, slow: 1 })],
   pufferfish:   ['hide', 'Inflation Reflex', 'Inflate', M(0, 16, 100, [], { guard: true, thorns: 0.3 })],
   armadillo:    ['organ', 'Scream Bladder', 'Screaming Fit', M(30, 18, 100, ['Sonic'], { powerDown: 1, accDown: 1 })],
+  // R186 — THE FIRST SWING THAT PAYS FOR ITSELF. Latch hands back half of
+  // what it deals, which no move in the county did: a build that outlasts
+  // instead of out-hitting. The price is the number — 40 power is the
+  // softest signature head in the file, under the cobra's Venom Fang.
+  lamprey:      ['head', 'Sucker Disc', 'Latch On', M(40, 22, 95, [], { latch: 0.5 })],
+  // R186 — the only organ that mends AND sharpens on one press. Priced as a
+  // utility, no damage at all: she is a wall that gets angrier, not a gun.
+  clinker:      ['organ', 'Furnace Heart', 'Stoke the Furnace', M(0, 20, 100, [], { regen: 0.08, powerUp: 1 })],
 };
 
 // Slot stat/phys bases, scaled by the species' role bias.
@@ -232,6 +252,7 @@ const ORGAN_NAMES = {
   jellyfish: ['Nerve Net', 'No Central Anything'], pufferfish: ['Inflation Sac', 'Puff Up'],
   armadillo: ['Scream Bladder', 'Screaming Fit'],
   manta: ['Gill Rake', 'Filter Feed'],
+  lamprey: ['Oral Gland', 'Anticoagulant'], clinker: ['Furnace Heart', 'Stoke the Furnace'],
 };
 
 // R20 wired the dead keywords onto specific parts by hand, straight into
@@ -324,6 +345,17 @@ const HAND_TUNED = {
   tiger_tail: { ability: 'Sight Line', move: M(0, 10, 100, [], { accUp: 1 }) },
   tortoise_tail: { ability: 'Slow Breath', move: M(0, 8, 100, [], { staminaRestore: 12 }) },
   wolf_tail: { ability: 'Hackles Up', move: M(0, 12, 100, [], { taunt: true }) },
+  // R186 — both new tails, for R23's rule rather than for flavour: a whip
+  // and a rudder give `evasionUp: 1` out of the archetype, which is what the
+  // lamprey's slick hide already does and what would have made one of the
+  // two a dead button. A lamprey holds on; a salamander grows another one.
+  lamprey_tail: { ability: 'Hold Fast', move: M(0, 10, 100, [], { trap: true }) },
+  clinker_tail: { ability: 'Spare Tail', move: M(0, 12, 100, [], { heal: 0.15 }) },
+  // --- head ---
+  // R186 — what the unique GIVES UP, which R179's rule asks every expedition
+  // animal to show on at least one part: she is forty years in a furnace and
+  // has no teeth left. The softest head swing in the file, and accurate.
+  clinker_head: { ability: 'A Good Gumming', move: M(34, 18, 100, [], {}) },
   // --- hide ---
   pangolin_hide: { ability: 'Roll Up', move: M(0, 14, 100, [], { guard: true, thorns: 0.5 }) },
   porcupine_hide: { ability: 'Quill Coat', move: M(0, 14, 100, [], { thorns: 0.9 }) },
@@ -369,6 +401,7 @@ const ACTIVE_ABILITY = {
   heron_organ: 'Stand Perfectly Still', falcon_organ: 'Terminal Velocity',
   goose_organ: 'Hold a Grudge', otter_organ: 'Never Still',
   jellyfish_organ: 'No Central Anything', pufferfish_organ: 'Puff Up',
+  clinker_hide: 'Clinker Crust',
 };
 // [hide kind, organ kind]; null where the species' signature covers the slot.
 const ACTIVES = {
@@ -385,6 +418,7 @@ const ACTIVES = {
   skunk:        ['screen', null],          porcupine:    ['bristles', 'spike'],
   mantis:       ['bristles', 'spike'],     cobra:        ['bristles', 'leech'],
   manta:        ['vanish', 'knit'],
+  lamprey:      ['slipskin', 'leech'],   clinker:      ['bristles', null],
   scorpion:     ['bristles', 'slowMend'],
   // A3
   heron:        ['slipskin', 'focus'],     falcon:       ['slipskin', 'focus'],
@@ -529,6 +563,9 @@ for (const sp of species) {
   const root = sp.variantOf ?? sp.id; // a variant borrows its base's tables
   const b = buildFor(sp);
   const [sigSlot, sigName, sigAbility, sigMove] = SIGNATURE[root];
+  // R186 — a unique is SOMEBODY, so her anatomy is hers: "Mother Clinker's
+  // Head", not a Mother Clinker Head off a shelf of them.
+  const who = sp.rarity === 'unique' ? `${sp.name}'s` : sp.name;
   for (const slot of SLOTS) {
     const shapes = shapesFor(slot, sp);
     if (!shapes) continue; // species genuinely lacks this anatomy (cobra limbs)
@@ -540,14 +577,14 @@ for (const sp of species) {
       : slot === 'organ' ? ORGAN_NAMES[root][0] : 'Head';
     const name = isSig
       ? (sp.variantOf ? `${sp.name} ${famName === 'Head' ? 'Head' : famName}` : sigName)
-      : slot === 'organ' ? famName : `${sp.name} ${famName}`;
+      : slot === 'organ' ? famName : `${who} ${famName}`;
     const limbFamily = slot === 'forelimbs' ? b.fore?.[0] : slot === 'hindlimbs' ? b.hind?.[0] : null;
     let ability = isSig ? sigAbility
       : slot === 'tail' ? TAIL_ABIL[b.tail[0]]
       : slot === 'hide' ? HIDE_ABIL[b.hide]
       : slot === 'organ' ? ORGAN_NAMES[root][1]
-      : slot === 'head' ? `${sp.name} ${HEAD_VERB[b.head[0]] ?? 'Bite'}`
-        : `${sp.name} ${limbVerb(limbFamily, slot) ?? (slot === 'hindlimbs' ? 'Kick' : 'Strike')}`;
+      : slot === 'head' ? `${who} ${HEAD_VERB[b.head[0]] ?? 'Bite'}`
+        : `${who} ${limbVerb(limbFamily, slot) ?? (slot === 'hindlimbs' ? 'Kick' : 'Strike')}`;
     const aff = affinityFor(slot, sp);
     let move = isSig ? sigMove : GENERIC_MOVE[slot](sp, aff);
     // Hides and organs have no generic move, so an unsigned one falls to its
@@ -559,7 +596,7 @@ for (const sp of species) {
       if (!kind) throw new Error(`${sp.id}.${slot} has neither a signature move nor an active kind`);
       const def = (slot === 'hide' ? HIDE_ACTIVE : ORGAN_ACTIVE)[kind];
       move = def.move;
-      ability = ACTIVE_ABILITY[`${sp.id}_${slot}`] ?? `${sp.name} ${def.label}`;
+      ability = ACTIVE_ABILITY[`${sp.id}_${slot}`] ?? `${who} ${def.label}`;
     }
     if (KEYWORD_MOVES[`${sp.id}_${slot}`]) {
       move = KEYWORD_MOVES[`${sp.id}_${slot}`];

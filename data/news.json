@@ -148,6 +148,13 @@
         "The {region} party is back, and {creature} came with them."
       ]
     },
+    "legend_recalled": {
+      "lines": [
+        "Out in {region} they still tell the one about {creature} and {lab}. It gets bigger every time.",
+        "{creature} was last seen leaving {region} in the back of a van belonging to {lab}. The pub has named a pie after her.",
+        "A plaque in {region} marks the day {lab} found {creature}. The plaque has been stolen twice, both times by admirers."
+      ]
+    },
     "expedition_empty": {
       "lines": [
         "The {region} party is back. They send their regards and an expenses claim."

@@ -66,7 +66,7 @@ function fmtAgo(ts, now) {
 
 // R102 — the run boundary's engine. This module is lazy (R81), so importing it
 // here costs the first paint nothing; see campaign/legacy.js.
-import { legacyOffers, applyLegacy, legacyTuning } from '../campaign/legacy.js';
+import { legacyOffers, applyLegacy, legacyTuning, recallLegends } from '../campaign/legacy.js';
 
 export function openSettings(overlay, ctx) {
   // R111 — `content` beside `state`, because the copy ledger scans the source
@@ -460,6 +460,9 @@ export function openSettings(overlay, ctx) {
       // `applyLegacy` is a no-op for a null pick, so travelling light goes
       // through exactly the path it always did.
       const fresh = applyLegacy(startNewRun(state), picked, state, ctx.content);
+      // R186 — and whichever it is, the new lab hears about anybody the old
+      // one found (campaign/legacy.js).
+      recallLegends(fresh, ctx.content);
       const written = adoptSave(fresh, storage, state.slotId);
       if (!written.ok) return render(written.msg);
       location.reload();

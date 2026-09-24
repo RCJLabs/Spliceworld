@@ -31,6 +31,9 @@
 // a dead end dressed as a choice, and the founding picker (R119) had exactly
 // that bug before it was measured.
 
+import { emitNews } from './wire.js';
+import { copy } from '../util/text.js';
+
 export function legacyTuning(content) {
   return content?.legacy ?? { maxPicks: 1, kinds: {}, ceremony: {} };
 }
@@ -75,6 +78,9 @@ export function legacyOffers(state, content) {
     const seen = new Set();
     for (const a of state.ranch?.stock ?? []) {
       if (!a?.species || seen.has(a.species)) continue;
+      // R186 — a unique is somebody, not a line: there is exactly one of her,
+      // and a founding animal of her kind would be a second.
+      if (content?.species?.[a.species]?.rarity === 'unique') continue;
       seen.add(a.species);
       offers.push({
         kind: 'bloodline',
@@ -225,4 +231,19 @@ export function applyLegacy(fresh, pick, previous, content, now = Date.now()) {
     },
   };
   return out;
+}
+
+// R186 — THE NAME, SAID OUT LOUD ON THE FAR SIDE OF THE BOUNDARY.
+// `startNewRun` carries the record (save/slots.js); this is the new lab's wire
+// hearing the story on its first morning, so a relocation is something the
+// county remembers rather than a save file that happens to keep a list. The
+// latest one only: an opening that reads out every legend is a speech, and
+// what this wants is a rumour.
+export function recallLegends(state, content) {
+  const last = (state?.legends ?? []).at(-1);
+  if (!last?.name) return state;
+  const lab = last.lab || copy(content, 'legend.unnamed_lab');
+  const region = content?.regions?.[last.region]?.name ?? copy(content, 'legend.somewhere');
+  emitNews(state, content, 'legend_recalled', { creature: last.name, lab, region });
+  return state;
 }

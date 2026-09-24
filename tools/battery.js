@@ -4430,10 +4430,12 @@ const BREAKS = [
     // milestone that ships R184 is told the day it ticks it.
     //
     // R184 shipped and was told before it ticked anything: re-aimed at R186.
+    // R186 did the same before its own tick: re-aimed at R187, the queue's
+    // head once R186 and the R191 it folded in have both left it.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: '- **R186 — The rare, the unique, and the run that remembers one.**',
-    to: '- **R186 — The rare, the unique, and the run that remembers one.** ✅',
+    anchor: '- **R187 — The gates that measure a fixture instead of a bound.**',
+    to: '- **R187 — The gates that measure a fixture instead of a bound.** ✅',
   },
   {
     // The other direction: the count beside the list stops matching the list.
@@ -5240,8 +5242,10 @@ const BREAKS = [
     // its own rather than only in combination with another break.
     n: 193, gate: RELEASE, name: 'the release smuggles the variant lines out, and the Incubator stops being their only door',
     file: 'campaign/rivals.js',
-    anchor: '    if (content.species[part.species]?.variantOf) continue;',
-    to: '',
+    // R186 re-aimed: the variant rule is now one tier rule (`commonOnly`),
+    // so the break lets the variants back through it and nothing else.
+    anchor: '    if (!commonOnly(part, content)) continue;',
+    to: '    if (!commonOnly(part, content) && !content.species[part.species]?.variantOf) continue;',
   },
   // --- gate: R130, the notes are out of the browser's path ----------------
   {
@@ -6249,6 +6253,14 @@ const BREAKS = [
       "uncommon": {
         "hours": 24,
         "crew": 2
+      },
+      "rare": {
+        "hours": 48,
+        "crew": 2
+      },
+      "unique": {
+        "hours": 48,
+        "crew": 3
       }
     }`,
     to: `    "rarityFloor": {}`,
@@ -6544,8 +6556,8 @@ const BREAKS = [
   {
     n: 441, gate: SHARD_D, name: 'the walker never takes the Vault\'s way out, and seed 4242 refuses every graduation again',
     file: 'tools/sim.js',
-    anchor: '  if (fit.fits || surplusParts(state, content).length || shelfForSale(state, content)) return null;',
-    to: '  if (fit || surplusParts(state, content).length || shelfForSale(state, content)) return null;',
+    anchor: '  if (fit.fits || surplusParts(state, content).length || (shelf && state.funds - shelf.level.cost >= reserve)) return null;',
+    to: '  if (fit || surplusParts(state, content).length || (shelf && state.funds - shelf.level.cost >= reserve)) return null;',
   },
   {
     n: 442, gate: SHARD_D, name: 'the walker clears twice what the goat needs, and eats the collection a graduation at a time',
@@ -6554,10 +6566,16 @@ const BREAKS = [
     to: '  return renderDown(state, content, leastMissed(state, content, fit.short * 2).map((t) => t.id));',
   },
   {
-    n: 443, gate: SHARD_D, name: 'the walker renders parts while shelf is still for sale, and R116\'s saving rule is skipped',
+    // R191 (folded into R186) — RE-AIMED, because the rule it broke changed.
+    // R182's walker waited on ANY shelf for sale; R191 found that on a shelf
+    // the walker could never afford that wait never ended (seed 808: 98 head
+    // against a ceiling of 80). The defect worth a break now is that wait
+    // coming back — saving for a shelf this visit cannot pay for, and
+    // refusing every graduation while it does.
+    n: 443, gate: SHARD_D, name: 'the walker waits on a shelf it cannot afford, and graduation stops for good',
     file: 'tools/sim.js',
-    anchor: '  if (fit.fits || surplusParts(state, content).length || shelfForSale(state, content)) return null;',
-    to: '  if (fit.fits || surplusParts(state, content).length) return null;',
+    anchor: '  if (fit.fits || surplusParts(state, content).length || (shelf && state.funds - shelf.level.cost >= reserve)) return null;',
+    to: '  if (fit.fits || surplusParts(state, content).length || shelf) return null;',
   },
   {
     n: 444, gate: HANDLERS, name: 'every part row paints a render button and nothing listens to it',
@@ -6605,6 +6623,110 @@ const BREAKS = [
     file: 'style.css',
     anchor: '    margin-bottom: -9999px;',
     to: '    margin-bottom: 0;',
+  },
+  // R186 — THE RARE, THE UNIQUE, AND THE RUN THAT REMEMBERS ONE. Every
+  // clause of the Done-when gets a break, and every one lands in the `tiers`
+  // block (shard d) unless a stricter older gate reaches it first.
+  {
+    // The unique's door is the rare's door: a full crew stops mattering, and
+    // a tier that shares its floor with the one below is not a tier.
+    n: 451, gate: SHARD_D, name: 'the unique floor asks for two crew, the same door as the rare',
+    file: 'data/regions.json',
+    anchor: '        "crew": 3',
+    to: '        "crew": 2',
+  },
+  {
+    // Once per run stops being once: a found unique stays on the table, so a
+    // second sealed trip can name her again.
+    n: 452, gate: SHARD_D, name: 'a unique already found this run is still on the table',
+    file: 'campaign/outfit.js',
+    anchor: '    if (found.has(f.species)) return false;',
+    to: '    if (found.size < 0) return false;',
+  },
+  {
+    // She comes home off the stock-name list, like a goat.
+    n: 453, gate: SHARD_D, name: 'the unique arrives under a stock name instead of her own',
+    file: 'campaign/expedition.js',
+    anchor: '      animal.name = String(legend.name);',
+    to: '      void legend.name;',
+  },
+  {
+    // The relocation carries earlier legends and drops this run's, so the
+    // one the player just found is gone on the far side.
+    n: 454, gate: SHARD_D, name: 'relocating forgets the unique this run found',
+    file: 'save/slots.js',
+    anchor: '  fresh.legends = [...(fresh.legends ?? []), ...structuredClone(state?.campaign?.legendsFound ?? [])].slice(-LEGENDS_KEPT);',
+    to: '  fresh.legends = [...(fresh.legends ?? [])].slice(-LEGENDS_KEPT);',
+  },
+  {
+    // Folded in once and then dropped: the second relocation starts empty.
+    n: 455, gate: SHARD_D, name: 'legends are not carried, so the lab after next has never heard of her',
+    file: 'save/slots.js',
+    anchor: "export const CARRIED_ACROSS_RUNS = ['settings', 'guidesSeen', 'ui', 'legends'];",
+    to: "export const CARRIED_ACROSS_RUNS = ['settings', 'guidesSeen', 'ui'];",
+  },
+  {
+    // The record crosses and nobody says her name out loud.
+    n: 456, gate: SHARD_D, name: 'the new lab\'s wire never mentions the legend it inherited',
+    file: 'campaign/legacy.js',
+    anchor: "  emitNews(state, content, 'legend_recalled', { creature: last.name, lab, region });",
+    to: '  void lab; void region;',
+  },
+  {
+    // The Yearbook row reads blank for a player who has one.
+    n: 457, gate: SHARD_D, name: 'the Yearbook legend row reads nothing whoever was found',
+    file: 'save/yearbook.js',
+    anchor: '    if (!last?.name) return null;',
+    to: '    return null;',
+  },
+  {
+    // A founding animal of HER — a second copy of somebody.
+    n: 458, gate: SHARD_D, name: 'the relocation offers the unique as a bloodline',
+    file: 'campaign/legacy.js',
+    anchor: "      if (content?.species?.[a.species]?.rarity === 'unique') continue;",
+    to: "      if (content?.species?.[a.species]?.rarity === 'unicorn') continue;",
+  },
+  {
+    // The keyword ships and does nothing: R20's decoration check.
+    n: 459, gate: SHARD_D, name: 'Latch is on the lamprey\'s head and heals nobody',
+    file: 'battle/engine.js',
+    anchor: '    if (move.keywords.latch && atk.hp > 0 && atk.hp < atk.maxHp) {',
+    to: '    if (move.keywords.latchNever && atk.hp > 0 && atk.hp < atk.maxHp) {',
+  },
+  {
+    // R129's leak again, one tier up: a rival wears Mother Clinker's head
+    // and salvage hands it over without the animal.
+    n: 460, gate: SHARD_D, name: 'rivals wear anatomy above common again, a second door the trip was meant to be the only one of',
+    file: 'campaign/rivals.js',
+    anchor: "const commonOnly = (part, content) => (content.species[part.species]?.rarity ?? 'common') === 'common';",
+    to: 'const commonOnly = () => true;',
+  },
+  {
+    // Power creep wearing a costume. Measured: the rare tier wins 42.3% at
+    // standard against the commons' 32.5 and 80.8% at apex against 58.8 —
+    // and 80.8 is still UNDER the best common's 86.5, which is why the rule
+    // compares tiers rather than asking for a new top of the chart.
+    n: 461, gate: SHARD_D, name: 'the lamprey\'s set bonus triples its power and its health',
+    file: 'data/species.json',
+    anchor: '          "keywords": {\n            "latch": 1.5\n          }',
+    to: '          "stats": {\n            "power": 3,\n            "hp": 3\n          },\n          "keywords": {\n            "latch": 1.5\n          }',
+  },
+  {
+    // The rare and the unique both ask for 48 hours, and no trip lasts that
+    // long: the floor is a wall with no door in it.
+    n: 462, gate: SHARD_D, name: 'the 48-hour trip is withdrawn while two tiers still ask for it',
+    file: 'data/regions.json',
+    anchor: '      24,\n      48\n    ],',
+    to: '      24\n    ],',
+  },
+  {
+    // R191's other half: saving is still the right answer when this visit
+    // can pay, and a walker that renders anyway eats the collection for a
+    // shelf it was about to buy.
+    n: 463, gate: SHARD_D, name: 'the walker renders parts while a shelf it can afford is for sale',
+    file: 'tools/sim.js',
+    anchor: '  if (fit.fits || surplusParts(state, content).length || (shelf && state.funds - shelf.level.cost >= reserve)) return null;',
+    to: '  if (fit.fits || surplusParts(state, content).length) return null;',
   },
 ];
 

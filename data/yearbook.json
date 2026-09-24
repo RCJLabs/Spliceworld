@@ -212,6 +212,13 @@
           "derive": "mostUsedPart",
           "fmt": "text",
           "sub": "You have a type. Everyone has noticed."
+        },
+        {
+          "id": "legend",
+          "label": "Legend",
+          "derive": "legend",
+          "fmt": "text",
+          "sub": "The one the county still talks about, and who found her"
         }
       ]
     }

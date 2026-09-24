@@ -184,6 +184,10 @@ const BOUNDS = {
   // R181 — the payroll. `hireBlock` refuses past `slotsOf`, which never
   // exceeds `maxSlots`, and one hire per duty besides.
   'staff.hired':          { max: (c) => c.henchmenMeta?.maxSlots ?? 2, by: '`maxSlots` in henchmen.json; `hireBlock` refuses past it' },
+  // R186 — the uniques. This run can find each one once (`findsFor` drops her
+  // after), and the carried list is trimmed at the boundary to LEGENDS_KEPT.
+  'campaign.legendsFound': { max: (c) => Object.values(c.species ?? {}).filter((s) => s.rarity === 'unique').length, by: 'one per unique species, once per run' },
+  'legends':              { max: 12, by: '`LEGENDS_KEPT` in save/slots.js — trimmed at every relocation' },
   'campaign.faunaGranted': { max: (c) => Object.keys(c.species ?? {}).length, by: 'the species list' },
   'directorStats.dissections': { max: 40, by: 'one per captive, and captives are capped' },
   'directorStats.announced':   { max: 40, by: 'one per countermeasure the director has' },

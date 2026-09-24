@@ -7,6 +7,7 @@
     "cornered": "— CORNERED AND FURIOUS!",
     "awakened": "{name} is rudely awakened.",
     "recoil": "{name} takes {amount} recoil. Worth it. Probably.",
+    "latch": "{name} hangs on and gets {amount} HP back. Rude, but restorative.",
     "thorns": "{name} is covered in spines — {target} takes {amount} back.",
     "venom_vehicle": "Venom drips off the chassis. Machines remain unimpressed.",
     "envenomed_one": "{name} is envenomed ({stacks} stack).",
@@ -106,6 +107,10 @@
   "rail": {
     "idle": "Nothing is open. Everything is on a timer — come back shortly.",
     "more": "and {n} more of these."
+  },
+  "legend": {
+    "unnamed_lab": "a lab that never gave its name",
+    "somewhere": "the county"
   },
   "expedition": {
     "already": "You already have a party in the field. One at a time; you only own the one van.",

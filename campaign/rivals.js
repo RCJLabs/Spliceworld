@@ -184,6 +184,13 @@ function gradeFor(rival, meta, defeats, index, rng) {
 // with no acceptable candidate is left EMPTY on purpose — that is how an
 // Air specialist ends up with no hind legs, and physiology charges them
 // for it exactly as it would charge the player.
+// R186 — ANATOMY ABOVE COMMON HAS EXACTLY ONE DOOR, and a rival's roster is
+// never it. R129 said so for variants (below); the expedition tiers are the
+// same case, and the reach census found it: all thirteen seeds held Mother
+// Clinker's anatomy and one had ever found her, because a rival shopping
+// outside its own lab wore her head. Salvage has no tier and its own rule.
+const commonOnly = (part, content) => (content.species[part.species]?.rarity ?? 'common') === 'common';
+
 // R129 — swap some sockets for anatomy from anywhere in the bestiary. Slot
 // is preserved, so the body still assembles; only its ancestry widens.
 function openTheDoors(parts, content, rng, chance) {
@@ -206,7 +213,7 @@ function openTheDoors(parts, content, rng, chance) {
     //
     // The release still widens what a specimen can be built from 21 species
     // to 35, which is the whole ceiling this milestone exists to break.
-    if (content.species[part.species]?.variantOf) continue;
+    if (!commonOnly(part, content)) continue;
     if (!bySlot.has(part.slot)) bySlot.set(part.slot, []);
     bySlot.get(part.slot).push(part);
   }
@@ -226,7 +233,7 @@ function pickTrait(parts, content, rng) {
 }
 
 function chooseParts(rival, targetClass, content, rng, dossier = null) {
-  const byId = Object.values(content.parts).filter((p) => p.species !== 'salvage');
+  const byId = Object.values(content.parts).filter((p) => p.species !== 'salvage' && commonOnly(p, content));
   // A rival's philosophy usually supplies the anatomy they want. When it
   // cannot — an aviarist ordered to field Water has no gills in the house —
   // they go shopping outside their own lab, which is exactly the story we

@@ -21,9 +21,17 @@ const HOUR = 3600000;
 // yes/no, because "which region, for how long, with whom" is only a decision
 // if the player can see what each answer buys. Anything above common has a
 // floor in hours and in crew, and a trip under either floor cannot roll it.
-export function findsFor(content, region, hours, crew) {
+//
+// R186 — AND A UNIQUE IS ONCE PER RUN. Given a save, anybody this run has
+// already brought home is off the table: `campaign.legendsFound` is the run's
+// own record of them, and the campaign block does not cross a relocation, so
+// the next lab can go looking for her again. Without a save (the Dex, the
+// balance harness) the table is the table.
+export function findsFor(content, region, hours, crew, state = null) {
   const floors = expTuning(content).rarityFloor ?? {};
+  const found = new Set((state?.campaign?.legendsFound ?? []).map((l) => l?.species));
   return (region?.expedition?.finds ?? []).filter((f) => {
+    if (found.has(f.species)) return false;
     const floor = floors[content.species?.[f.species]?.rarity ?? 'common'];
     if (!floor) return true;
     return hours >= (floor.hours ?? 0) && crew >= (floor.crew ?? 0);
@@ -33,10 +41,10 @@ export function findsFor(content, region, hours, crew) {
 // What a longer, fuller trip would ALSO reach — derived from the table, so
 // the screen advertises a species the day somebody adds one and stops the
 // day somebody takes it out.
-export function findsBeyond(content, region, hours, crew) {
-  const here = new Set(findsFor(content, region, hours, crew).map((f) => f.species));
+export function findsBeyond(content, region, hours, crew, state = null) {
+  const here = new Set(findsFor(content, region, hours, crew, state).map((f) => f.species));
   const most = expeditionHours(content).reduce((n, h) => Math.max(n, h), 0);
-  return findsFor(content, region, most, expTuning(content).crewMax)
+  return findsFor(content, region, most, expTuning(content).crewMax, state)
     .filter((f) => !here.has(f.species)).map((f) => f.species);
 }
 
@@ -82,7 +90,7 @@ export function startExpedition(state, content, now, regionId, crewIds = [], hou
   state.campaign.expeditionCount = (state.campaign.expeditionCount ?? 0) + 1;
   const rng = rngStream(state.seed, `expedition:${regionId}`, state.campaign.expeditionCount);
   const success = rng() < odds.chance;
-  const table = findsFor(content, region, hours, crew.length);
+  const table = findsFor(content, region, hours, crew.length, state);
   const total = table.reduce((n, f) => n + (f.weight ?? 1), 0);
   let roll = rng() * total;
   let species = null;
@@ -102,6 +110,12 @@ export function startExpedition(state, content, now, regionId, crewIds = [], hou
       success,
       funds: success ? odds.funds : Math.round(odds.funds * t.consolation),
       species: success ? species : null,
+      // R186 — a unique comes home as HERSELF, and the lab that found her is
+      // part of the story. Sealed with everything else, so the settle on the
+      // first frame decides nothing and reads one field.
+      ...(success && content.species?.[species]?.rarity === 'unique'
+        ? { legend: { species, name: content.species[species].name, lab: state.profile?.lab ?? null, region: regionId } }
+        : {}),
     },
   };
   state.campaign.expedition = run;

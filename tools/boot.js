@@ -444,7 +444,22 @@ const REPORT = process.argv.includes('--report');
 //
 // The slack is nine kilobytes again, which is what R169 asked for, R112
 // restored and R116 kept.
-const FIRST_PAINT_KB = 1136;
+// R186 — 1136 -> 1155, measured at 1146 against 1135.6 on the commit before
+// it, so the whole ten kilobytes is this milestone and none of it is drift.
+// Itemised, because R112's rule is that a raise which cannot say is a shrug:
+// 5.1 KB is the ten new parts in `data/parts.json` (their GEOMETRY is in the
+// deferred shapes file, per R81, and is not in this number); 2.0 is the two
+// species; 1.0 the two combos; 0.4 each for the region tables with the 48-hour
+// trip and the two floors, and for the legend's three wire lines; 0.2 each for
+// the Latch keyword, the Yearbook row and the copy; and ~0.4 of eager code —
+// the arrival stamp, the two declared fields and the rival rule, which
+// `tools/smoke.js` itemises beside KB_CAP.
+//
+// Content, not code, like R180's raise, and it stays in CORE for R180's
+// reason: a part's stats and a species' rarity are what the tick and the
+// table READ, so moving them behind the geometry fetch would be passing this
+// gate by breaking what it measures. Nine kilobytes of slack again.
+const FIRST_PAINT_KB = 1155;
 
 // R169 — AND IT STAYS AT 1034, measured at 1016. Every previous milestone
 // either raised this number or brought it down to sit just above the

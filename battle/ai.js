@@ -159,6 +159,8 @@ function scoreMove(battle, atk, def, move, content, allies, incoming, window) {
   // Charge spends a turn before it does anything; only worth it well ahead.
   if (move.keywords.charge) score *= 0.55;
   if (move.keywords.recoil) score -= p.damage * move.keywords.recoil * 0.9;
+  // R186 — and its mirror: what Latch hands back, capped at what is missing.
+  if (move.keywords.latch) score += Math.min(p.damage * move.keywords.latch, atk.maxHp - atk.hp) * p.hitChance;
   // Priority is tempo when the exchange is close to lethal either way.
   if (move.keywords.priority && def.speed >= atk.speed) score += 6;
   // Stamina is a real resource: a move that empties the tank costs the next

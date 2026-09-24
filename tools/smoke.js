@@ -181,6 +181,10 @@ const SHARD_OF = {
   // R182 — the Vault's way out. One built fixture and a few screen paints;
   // no walk, no battles. Shard d, beside the other cheap ones.
   shelf: 'd',
+  // R186 — the rarity tiers. Two launch loops of 240 sealed trips and a
+  // purebred bench of about 27,000 fights, so it is worth a lane rather than
+  // four copies. Shard d.
+  tiers: 'd',
 };
 // Blocks not named above run in EVERY shard. That is deliberate for anything
 // small: the duplicated cost is four times a few seconds, and a guard is a
@@ -1864,7 +1868,7 @@ function dexPages(state) {
     charge: true, ignoreArmor: true, ignoreGuard: true, knockback: true, accUp: 2, accDown: 2,
     powerUp: 2, powerDown: 2, evasionUp: 2, staminaRestore: 30, heal: 0.3, bleed: 3, slow: 0.5,
     taunt: true, thorns: 0.5, multiHit: 4, frenzy: true, rally: 2, regen: 0.2, rage: true,
-    staminaDrain: 40, ignoreEvasion: true,
+    staminaDrain: 40, ignoreEvasion: true, latch: 0.5,
   };
   const inert = [];
   for (const kw of Object.keys(content.keywords)) {
@@ -2188,7 +2192,7 @@ for (const combo of Object.values(content.combos)) {
     gradeAssignmentsChecked++;
   }
 }
-assert.equal(gradeAssignmentsChecked, 448, 'every combo × grade assignment was actually checked');
+assert.equal(gradeAssignmentsChecked, 480, 'every combo × grade assignment was actually checked');
 // Grades are the power curve: each tier opens the boss further.
 //
 // Measured on the MEAN across builds, not the max. A max over a couple of
@@ -2609,6 +2613,8 @@ assert.deepEqual(m5.campaign, {
   // contact and seeding them would write keys onto five labs a migrating
   // player may never have met.
   mission: null, missionReadyAt: 0, missionCount: 0, missionReport: null,
+  // R186 — and nobody found. A save from before the uniques cannot have met one.
+  legendsFound: [],
 });
 // v27 (A4): the one job slot became a list, and a job that was IN FLIGHT
 // when the save was written has to survive the move — it keeps its clock,
@@ -8299,6 +8305,241 @@ if (inShard('regions')) {
     `and conquest still adds to it (${beforeCatalog.size} -> ${afterCatalog.size})`);
 }
 
+// --- R186: the rare, the unique, and the run that remembers one --------
+//
+// R179 built the machinery and shipped one uncommon through it. This block is
+// the content the machinery was built to carry, and it asks five questions
+// the data cannot answer by existing:
+//
+//   1. EACH TIER HAS ITS OWN DOOR. A rare and a unique ship, each with a
+//      `rarityFloor` row of its own, and the floors CLIMB: a rare that shares
+//      the uncommon's floor is an uncommon with a longer name. Each is found
+//      on a trip that meets its floor and on no trip that falls short of it
+//      on either axis — hours or crew — so the floor is the door and not a
+//      suggestion.
+//   2. THE UNIQUE IS SOMEBODY. It arrives carrying its own name, once per
+//      run, and the county writes it down.
+//   3. THE NAME CROSSES THE RUN BOUNDARY. R102's relocation keeps it, the new
+//      lab's wire says it out loud, and the new lab's Yearbook still has the
+//      line — and the new run may find her again, because "once per run" is
+//      about this run.
+//   4. THEY BRING SOMETHING. A keyword that exists only because they do.
+//   5. RARITY IS NOT STRENGTH. Every tier's purebreds, at equal grade, win no
+//      more often than the commons' do, beyond what the bench can resolve.
+if (inShard('tiers')) {
+  const { findsFor, findsBeyond, startExpedition } = await import('../campaign/outfit.js');
+  const { tickExpeditions, expTuning, expeditionHours } = await import('../campaign/expedition.js');
+  const { startNewRun } = await import('../save/slots.js');
+  const { applyLegacy, legacyOffers, recallLegends } = await import('../campaign/legacy.js');
+  const { yearbookRow } = await import('../save/yearbook.js');
+  const TIERS = ['common', 'uncommon', 'rare', 'unique'];
+  const tierOf = (sp) => sp.rarity ?? 'common';
+  const fauna = Object.values(content.species).filter((sp) => !sp.synthetic);
+  const tune = expTuning(content);
+  const onTable = (id) => Object.values(content.regions)
+    .filter((r) => (r.expedition?.finds ?? []).some((f) => f.species === id));
+  const rolls = (region, hours, crew, id, state = null) =>
+    findsFor(content, region, hours, crew, state).some((f) => f.species === id);
+
+  // 1. Each tier its own floor, and the floors climb.
+  for (const tier of ['rare', 'unique']) {
+    assert.ok(fauna.some((sp) => tierOf(sp) === tier), `a ${tier} species ships (R186)`);
+  }
+  const above = TIERS.slice(1).filter((t) => fauna.some((sp) => tierOf(sp) === t));
+  for (const tier of above) {
+    assert.ok(tune.rarityFloor?.[tier], `the ${tier} tier has a floor of its own in rarityFloor`);
+  }
+  for (let i = 1; i < above.length; i++) {
+    const lo = tune.rarityFloor[above[i - 1]];
+    const hi = tune.rarityFloor[above[i]];
+    assert.ok(hi.hours >= lo.hours && hi.crew >= lo.crew && (hi.hours > lo.hours || hi.crew > lo.crew),
+      `the ${above[i]} floor (${hi.hours}h, ${hi.crew} crew) asks for more than the ${above[i - 1]}`
+      + ` floor (${lo.hours}h, ${lo.crew} crew) — a tier that shares its door is not a tier`);
+  }
+  const hours = expeditionHours(content);
+  for (const sp of fauna.filter((s) => tierOf(s) !== 'common' && !s.variantOf)) {
+    const floor = tune.rarityFloor[tierOf(sp)];
+    for (const region of onTable(sp.id)) {
+      assert.ok(hours.includes(floor.hours), `${sp.id}'s floor asks for ${floor.hours}h, and that is a trip length the game offers`);
+      assert.ok(rolls(region, floor.hours, floor.crew, sp.id), `${sp.id} can be found on a trip that meets its floor exactly`);
+      for (const h of hours) {
+        for (let crew = 1; crew <= tune.crewMax; crew++) {
+          if (h >= floor.hours && crew >= floor.crew) continue;
+          assert.ok(!rolls(region, h, crew, sp.id),
+            `${sp.id} (${tierOf(sp)}) cannot be found on a ${h}h trip with ${crew} crew — short of its`
+            + ` ${floor.hours}h/${floor.crew}-crew floor`);
+        }
+      }
+    }
+  }
+
+  // 1b. …and the trip is the ONLY door, at the part level too. R129 found that
+  //     a rival's roster was a second door to the variant lines; R186's census
+  //     found the same for the expedition tiers — every seed held Mother
+  //     Clinker's anatomy and one of thirteen had ever met her, because a
+  //     rival shopping outside its own lab wore her head and salvage handed it
+  //     over. Every lab, every class it can be asked to answer, lead and
+  //     counter, tame and released, across enough seeds to find it.
+  {
+    const { rivalList, rivalSpecimen } = await import('../campaign/rivals.js');
+    const worn = new Set();
+    for (const rival of rivalList(content)) {
+      for (const counter of [null, 'air', 'water', 'ground']) {
+        for (const wild of [null, { socketChance: 1 }]) {
+          for (let s = 0; s < 24; s++) {
+            const rng = rngStream(186, `tiers:${rival.id}:${counter}:${!!wild}`, s);
+            for (let index = 0; index < 3; index++) {
+              const unit = rivalSpecimen(rival, content, { rng, meta: content.rivalMeta, index, counter, wild });
+              for (const id of [...Object.values(unit.genome?.parts ?? {}), ...(unit.salvage ?? [])]) worn.add(id);
+            }
+          }
+        }
+      }
+    }
+    assert.ok(worn.size > 100, `the sweep actually builds rival anatomy (${worn.size} distinct parts)`);
+    const leaked = [...worn].filter((id) => tierOf(content.species[content.parts[id]?.species] ?? {}) !== 'common');
+    assert.deepEqual(leaked, [],
+      `no rival fields anatomy above common — its only door is the player's own (${leaked.join(', ')})`);
+  }
+
+  // 2. The unique is somebody, and it arrives once per run.
+  const unique = fauna.find((sp) => tierOf(sp) === 'unique');
+  const uRegion = onTable(unique.id)[0];
+  assert.ok(uRegion, `${unique.id} is on a region's table`);
+  const uFloor = tune.rarityFloor.unique;
+  const allNodes = Object.values(content.regions).flatMap((r) => r.nodes.map((n) => n.id));
+  const lab = { ...newGameState(), seed: 186, funds: 5000, createdAt: t0 - 40 * 24 * HOUR };
+  lab.lastTickAt = t0;
+  lab.profile = { ...lab.profile, named: true, lab: 'The Test Kitchen' };
+  lab.campaign.heldNodes = [...allNodes];
+  const crewIds = [];
+  for (let i = 0; i < uFloor.crew; i++) {
+    const c = makeChimera(lab, 'M', { goat_head: 'standard', goat_hindlimbs: 'standard' }, t0);
+    c.id = `r186-${i}`;
+    c.settleUntil = t0;
+    crewIds.push(c.id);
+  }
+  const launchMany = (s, n) => {
+    const sealed = [];
+    for (let i = 0; i < n; i++) {
+      s.campaign.expedition = null;
+      s.campaign.expeditionReadyAt = 0;
+      const r = startExpedition(s, content, t0, uRegion.id, crewIds, uFloor.hours);
+      assert.ok(r.ok, `a ${uFloor.hours}h trip to ${uRegion.id} launches (${r.msg})`);
+      sealed.push(r.run);
+    }
+    s.campaign.expedition = null;
+    return sealed;
+  };
+  const before = launchMany(lab, 240);
+  const hers = before.filter((run) => run.outcome.species === unique.id);
+  assert.ok(hers.length > 0, `across 240 full-floor trips ${unique.id} turns up at least once (${hers.length})`);
+  lab.campaign.expedition = hers[0];
+  const came = tickExpeditions(lab, content, hers[0].until).result;
+  assert.equal(came?.animal?.species, unique.id, 'she comes home with the party');
+  assert.equal(came.animal.name, unique.name,
+    `the unique arrives carrying its own name — "${unique.name}" — not a name off the stock list`);
+  const found = lab.campaign.legendsFound ?? [];
+  assert.equal(found.length, 1, 'the run writes her down, once');
+  assert.equal(found[0].name, unique.name, 'by name');
+  assert.equal(found[0].lab, 'The Test Kitchen', 'and by the lab that found her');
+  assert.equal(found[0].region, uRegion.id, 'and where');
+  assert.ok(!rolls(uRegion, uFloor.hours, uFloor.crew, unique.id, lab),
+    `once found, ${unique.id} is off this run's table`);
+  assert.ok(!findsBeyond(content, uRegion, 4, 1, lab).includes(unique.id),
+    'and the card stops advertising her');
+  const after = launchMany(lab, 240);
+  assert.equal(after.filter((run) => run.outcome.species === unique.id).length, 0,
+    `and no sealed trip names ${unique.id} again this run, in 240 launches`);
+  assert.ok(!legacyOffers({ ...lab, dominionAt: t0 }, content)
+    .some((o) => o.kind === 'bloodline' && o.id === unique.id),
+  'she is not offered as a bloodline — a unique is somebody, not a line');
+
+  // 3. The name crosses the run boundary, and the next lab talks about her.
+  lab.dominionAt = t0;
+  for (const [how, pick] of [['travelling light', null], ['with a pick', legacyOffers(lab, content)[0]]]) {
+    const fresh = recallLegends(applyLegacy(startNewRun(lab), pick, lab, content), content);
+    const kept = (fresh.legends ?? []).find((l) => l.species === unique.id);
+    assert.ok(kept, `${how}: the relocated save still has her (${JSON.stringify(fresh.legends)})`);
+    assert.equal(kept.name, unique.name, `${how}: by name`);
+    assert.equal(kept.lab, 'The Test Kitchen', `${how}: and the old lab's name with her`);
+    assert.deepEqual(fresh.campaign.legendsFound ?? [], [], `${how}: and the new run has found nobody yet`);
+    assert.ok(rolls(uRegion, uFloor.hours, uFloor.crew, unique.id, fresh),
+      `${how}: so the new run could find her again — once per run is about THIS run`);
+    const said = (fresh.news ?? []).find((line) => line.includes(unique.name));
+    assert.ok(said && said.includes('The Test Kitchen'),
+      `${how}: the new lab's wire names her and the lab that found her (${JSON.stringify(fresh.news)})`);
+    const row = yearbookRow(fresh, content, 'legend');
+    assert.ok(row?.value?.includes(unique.name),
+      `${how}: and the new lab's Yearbook still has the line (${row?.value})`);
+    // And the lab after THAT: a legend is carried, not merely folded in once.
+    const later = startNewRun(fresh);
+    assert.ok((later.legends ?? []).some((l) => l.name === unique.name),
+      `${how}: two relocations on, the county still has her name`);
+  }
+  const bare = recallLegends(startNewRun(newGameState()), content);
+  assert.deepEqual(bare.legends ?? [], [], 'a run that found nobody carries nobody');
+  assert.ok(!(bare.news ?? []).length, 'and says nothing about it');
+
+  // 4. They bring a keyword that exists because they do.
+  const newTier = new Set(fauna.filter((sp) => ['rare', 'unique'].includes(tierOf(sp))).map((sp) => sp.id));
+  const carriers = {};
+  for (const part of Object.values(content.parts)) {
+    for (const k of Object.keys(part.move?.keywords ?? {})) (carriers[k] ??= []).push(part.species);
+  }
+  const theirs = Object.keys(content.keywords)
+    .filter((k) => (carriers[k] ?? []).length && carriers[k].every((sp) => newTier.has(sp)));
+  assert.ok(theirs.length >= 1,
+    'at least one keyword arrives with the rare or the unique: carried by their anatomy and by no other part');
+  for (const k of theirs) {
+    const inCombo = Object.values(content.combos)
+      .some((c) => k in (c.move?.keywords ?? {}) && c.parts.some((id) => newTier.has(content.parts[id]?.species)));
+    assert.ok(inCombo, `and \`${k}\` reaches a combo built on their anatomy`);
+  }
+
+  // 5. Rarity is not strength.
+  //
+  // Every natural species, flown as a purebred — its own frame, one of its
+  // own parts per socket, the build `sampleBuilds` already treats as the
+  // species — at the SAME grade, in teams of three, against every encounter.
+  // A tier's rate is its purebreds' games pooled. The noise floor is two
+  // standard errors of the difference between two pooled binomials, which
+  // over-states the real noise (a fight's odds vary by encounter, and a sum
+  // of unequal Bernoullis is LESS spread than one) — so this can only be
+  // lenient where it is uncertain, never harsh.
+  const purebredOf = (sp) => {
+    const bySocket = {};
+    for (const p of Object.values(content.parts)) if (p.species === sp.id) bySocket[p.slot] ??= p.id;
+    return partsOnFrame(content, sp.frame, Object.values(bySocket));
+  };
+  const TIER_SEEDS = 12;
+  for (const grade of ['standard', 'apex']) {
+    const by = {};
+    for (const sp of fauna) {
+      const c = makeSimChimera(sp.frame, purebredOf(sp), grade, content);
+      const t = (by[tierOf(sp)] ??= { wins: 0, games: 0 });
+      for (const enc of Object.keys(content.encounters)) {
+        for (let s = 0; s < TIER_SEEDS; s++) {
+          t.games++;
+          if (scriptedBattle(c, enc, content, hashString(`tier:${sp.id}:${enc}:${s}`), 3).outcome === 'win') t.wins++;
+        }
+      }
+    }
+    const rate = (t) => t.wins / t.games;
+    const se = (t) => Math.sqrt(rate(t) * (1 - rate(t)) / t.games);
+    const common = by.common;
+    for (const tier of above) {
+      const t = by[tier];
+      const gap = rate(t) - rate(common);
+      const floor = 2 * Math.sqrt(se(t) ** 2 + se(common) ** 2);
+      assert.ok(gap <= floor,
+        `at ${grade}, ${tier} purebreds win ${(100 * rate(t)).toFixed(1)}% against the commons'`
+        + ` ${(100 * rate(common)).toFixed(1)}% — ${(100 * gap).toFixed(1)} points over, past a noise floor`
+        + ` of ${(100 * floor).toFixed(1)}. Rarity bought strength, which is power creep wearing a costume`);
+    }
+  }
+}
+
 // --- R179: expeditions — the price, the seal, and the reload -----------
 //
 // The four things an expedition has to be, checked against the engine rather
@@ -9096,6 +9337,9 @@ if (inShard('frames')) {
     ['upkeep', upkeepTuning, content.upkeepMeta],
     ['scars', scarTuning, content.scarMeta],
     ['resequencer', resequencerTuning, content.resequencerMeta],
+    // R186 — the expedition's defaults were outside this list, and R186's own
+    // 48-hour trip would have made `hourOptions` a lie the day it shipped.
+    ['expeditions', (await import('../campaign/expedition.js')).expTuning, content.campaignMeta?.expeditions],
   ];
   // Numbers only. Copy strings are SUPPOSED to differ — the data is the
   // source of truth for wording and the code default is a fallback for a
@@ -9250,6 +9494,11 @@ if (inShard('frames')) {
     // Fast to adult for its bulk and slow to elder: a glider that is useful
     // early and worth keeping, which is what an expedition prize should be.
     manta: [9, 26, 84, 34],
+    // R186 — the rare and the unique. Neither can be bred (one is a table
+    // roll, the other is one individual), so the egg timer is a formality the
+    // shape of the roster still asks for.
+    lamprey: [10, 28, 90, 40],
+    clinker: [10, 30, 100, 50],
     salvage: [1, 2, 3, 1],
     alpine_ram: [5, 15, 64, 39],
     abyssal_shark: [10, 29, 96, 51],
@@ -12670,9 +12919,20 @@ if (inShard('shelf')) {
     assert.ok(r?.ok && r.count === fit.short, `the walker renders exactly the ${fit.short} it is short (got ${r?.count})`);
     assert.ok(expect.every((id) => !st.inventory.parts.some((t) => t.id === id)), 'and they are the least missed');
     assert.ok(extractionFit(st, st.ranch.stock[0], content).fits, 'and the graduation then fits');
+    // R191 (folded into R186) — SAVING IS FOR A SHELF THIS VISIT CAN BUY.
+    // Within reach, the walker waits and the facility step buys it; out of
+    // reach, the conveyor keeps moving: exactly what is short, as above.
     const buyable = shelf(top - 1);
-    assert.equal(walkMakeRoom(buyable, content, buyable.ranch.stock[0]), null,
-      'while shelf is for sale the walker saves for it (R116) rather than rendering');
+    const price = shelfForSale(buyable, content).level.cost;
+    buyable.funds = price + 1000;
+    assert.equal(walkMakeRoom(buyable, content, buyable.ranch.stock[0], 1000), null,
+      'while a shelf it can pay for is for sale, the walker saves for it (R116) rather than rendering');
+    const saving = shelf(top - 1);
+    saving.funds = price + 999;
+    const short = extractionFit(saving, saving.ranch.stock[0], content).short;
+    const r2 = walkMakeRoom(saving, content, saving.ranch.stock[0], 1000);
+    assert.ok(r2?.ok && r2.count === short,
+      `but a shelf this visit cannot pay for does not stop graduation: it renders the ${short} it is short (got ${r2?.count})`);
     const spare = structuredClone(dead);
     spare.inventory.parts[spare.inventory.parts.length - 1].traits = [];
     assert.ok(surplusParts(spare, content).length > 0, 'a shelf with one plain duplicate has a spare');
@@ -14212,8 +14472,11 @@ if (inShard('spar')) {
     // The list is the contract, so assert the list rather than only its
     // current members — a fourth entry added without thought should show up
     // here as a decision rather than as a silent carry.
-    assert.deepEqual(CARRIED_ACROSS_RUNS, ['settings', 'guidesSeen', 'ui'],
-      'and exactly those three cross a run boundary');
+    // R186 — a fourth, as a decision: `legends` is the player's story rather
+    // than the run's, and the unique's name crossing a relocation is the
+    // whole of that milestone's third clause.
+    assert.deepEqual(CARRIED_ACROSS_RUNS, ['settings', 'guidesSeen', 'ui', 'legends'],
+      'and exactly those four cross a run boundary');
     // Mutating the new run must not reach back into the old one.
     after.guidesSeen.push('another');
     assert.equal(before.guidesSeen.length, 2, 'the carried values are copies, not references');
@@ -14708,8 +14971,8 @@ if (inShard('spar')) {
     assert.equal(fresh.chimeras.length, 0, 'a new lab starts empty — nothing carries over but the device list');
     assert.equal(fresh.settings.muted, true, 'sound carries forward');
     assert.deepEqual(fresh.guidesSeen, ['resequencer'], 'and the field notes already read');
-    assert.deepEqual(CARRIED_ACROSS_RUNS, ['settings', 'guidesSeen', 'ui'],
-      'the exact same three fields a reset carries — one list, both doors');
+    assert.deepEqual(CARRIED_ACROSS_RUNS, ['settings', 'guidesSeen', 'ui', 'legends'],
+      'the exact same four fields a reset carries — one list, both doors');
     // The old lab is entirely undisturbed by the new one existing.
     assert.equal((await loadSlot(1, store)).chimeras.length, 1, 'slot 1 still has its chimera');
   }
@@ -17663,7 +17926,10 @@ if (inShard('orphans')) {
     // breakout's own announcement is emitted there — the module that decides
     // a specimen got loose is not the module that owns the clock it got
     // loose on. It was outside this list, so its copy read as an orphan.
-    'campaign/world.js'];
+    'campaign/world.js',
+    // R186: the relocation's one line — the new lab hearing about the unique
+    // the old one found — is said where the run boundary lives.
+    'campaign/legacy.js'];
   const src = Object.fromEntries(engineFiles.map((f) => [f, readFileSync(join(root, f), 'utf8')]));
   const allCode = Object.values(src).join('\n');
   const copy = content.news;
@@ -23037,14 +23303,30 @@ if (inShard('empire')) {
     // clears three and a half times over on its own, and which break 242
     // does not need to, because it fails the first clause 5 of 5. Neither
     // break can pass this, and nothing in the lever sweep false-reds it.
+    //
+    // R186 — AND THE UNANIMITY STOPPED SEPARATING, for R180's own reason: the
+    // clean game kept drifting toward the line it drew. `main` before R186
+    // read 4 of 5 better off bigger, and its one holdout was seed 11 at
+    // -0.03pp. R186 moved the walks twice (new trips, and rivals no longer
+    // wearing anatomy above common) and the clean tree read 5 of 5 both
+    // times, the second time with its two lowest seeds at +0.22 and +0.24.
+    // A clause whose clean side is a coin toss at a quarter of a point is
+    // not a rule. Measured on R186's tree, same five walks each:
+    //
+    //                          seeds better off bigger   median    mean
+    //   main before R186              4 of 5              +2.01    +1.88
+    //   R186, first draft             5 of 5              +2.77    +3.08
+    //   R186, shipped                 5 of 5              +1.19    +1.80
+    //   BREAK 242 bonuses off          5 of 5              +6.63    +7.47
+    //   BREAK 243 garrison flat        5 of 5             +18.32   +18.97
+    //
+    // So the sign count no longer tells a defect from the game, and the
+    // median band — which R180 kept as the backstop — is the rule now. It
+    // still separates both breaks from every clean reading: 3.8 points of
+    // room on the clean side today, 1.6 on break 242's, thirteen on 243's.
+    // `worse` is still computed and printed, because a reader should see the
+    // count; it just no longer decides anything.
     const MEDIAN_BAND = 0.05;   // 5pp: the readings above wander 4pp end to end
-    assert.ok(worse < gaps.length,
-      `doubling the map does not make EVERY empire more profitable: all ${gaps.length} campaigns keep `
-      + `more of gross across ${everything.length} nodes than across their own, which is what a garrison `
-      + `that has stopped billing looks like — it is a property of the map, so it moves every seed at `
-      + `once (${shown}) `
-      + '(before R152: 76.7% -> 85.2%, because the garrison was a flat share and the '
-      + 'completion bonuses were not on the books at all)');
     assert.ok(median <= MEDIAN_BAND,
       `and the typical empire is not much more profitable bigger: the median campaign keeps `
       + `${(median * 100).toFixed(2)}pp MORE of gross across ${everything.length} nodes than across its own, `
@@ -24326,7 +24608,22 @@ if (inShard('wire')) {
 // second one, the duties ride inside `tuning` so the index needs no spread,
 // and the PROSE half was paid outright — the Task Force header gave 1.2 KB of
 // measurement back to data/notes/taskforce.md, which already said it.
-const KB_CAP = 334;        // CODE only, measured at 333.99
+// R186 — 334 -> 335, measured at 334.31, and it is R181's argument again
+// because it is R181's clock: a unique comes home on the tick that settles
+// the trip, and that tick is eager because boot calls it. What the tick has
+// to do is two lines — name the animal, stamp the record — and the record
+// itself is SEALED AT LAUNCH in `campaign/outfit.js`, which is lazy, so the
+// first frame never learns what a unique is.
+//
+// Paid down before it was raised: the first draft built the record on arrival
+// and cost 226 bytes here; sealing it at launch took that to 155, and the same
+// block stopped reading `funds` twice. 61 bytes are the two fields every save
+// now declares (`legends`, `campaign.legendsFound`), which the Ascent rule
+// requires a fresh save and a migrated one to agree on. And 127 are the one
+// rule in `campaign/rivals.js` that keeps anatomy above common off a rival's
+// roster — the leak the reach census found, which `rivals.js` has to hold
+// because it builds every generated unit on the tick that fights them.
+const KB_CAP = 335;        // CODE only, measured at 334.31
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.
