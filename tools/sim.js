@@ -1175,6 +1175,8 @@ import {
 import { findsFor, expeditionOdds, startExpedition } from '../campaign/outfit.js';
 import { activeMission, missionCandidates } from '../campaign/mission.js';
 import { missionsFor, missionHours, missionTargets, missionAptitude, startMission, missionCommitted } from '../campaign/caper.js';
+import { hireRoster, slotsOf, hiredOf, hire, letGo, wageNow } from '../campaign/staff.js';
+import { guideStates } from '../ranch/onboarding.js';
 
 const WALK_HOUR = 3600000;
 const WALK_DAY = 24 * WALK_HOUR;
@@ -1529,6 +1531,62 @@ const WALK_RESERVE_DAYS = 14;
 // charged, rescues a captured creature, waits for the Infirmary when the
 // window allows, and tries the next node when one keeps winning. None of
 // that is optimal play; all of it is the game's own instructions.
+// R188 — THE PAYROLL, AS A PLAYER RUNS IT. R181 shipped four hires with its
+// whole proof in fixtures; the walk never opened the card. Four rules, every
+// one read off the data rather than off a henchman's id, so a fifth hire is
+// judged by the same questions:
+//
+//   0. NOT BEFORE THE GAME SAYS SO. The payroll's field guide is `locked`
+//      until its own `reachable` holds; the walk loop marks that day
+//      (`at.payroll`) and the walker hires only after it, which is when a
+//      player would first be told they can. No agenda row: a hire is one
+//      decision, not a chore that comes back, and the agenda is eager.
+//   1. THE SLOTS FILL IN DUTY ORDER — `tuning.duties.<duty>.order` — because
+//      a slot is scarce and the data states which job comes first.
+//   2. WITHIN A DUTY, THE HIRE WHO COVERS THE MOST OF THIS RANCH, then the
+//      cheapest quirk, then roster order. Coverage is the share of the herd
+//      a hand reaches, or of the roster a vet will touch. That is the whole
+//      trade R181 built: which one is right depends on the ranch you have.
+//   3. A HIRE WHO CANNOT DO THE JOB IS REPLACED; ONE WHO CAN IS KEPT. When
+//      the herd outgrows a hand's reach or a vet starts refusing patients,
+//      the better-covering hire takes the slot. Nobody lets a working hand go
+//      to save $2 a meal, so a swap is only ever for coverage.
+//   4. NEVER ON THE LAST WEEK'S MONEY: a hire needs seven days of its wage in
+//      the bank. Checked once a day, like every other standing decision here.
+function walkHire(state, content, now, did, introduced) {
+  if (!introduced) return;
+  const day = Math.floor(now / WALK_DAY);
+  if (state.__walkHireDay === day) return;
+  state.__walkHireDay = day;
+
+  const roster = hireRoster(content);
+  const duties = Object.entries(content.henchmenMeta?.duties ?? {})
+    .sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0)).map(([id]) => id);
+  const herd = state.ranch.stock.length;
+  const pens = state.chimeras ?? [];
+  const coverage = (h) => (h.duty === 'care'
+    ? (herd ? Math.min(1, (h.reach ?? Infinity) / herd) : 1)
+    : (pens.length ? pens.filter((c) => (c.instability ?? 0) <= (h.ceiling ?? 100)).length / pens.length : 1));
+  const pick = (duty) => roster.filter((h) => h.duty === duty)
+    .sort((a, b) => coverage(b) - coverage(a) || (a.fee ?? 0) - (b.fee ?? 0))[0] ?? null;
+  const affordable = (h) => state.funds >= 7 * wageNow(state, content, h.id);
+
+  for (const duty of duties) {
+    const want = pick(duty);
+    const held = hiredOf(state).find((r) => content.henchmen?.[r.id]?.duty === duty);
+    if (!want) continue;
+    if (held) {
+      const h = content.henchmen[held.id];
+      if (held.id === want.id || coverage({ ...h, id: held.id }) >= coverage(want) || !affordable(want)) continue;
+      letGo(state, content, held.id);
+      if (hire(state, content, now, want.id).ok) did('hire', { id: want.id, duty, swapped: held.id });
+      continue;
+    }
+    if (hiredOf(state).length >= slotsOf(state, content) || !affordable(want)) continue;
+    if (hire(state, content, now, want.id).ok) did('hire', { id: want.id, duty });
+  }
+}
+
 function walkAct(state, content, now, open, opts = {}) {
   const has = (id) => open.some((i) => i.id === id);
   const lvl = (c) => levelOf(c.xp ?? 0, content);
@@ -2150,6 +2208,7 @@ function walkAct(state, content, now, open, opts = {}) {
       });
     }
   }
+  if (opts.hire) walkHire(state, content, now, did, opts.payrollOpen);
   // The ring. The hardest garrison you hold pays the most xp per charge.
   // Rationed: the bucket refills three charges every half hour, so a walker
   // ticking every two hours could spar 36 times a day, which is a diet
@@ -2887,7 +2946,7 @@ export function voiceDiet(lines, content) {
   };
 }
 
-export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, sparsPerDay = 3, stableCap = null, away = null, snapshotDays = [], markDay = null, tick = tickWorld, stopAtDominion = true, priceBeats = false, from = null } = {}) {
+export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, sparsPerDay = 3, stableCap = null, away = null, snapshotDays = [], markDay = null, tick = tickWorld, stopAtDominion = true, priceBeats = false, from = null, hire: hires = true } = {}) {
   const t0 = Date.UTC(2026, 0, 1);
   // R172 — `from` walks a SECOND RUN. The walker has only ever started from
   // an empty ranch, so R102's run boundary shipped with nobody able to ask
@@ -3081,6 +3140,10 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // it is just not the question the old name asked.
     if (state.campaign.heldNodes.length >= 5) mark('fifthNode', now);
     if (state.dominionAt) mark('dominion', now);
+    // R188 — the day the game introduces the payroll: its guide's own
+    // `reachable`, read here in the loop rather than by the hiring rule, so
+    // the gate can hold that rule to a clock it does not set.
+    if (at.payroll === undefined && guideStates(state, content, now).find((g) => g.guide.id === 'henchmen')?.reachable) mark('payroll', now);
     // R146 — THE TWO SYSTEMS NOBODY COULD PLACE IN TIME.
     //
     // `tools/coverage.js` names eight systems and proves each one RAN by a
@@ -3116,7 +3179,7 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     } else {
       stall = 0;
     }
-    walkAct(state, content, now, shape.open, { t0, stepHours, sparsPerDay, stableCap, priceBeats });
+    walkAct(state, content, now, shape.open, { t0, stepHours, sparsPerDay, stableCap, priceBeats, hire: hires, payrollOpen: at.payroll !== undefined });
     // R155 — whoever is STILL at risk after the walker has had its turn.
     for (const c of state.chimeras) {
       if (feralStatus(c, content, now).atRisk) {
@@ -3204,6 +3267,14 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // and a fixture carrying them measures a screen no player will see.
     save: Object.fromEntries(Object.entries(state).filter(([k]) => !k.startsWith('__'))),
     verbs,
+    // R188 — the payroll as the walk ran it: when the game introduced it,
+    // every hire and swap with its day, and what the books say at the end.
+    payroll: {
+      openDay: at.payroll ?? null,
+      hires: (state.__walkLog ?? []).filter((e) => e.kind === 'hire'),
+      hired: hiredOf(state).map((r) => ({ id: r.id, duty: content.henchmen?.[r.id]?.duty, done: r.done, missed: r.missed })),
+      wages: hiredOf(state).reduce((n, r) => n + wageNow(state, content, r.id), 0),
+    },
     actions: (state.__walkLog ?? []).length,
     reachedDominion: state.dominionAt != null,
     nodes: state.campaign.heldNodes.length,

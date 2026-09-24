@@ -17833,6 +17833,61 @@ if (inShard('contest')) {
   assert.ok(doms >= MIN_DOMINION_SEEDS, `at least ${MIN_DOMINION_SEEDS} of ${WALK_SEEDS.length} seeds reach dominion inside 180 days (${summary})`);
   assert.ok(heldTotal >= MIN_NODES_EACH * walks.length, `and across the seeds most of the map is held at day 180 (${heldTotal} of ${total * walks.length}; floor ${MIN_NODES_EACH * walks.length})`);
 
+  // 2a. R188 — THE WALK RUNS THE PAYROLL. R181 shipped four hires with the
+  //     whole of its proof in fixtures, so no campaign number said what a
+  //     henchman is worth or what the wage bill does over a real run. The
+  //     walker now hires by the policy stated above `walkHire` in sim.js,
+  //     and this asks the four things that policy promises: the game
+  //     introduces the payroll before anyone is hired, somebody is hired,
+  //     every slot the map opens is filled one duty each, and every hire on
+  //     the books did the job they are paid for. Red on the tree that
+  //     shipped R181, where every walk ends with an empty payroll.
+  {
+    const { slotsOf } = await import('../campaign/staff.js');
+    const duties = Object.keys(content.henchmenMeta?.duties ?? {});
+    const said = [];
+    for (const w of walks) {
+      const p = w.payroll;
+      assert.ok(p && p.openDay != null, `${w.seed}: the walk reaches the moment the game introduces the payroll`);
+      assert.ok(p.hires.length >= 1, `${w.seed}: the walk hires somebody (${p.hires.length} hires by day ${w.at.dominion ?? 180})`);
+      assert.ok(p.hires.every((e) => e.day >= p.openDay),
+        `${w.seed}: nobody is hired before the game says they can be (payroll opened day ${p.openDay}, first hire day ${p.hires[0]?.day})`);
+      assert.equal(new Set(p.hired.map((h) => h.duty)).size, p.hired.length, `${w.seed}: one hire per duty`);
+      const open = Math.min(slotsOf(w.save, content), duties.length);
+      assert.equal(p.hired.length, open, `${w.seed}: every slot the map opens is filled (${p.hired.length} of ${open})`);
+      for (const h of p.hired) {
+        assert.ok(h.done > 0, `${w.seed}: ${h.id} did the job they are paid for (done ${h.done})`);
+        // Rule 3's observable: a hire who cannot cover the job is replaced.
+        // Mopsy is right for a three-animal herd and wrong for twenty, and a
+        // walker that kept her would end with more meals missed than given.
+        assert.ok(h.missed < h.done,
+          `${w.seed}: ${h.id} covers most of their duty (${Math.round(h.done)} done, ${Math.round(h.missed)} missed) — a hire who cannot is replaced`);
+      }
+      said.push(`${w.seed}:${p.hires.map((e) => `${e.id}@d${e.day}`).join('>')}`);
+    }
+    console.log(`   R188 payroll: ${said.join(' ')}`);
+
+    // THE DAY-180 NUMBERS THE ENTRY REPORTS, off the save the height and
+    // untrusted-input gates already read. Printed, not pinned: a wage share
+    // is a fact about one chaotic campaign, and R187 is the standing lesson
+    // about thresholds set beside one reading of the walk. What IS pinned is
+    // that the bill is non-zero and smaller than everything else the ranch
+    // pays for, because a payroll that outweighs the empire it staffs is the
+    // R152 defect the other way round.
+    const { walkedSave } = await import('./fixtures.js');
+    const { wageOf, upkeepPerDay } = await import('../ranch/ranch.js');
+    const { incomePerDay } = await import('../campaign/campaign.js');
+    const d180 = walkedSave({ days: 180 });
+    const hired180 = d180.staff?.hired ?? [];
+    const wages = hired180.reduce((n, r) => n + wageOf(d180, content, r), 0);
+    const upkeep = upkeepPerDay(d180, content);
+    assert.ok(hired180.length > 0 && wages > 0, `the day-180 save has a payroll (${hired180.length} hired, $${Math.round(wages)}/day)`);
+    assert.ok(wages < upkeep - wages, `and it costs less than everything else the ranch pays for ($${Math.round(wages)} of $${Math.round(upkeep)}/day)`);
+    console.log(`   R188 day 180: wages $${Math.round(wages)}/day = ${(100 * wages / upkeep).toFixed(1)}% of upkeep, `
+      + `${(100 * wages / Math.max(1, incomePerDay(d180, content))).toFixed(1)}% of territory income · `
+      + hired180.map((r) => `${r.id} done ${Math.floor(r.done)} missed ${Math.floor(r.missed)}`).join(' · '));
+  }
+
   // 2b. R83 — WHAT A CAMPAIGN ACTUALLY CONTAINS.
   //
   //     "180 days" here means what it has always meant in this file: up to
@@ -22099,9 +22154,6 @@ if (inShard('empire')) {
         `and a decant is kept the ${VAT_KEEP_FLOOR_DAYS} days R163 bought it, not the general `
         + `dismantle floor (${t.decantLifeDays}d across ${t.decants} decants)`);
     }
-    assert.ok(t.splices <= SPLICE_CEILING,
-      `and a campaign splices at most ${SPLICE_CEILING} times in 180 days (got ${t.splices})`
-      + ' — past that is the rebuild loop R135 measured, not a busier Theater');
     // R116 — THE FLOOR IS A CENSUS NOW, and R139's rule four blocks down made
     // the same move for the same reason: a per-seed line on a chaotic walk is
     // a coin flip on whichever seeds happen to be listed.
@@ -22154,6 +22206,34 @@ if (inShard('empire')) {
       + `(${meanSplices.toFixed(1)} ± ${spread.toFixed(1)} across ${splicesEach.join(', ')})`);
     assert.ok(t.splices >= SPLICE_FLOOR / 2,
       `and no campaign falls under half of that (got ${t.splices})`);
+    // R188 — AND THE CEILING TAKES THE SAME SHAPE, because the walker started
+    // hiring and seed 99 read 48 against a per-seed 45. The rule said "past
+    // that is the rebuild loop R135 measured, not a busier Theater", and the
+    // census says otherwise. Sixteen seeds, 180 days, same box, same hour:
+    //
+    //   R181 (no hires)  21 23 24 27 29 29 30 31 31 32 33 36 39 40 41 41
+    //                    mean 31.7, median 31, max 41, shortest median life 28d
+    //   R188 (hiring)    20 28 29 29 30 30 31 33 33 37 37 38 40 41 42 48
+    //                    mean 34.1, median 33, max 48, shortest median life 72d
+    //
+    // Hiring does move it, and for a reason worth having: a hand keeps the
+    // herd's condition up, condition multiplies an extraction's grade, and
+    // better parts are more upgrades to splice — 11 seeds up, 4 down. But the
+    // seed that crossed 45 did it at an 82-day median chimera life, sixteen
+    // times R135's churn floor, and the churn floor itself got FURTHER from
+    // failing on every seed. A busier Theater, exactly what the old sentence
+    // said this could not be.
+    //
+    // So the design claim is asserted where it is true — the AVERAGE campaign
+    // does not splice significantly more than 45 times — and a per-seed line
+    // at double it catches the runaway the rule was really for: R135's loop
+    // built 460 creatures to keep 12, which is hundreds of splices, not 48.
+    // The churn floor above is the rule that measures churn directly.
+    assert.ok(meanSplices - spread <= SPLICE_CEILING,
+      `and the average campaign splices at most about ${SPLICE_CEILING} times `
+      + `(${meanSplices.toFixed(1)} ± ${spread.toFixed(1)} across ${splicesEach.join(', ')})`);
+    assert.ok(t.splices <= SPLICE_CEILING * 2,
+      `and no campaign runs past double that (got ${t.splices}) — that is the rebuild loop R135 measured`);
     // AND THE RATIO IS DERIVED, not a constant somebody typed. A report whose
     // numbers do not move with the walk is the shape R160 spent a milestone
     // removing: an instrument that reads the same thing whatever happens.

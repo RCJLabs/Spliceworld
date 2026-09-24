@@ -4420,12 +4420,18 @@ const BREAKS = [
     // anchor is silent. 277 escaped it by patching the LIST instead of a named
     // entry; this rule cannot, because the failure it models is exactly "an
     // ENTRY says shipped while the queue still lists it", so it has to name
-    // one. Whoever ships R181: move this to another entry §9.0 still queues,
-    // and do not wait for `--anchors` to remind you, because it will not.
+    // one.
+    //
+    // R188 — AND IT HAPPENED AGAIN. The line above said "whoever ships R181:
+    // move this"; R181 shipped and nobody did, and R188's full battery read
+    // 276 MISSED for the reason R116 already wrote down. It now aims at R184,
+    // the longest-queued entry, and `--anchors` has learned to say so when an
+    // append-style break's target already carries the append — so the next
+    // milestone that ships R184 is told the day it ticks it.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: '- **R181 — Henchmen, and the end of being one person.**',
-    to: '- **R181 — Henchmen, and the end of being one person.** ✅',
+    anchor: '- **R184 — The room inside `main`.**',
+    to: '- **R184 — The room inside `main`.** ✅',
   },
   {
     // The other direction: the count beside the list stops matching the list.
@@ -6449,6 +6455,53 @@ const BREAKS = [
     anchor: 'if (!Number.isFinite(r[k])) { r[k] = 0;',
     to: 'if (false) { r[k] = 0;',
   },
+  // R188 — the walker runs the payroll. The first four are the `contest`
+  // block's R188 rule in shard B; the fifth is the splice ceiling R188
+  // re-derived in the `empire` block.
+  {
+    // The default goes back to R181's: nobody is ever hired, every walk ends
+    // with an empty payroll, and no campaign number knows what one is worth.
+    n: 431, gate: SHARD_B, name: 'the walker never hires, and no campaign ever finds out what a henchman is worth',
+    file: 'tools/sim.js',
+    anchor: 'stopAtDominion = true, priceBeats = false, from = null, hire: hires = true } = {}) {',
+    to: 'stopAtDominion = true, priceBeats = false, from = null, hire: hires = false } = {}) {',
+  },
+  {
+    // Rule 0 comes off, and the walker hires on its first visit — before the
+    // game has introduced the payroll at all. The introduction is marked by
+    // the walk loop, not by this rule, which is the only reason it can fail.
+    n: 432, gate: SHARD_B, name: 'the walker hires before the game has told anybody they can',
+    file: 'tools/sim.js',
+    anchor: '  if (!introduced) return;',
+    to: '  if (false) return;',
+  },
+  {
+    // Rule 3 comes off: the hand hired for a three-animal herd keeps the job
+    // when the herd is twenty, and ends with more meals missed than given.
+    n: 433, gate: SHARD_B, name: 'a hand hired for a small herd keeps the job long after the herd has outgrown her',
+    file: 'tools/sim.js',
+    anchor: '      if (held.id === want.id || coverage({ ...h, id: held.id }) >= coverage(want) || !affordable(want)) continue;',
+    to: '      if (true) continue;',
+  },
+  {
+    // The payroll priced twenty times over. Every R181 rule still holds —
+    // it doubles with the operation, the card and the clock agree — which is
+    // why only the day-180 bill on a real campaign can see it.
+    n: 434, gate: SHARD_B, name: 'the payroll is priced twenty times over and outweighs the empire it staffs',
+    file: 'ranch/ranch.js',
+    anchor: 'Math.max(content.henchmenMeta?.minSize ?? 0, size);',
+    to: 'Math.max(content.henchmenMeta?.minSize ?? 0, size) * 20;',
+  },
+  {
+    // The walker dismantles its weakest creature every time a better build
+    // is possible at any price — R135's rebuild loop. The per-seed ceiling
+    // R188 moved to double the design number is the rule aimed at this, and
+    // the churn floor beside it sees it too.
+    n: 435, gate: EMPIRE, name: 'the walker rebuilds its roster every visit, and the Theater becomes a conveyor belt',
+    file: 'tools/sim.js',
+    anchor: '        if (plan.score > quality(weakest) + burned) {',
+    to: '        if (true) {',
+  },
 ];
 
 const pristine = {};
@@ -6523,6 +6576,14 @@ if (process.argv.includes('--anchors')) {
     }
     const hits = src.split(b.anchor).length - 1;
     if (hits !== 1) stale.push(`${b.n}: ${hits} matches in ${b.file} — ${b.name}`);
+    // R188 — A LIVE ANCHOR WITH A DEAD MEANING. A break that APPENDS to its
+    // anchor (a tick after a title, a clause after a line) is a no-op once
+    // the file already carries what it appends: 276 did exactly that from the
+    // day its target shipped until a full battery noticed, and this check is what the note on
+    // it said could not exist.
+    else if (b.to.startsWith(b.anchor) && b.to.length > b.anchor.length && src.includes(b.to)) {
+      stale.push(`${b.n}: ${b.file} already says what this break appends — its target has moved — ${b.name}`);
+    }
   }
   cleanup();
   if (stale.length) {

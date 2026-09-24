@@ -1,5 +1,58 @@
 # PROGRESS
 
+## Session 209 — R188: The walker hires ✅
+
+**R181 shipped a payroll with its whole proof in fixtures. The walk now runs
+it, so there is a campaign number for what a henchman is worth.**
+
+### The policy (above `walkHire` in tools/sim.js)
+
+0. Not before the game says so: the payroll guide's own `reachable`, marked
+   by the walk loop (`at.payroll`), not by the hiring rule.
+1. Slots fill in the data's duty order.
+2. Within a duty, the hire who covers the most of this ranch, then the
+   cheaper quirk.
+3. A hire who cannot cover the job is replaced; one who can is kept.
+4. Seven days of wages in the bank before anybody is hired.
+
+### What the walk does with it
+
+    Mopsy       day 0.25   three animals fit her eight pens, $0 extra
+    → Gristle   day 6-9    the herd outgrew her
+    + Gauze     day 17-19  the twelfth block opens the second slot
+
+Day 180 (seed 2026): wages **$392/day = 10.9% of upkeep, 6.8% of territory
+income**; Gristle 3,364 meals given, none missed; Gauze 851 Infirmary hours
+saved, nobody refused. Sixteen seeds: 9.9-15.3% of upkeep.
+
+### The cascade: one rule, re-derived
+
+Only the splice ceiling moved: seed 99 read 48 against a per-seed 45. A
+16-seed census on both trees showed hiring genuinely lifts splicing (median
+31 → 33) because a hand's condition feeds extraction grades, but at an 82-day
+median chimera life on the seed that crossed, which is the opposite of the
+rebuild loop the rule claimed. The ceiling now has the shape R116 gave the
+floor: the design number on the average, double it per seed for the runaway.
+
+### Known issues
+
+- **Doc Sutures is never the walker's vet** (queued as R190). Every roster
+  holds something over 40 instability by day 17, and the walker ranks
+  coverage before cost. Either the policy should weigh refused hours against
+  Gauze's fee, or the ceiling is too low; R190 measures which.
+- The splice-ceiling change is a change to an existing gate's logic, so the
+  full battery ran: **4h38m** in four chunks (21 / 74 / 116 / 67 minutes),
+  423 of 427 caught. Three misses are R180's known 372 / 388 / 389, already
+  queued as R187 and unchanged. The fourth was mine from R181: break 276 still
+  pointed at R181, whose tick made its patch a no-op — exactly what its own
+  note warned "whoever ships R181" about. Re-aimed at R184 and caught; and
+  `--anchors` now flags any append-style break whose target already carries
+  the append, so it cannot go silent a third time.
+
+### Next session's first task
+
+The §9.0 queue: R182, R184, R186, R187, R189, R190.
+
 ## Session 208 — R181: Henchmen, and the end of being one person ✅
 
 **A week nobody opened the app used to cost the herd 90 → 26 condition,

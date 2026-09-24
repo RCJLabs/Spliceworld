@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**6 entries queued.** R182, R184, R186, R187, R188, R189.
+**6 entries queued.** R182, R184, R186, R187, R189, R190.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -6693,7 +6693,7 @@ triangle working, and each region genuinely asks a different question)*.
   and say why the data-key option could only ever have paid half.
 
 
-- **R188 — The walker never hires.** R181 shipped the payroll with its
+- **R188 — The walker never hires.** ✅ R181 shipped the payroll with its
   whole proof in fixtures: the walk does not touch it, so no campaign
   number says what a hand or a vet is worth over 180 days, or whether the
   wage bill really tracks the operation on a real run rather than a
@@ -6704,6 +6704,60 @@ triangle working, and each region genuinely asks a different question)*.
   criterion did not cover. *Done when: the walker hires by a stated policy,
   the cascade is re-derived rather than re-tuned, and the entry reports the
   day-180 wage share and each hire's tallies.*
+
+  **Shipped.** The policy sits above `walkHire` in `tools/sim.js`, four rules
+  read off the data rather than off a henchman's id: nobody is hired before
+  the payroll guide's own `reachable` holds (the walk loop marks that day, so
+  the rule is held to a clock it does not set); slots fill in the data's duty
+  order; within a duty the hire who covers most of THIS ranch wins, then the
+  cheaper quirk; a hire who cannot cover the job is replaced, and one who can
+  is kept; and a hire needs seven days of wages in the bank.
+
+  *What the walk does with it*, on all four smoke seeds: **Mopsy on day
+  0.25**, when three animals fit her eight pens and she costs nothing extra;
+  **swapped for Gristle on day 6-9**, when the herd outgrows her; **Nurse
+  Gauze on day 17-19**, when the twelfth block opens the second slot. R181's
+  trade working exactly as built, on a real campaign.
+
+  *Day 180, seed 2026:* wages **$392/day = 10.9% of upkeep, 6.8% of territory
+  income**. Gristle has given **3,364 meals and missed none**; Gauze has cut
+  **851 hours** off the Infirmary clock and refused nobody. Across sixteen
+  seeds the share sits at 9.9-15.3% of upkeep.
+
+  *The cascade was one rule, and it was re-derived rather than raised.* The
+  splice ceiling read 48 against 45 on seed 99. Its sentence said "past that
+  is the rebuild loop R135 measured, not a busier Theater", and a sixteen-seed
+  census on both trees falsified it: hiring does lift splicing (median 31 →
+  33, mean 31.7 → 34.1, eleven seeds up, four down), because a hand keeps
+  condition up, condition multiplies an extraction's grade, and better parts
+  are more upgrades. But seed 99 reached 48 at an **82-day median chimera
+  life**, and the churn floor moved AWAY from failing on every seed (the
+  shortest median life went from 28 days to 72). So the ceiling took the shape
+  R116 gave the floor: the design number on the average (mean minus its
+  standard error at most 45), and a per-seed line at double it for the
+  runaway R135 actually measured, which is hundreds of splices.
+
+  Breaks 431-435. The full battery the ceiling change required read 423 of
+  427: R187's three known misses, and break 276, still aimed at R181 after it
+  shipped — re-aimed at R184, and `--anchors` now flags an append-style break
+  whose target already carries the append. The finding it could not fix is
+  filed as R190: Doc Sutures is never the walker's vet.
+
+- **R190 — Doc Sutures is never the walker's vet.** Found by R188. On every
+  seed that has been walked — the four smoke seeds and a sixteen-seed census
+  — the second slot opens on day 17-19 and goes to Nurse Gauze, because every
+  roster by then holds at least one chimera over Doc's 40-instability ceiling
+  and the walker ranks coverage before cost. R181's gate proves the two vets
+  do not dominate each other on a wound-up fixture; R188 shows that on the
+  ranch the game actually produces, one of them is never the answer. Two
+  readings, and they want different fixes: the POLICY is too strict (a player
+  might take a few refusals to save $20 an hour, and the walker never weighs
+  refused hours against the fee), or the CEILING sits below the roster the
+  game builds by day 17. *Done when: both vets' value — hours saved against
+  what they cost — is measured over the census; the fix the measurement
+  points at ships, in the walker's policy or in the data; and Doc is the
+  walker's pick on at least one seed, or the entry argues from the numbers
+  why a vet nobody should hire belongs on the roster.*
 
 - **R189 — A henchman runs a mission.** R181's entry said a henchman "can
   also run an R180 mission, which is how espionage stops costing a chimera."
