@@ -6945,7 +6945,12 @@ triangle working, and each region genuinely asks a different question)*.
   5pp median band it kept as a backstop is the rule now, and still separates
   both breaks: clean +1.19, break 242 +6.63, break 243 +18.32. Budgets moved
   with stated arguments: first paint 1136 → 1155 KB (measured 1146; 9.5 KB of
-  it content), eager code 334 → 335 KB (measured 334.31, paid down first).
+  it content), eager code 334 → 335 KB (measured 334.31, paid down first),
+  and the suite's walk rebuild allowance 16 → 36 CPU-seconds. That last one
+  is not R186's cost. The A/B on `main` measured a rebuilt walk at about 31
+  CPU-s alone and 41 in a cold suite on both trees, and `main` had been
+  passing cold only on its warm headroom. R186 itself adds 149 warm seconds
+  and reads 1,191 of 1,425.
   Breaks 451–463, 443/193/409/441 re-aimed, and a full battery because three
   existing gates changed their logic.
 

@@ -369,7 +369,24 @@ const CPU_BUDGET_S = 1425;
 // Measured twice, two ways: 15.4s from this suite's own cold-minus-warm
 // delta over 13 walks, and 16.4s for one walk timed alone twenty times. 16
 // is the middle of the two, not a cushion.
-const WALK_REBUILD_S = 16;
+//
+// R186 — 16 -> 36, RE-MEASURED THE SAME TWO WAYS, AND ON BOTH TREES. R186's
+// first run was cold and read 1691 of 1633. The A/B said the previous tree
+// was not over (1599 cold, 1042 warm), so the 149 warm seconds are R186's:
+// the tier bench and two species' worth of every sweep. But the same A/B
+// said what the allowance had become. A walk rebuilt costs, per walk:
+//
+//                          alone (3 runs)       cold minus warm (13 walks)
+//   R184's tree (main)     33.7 · 32.5 · 28.6         42.8
+//   R186's tree            31.8 · 28.9 · 28.4         38.5
+//
+// No difference between the trees. Both are twice what this line said:
+// `main` was passing cold only because its warm headroom was paying for walks
+// the allowance claimed cost 16. 36 is the middle of the two means (30.7 and
+// 40.7), R160's rule, not a cushion. No break needs it small: 241 and 261
+// read about 4,600, and 240, 260, 262, 300 and 301 are held by the cache, the
+// battle count and the shares, none of which is in seconds.
+const WALK_REBUILD_S = 36;
 const cacheAtEnd = walkCacheState();
 // What this run actually rebuilt. Self-calibrating on purpose: a run ends
 // with a full cache, so the walks that APPEARED during it are exactly the

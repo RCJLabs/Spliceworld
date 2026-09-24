@@ -55,9 +55,11 @@ instruction to distrust it.)
 - `node tools/battery.js --only <the breaks this milestone added>` — the new rules go red on demand.
 - `npm test` — **~5.5 min wall on a warm walk cache, ~1,250 CPU-seconds on
   four lanes, run alone.** R118 read 334s wall / 1,254 CPU-s of 1,425
-  budgeted. A milestone that touches the engine also pays a rebuild allowance
-  (16s a walk) on its FIRST run and not its second, so budget the COLD number
-  (~8 min) when planning an evening, not the warm one.
+  budgeted; R186 read 320s / 1,191 warm. A milestone that touches the engine
+  also pays a rebuild allowance (36s a walk since R186 re-measured it; it said
+  16 and a walk had doubled) on its FIRST run and not its second, so budget
+  the COLD number (~11 min, 1,691 CPU-s at R186) when planning an evening,
+  not the warm one.
   **The budgeted number is not headroom.** R117's "1,126 of 1,342" was 1,150
   plus a 192s cold-walk allowance — real warm headroom, 24 seconds — and R118
   read it the other way and spent an hour attributing an overrun to its own

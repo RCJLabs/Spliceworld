@@ -67,6 +67,14 @@ remembers her after the lab moves.**
 - First paint: 1,136 → 1,155 KB (measured 1,146).
 - Eager code: 334 → 335 KB (measured 334.31, after paying down the first
   draft by 71 bytes).
+- Suite walk rebuild allowance: 16 → 36 CPU-s a walk. The first `npm test`
+  was cold and read 1,691 of 1,633. The A/B on `main` read 1,042 warm and
+  1,599 cold, so R186's own cost is 149 warm seconds and fits the warm
+  budget (1,191 of 1,425).
+  - A walk rebuilt costs the same on both trees: about 31 CPU-s alone and
+    about 41 inside a cold suite.
+  - `main` was only passing cold because its warm headroom paid for walks
+    the allowance priced at 16.
 
 ### Gates
 
