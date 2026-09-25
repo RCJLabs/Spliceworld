@@ -58,7 +58,16 @@ move.**
 - 199 re-aimed with the Vault line again, and 276 re-aimed at R189 before
   the tick. The list is 459 breaks, numbered to 468.
 - A full battery, because three existing gates changed their logic (a11y,
-  height, smoke's untrusted block).
+  height, smoke's untrusted block): **459 breaks, 459 caught, 0 missed**,
+  BATTERY_EXIT 0 in every chunk and all 40 baseline gates green in each.
+  The chunks took 21m, 62m, 121m and 81m, 285 minutes in all. R186's
+  battery missed 388 and the since-retired 347; this one missed nothing.
+- `--only` over the eight R187 touched: all caught after 467's re-aim.
+  `npm test` alone: 11 of 11, 1,035 CPU-s of 1,425, 273s wall.
+- No game code and no save schema changed: SAVE_VERSION stays 63. Each
+  baseline included the browser gates that cover the rest of the Definition
+  of Done: a real old save opening the game quietly, the keyboard walk at
+  380px, and the height budgets on the day-180 save.
 
 ### Known issues
 

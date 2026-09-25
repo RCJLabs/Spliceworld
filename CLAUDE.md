@@ -79,7 +79,13 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (~5h25m. R186 is the SEVENTH reading: 456 breaks at 22m,
+**The full battery (4h45m to 5h25m. R187 is the EIGHTH reading: 459 breaks
+at 21m, 62m, 121m and 81m, which is 285 minutes. That is 39 minutes under
+R186 on a tree that only ADDED work (four breaks and three new gate passes),
+so the difference is the host. There are now two readings near 4h40m (R188,
+R187) and three near 5h25m (R118, R185, R186), all on the same box, so this
+is a range, not a number: plan an evening on the top of it.
+R186 was the SEVENTH reading: 456 breaks at 22m,
 83m, 133m and 86m, which is 324 minutes. It agrees with R118 and R185 below
 and not with R188, so the four chunks cost what they did before R188.
 R188 was the sixth reading, and it disagreed with

@@ -6908,7 +6908,9 @@ triangle working, and each region genuinely asks a different question)*.
   **Every rule touched says what would blind it again**, in the gate and
   beside its break. Breaks 465-468 prove the new rules on states the walk
   does not reach: the bound's spares shelf, the held-row pass's open cards,
-  the record-map detector, and the retainer's long-absence cap.
+  the record-map detector, and the retainer's long-absence cap. The full
+  battery that proved it caught all 459 breaks, with no miss, in 285
+  minutes.
 
   *Of the four worked examples above:* R152's median and R95's variant rule
   were settled in R186 (the median band, and break 347 retired on its own
