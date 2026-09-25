@@ -22,6 +22,14 @@
 // anything needing content/RNG (e.g. starter herd) happens on boot via
 // seeded flags (see ranch.ensureRanchSeeded).
 export const migrations = {
+  // R189 — nobody has been hired away yet: an agent is a hire this version
+  // introduces, so a save from before it cannot have lost one to a lab.
+  64: (save) => {
+    save.staff ??= {};
+    save.staff.hired ??= [];
+    save.staff.poached ??= {};
+    return save;
+  },
   // R186 — nobody has been found yet, in this run or any before it: a save
   // from before the uniques existed cannot have met one.
   63: (save) => {

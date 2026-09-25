@@ -32,6 +32,10 @@
       "risk": "detained",
       "detainHours": 9,
       "grants": "intel",
+      "agent": {
+        "risk": "detained",
+        "detainHours": 24
+      },
       "order": 1
     },
     "sabotage": {
@@ -49,6 +53,11 @@
       "catchOnFail": 0.4,
       "grants": "setback",
       "setback": 1,
+      "agent": {
+        "risk": "poached",
+        "catchOnFail": 0.4,
+        "poachDays": 7
+      },
       "order": 2
     },
     "renewal": {

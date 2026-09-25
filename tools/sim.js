@@ -1554,6 +1554,12 @@ const WALK_RESERVE_DAYS = 14;
 //      to save $2 a meal, so a swap is only ever for coverage.
 //   4. NEVER ON THE LAST WEEK'S MONEY: a hire needs seven days of its wage in
 //      the bank. Checked once a day, like every other standing decision here.
+//   5. R189 — NOT A HIRE WHOSE JOB IS TO BE SENT. A duty the file marks
+//      `sent` (Fieldwork) holds no standing clock: its hire earns the wage
+//      only on missions somebody sends them on, and this walker's mission
+//      policy sends creatures (R180). Hiring one it never sends would be a
+//      wage for nothing and a slot taken from the hand or the vet. Teaching
+//      the walk to weigh an agent against its own infiltrator is R192.
 function walkHire(state, content, now, did, introduced) {
   if (!introduced) return;
   const day = Math.floor(now / WALK_DAY);
@@ -1562,6 +1568,7 @@ function walkHire(state, content, now, did, introduced) {
 
   const roster = hireRoster(content);
   const duties = Object.entries(content.henchmenMeta?.duties ?? {})
+    .filter(([, d]) => !d.sent)
     .sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0)).map(([id]) => id);
   const herd = state.ranch.stock.length;
   const pens = state.chimeras ?? [];

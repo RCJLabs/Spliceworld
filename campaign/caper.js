@@ -46,6 +46,16 @@ export function missionCommitted(state) {
   return new Set(run?.chimeraId ? [run.chimeraId] : []);
 }
 
+// R189 — the hires who could go instead of a creature: on the books, on a
+// duty the file marks `sent`, and not held. Lazy with the rest of the board:
+// the agenda's row counts creatures only, so the first frame never asks.
+export function missionAgents(state, content, now) {
+  const duties = content.henchmenMeta?.duties ?? {};
+  const hired = Array.isArray(state.staff?.hired) ? state.staff.hired : [];
+  return hired.filter((rec) => duties[content.henchmen?.[rec?.id]?.duty]?.sent && !(rec.detainedUntil > now))
+    .map((rec) => ({ rec, h: content.henchmen[rec.id] }));
+}
+
 export function missionReadyAt(state) {
   return state.campaign?.missionReadyAt ?? 0;
 }
@@ -102,9 +112,12 @@ function clamp01(n) {
 
 // The odds and the purse, shown before the player commits. Derived, so the
 // number on the button is the number the launch rolls against.
-export function missionOdds(content, mission, hours, chimera) {
+//
+// R189 — an AGENT has no anatomy to read, so it brings the one number the
+// file gives it (`aptitude` in data/henchmen.json) to the same formula.
+export function missionOdds(content, mission, hours, chimera, agent = null) {
   const t = missionTuning(content);
-  const apt = chimera ? missionAptitude(content, chimera) : { score: 0 };
+  const apt = agent ? { score: clamp01(agent.aptitude) } : chimera ? missionAptitude(content, chimera) : { score: 0 };
   const chance = Math.max(t.minChance, Math.min(t.maxChance,
     t.baseChance + apt.score * t.perAptitude + hours * t.perHour));
   return {
@@ -125,7 +138,11 @@ export function missionTargets(state, content) {
 }
 
 // Launching decides everything NOW, seeded, and stores it.
-export function startMission(state, content, now, missionId, rivalId, chimeraId, hours = 0) {
+//
+// R189 — `henchId` sends a hire from a `sent` duty instead of a creature.
+// The mission's `agent` block says what a failure costs them; a mission
+// without one (renewal, which leaves its specimen behind) refuses in words.
+export function startMission(state, content, now, missionId, rivalId, chimeraId, hours = 0, henchId = null) {
   const t = missionTuning(content);
   if (activeMission(state)) return { ok: false, msg: content.copy?.mission?.already };
   if (now < missionReadyAt(state)) return { ok: false, msg: content.copy?.mission?.resting };
@@ -134,13 +151,21 @@ export function startMission(state, content, now, missionId, rivalId, chimeraId,
   const rival = missionTargets(state, content).find((r) => r.id === rivalId);
   if (!rival) return { ok: false, msg: content.copy?.mission?.no_rival };
   if (!missionHours(mission).includes(hours)) return { ok: false, msg: content.copy?.mission?.no_hours };
-  const busy = new Set((state.campaign?.operations ?? []).map((r) => r.chimeraId).filter(Boolean));
-  const chimera = (state.chimeras ?? []).find((c) => c.id === chimeraId);
-  if (!chimera || isInjured(chimera, now) || busy.has(chimera.id)) {
-    return { ok: false, msg: content.copy?.mission?.no_specimen };
+  let chimera = null;
+  let agent = null;
+  if (henchId) {
+    if (!mission.agent) return { ok: false, msg: content.copy?.mission?.agent_refused };
+    agent = missionAgents(state, content, now).find((a) => a.rec.id === henchId) ?? null;
+    if (!agent) return { ok: false, msg: content.copy?.mission?.agent_away };
+  } else {
+    const busy = new Set((state.campaign?.operations ?? []).map((r) => r.chimeraId).filter(Boolean));
+    chimera = (state.chimeras ?? []).find((c) => c.id === chimeraId);
+    if (!chimera || isInjured(chimera, now) || busy.has(chimera.id)) {
+      return { ok: false, msg: content.copy?.mission?.no_specimen };
+    }
   }
 
-  const odds = missionOdds(content, mission, hours, chimera);
+  const odds = missionOdds(content, mission, hours, chimera, agent?.h);
   state.campaign.missionCount = (state.campaign.missionCount ?? 0) + 1;
   const rng = rngStream(state.seed, `mission:${missionId}:${rivalId}`, state.campaign.missionCount);
   const success = rng() < odds.chance;
@@ -149,8 +174,16 @@ export function startMission(state, content, now, missionId, rivalId, chimeraId,
   // that is what `alwaysSpends` means and it is the whole price of the
   // mission. Sabotage risks it only on a failure, and then only sometimes.
   // Espionage never costs more than time.
+  const until = now + Math.round(hours * HOUR);
   let fate = 'home';
-  if (mission.alwaysSpends) fate = 'released';
+  if (agent) {
+    // AN AGENT'S PRICE IS THE AGENT'S OWN, read off the mission's `agent`
+    // block: held for questioning, or hired away by the lab they were caught
+    // in. Never released and never conscripted — there is no genome to take.
+    const risk = mission.agent;
+    if (!success && risk.risk === 'poached' && rng() < (risk.catchOnFail ?? 0)) fate = 'poached';
+    else if (!success && risk.risk === 'detained') fate = 'detained';
+  } else if (mission.alwaysSpends) fate = 'released';
   else if (!success && mission.risk === 'conscripted' && rng() < (mission.catchOnFail ?? 0)) fate = 'conscripted';
   else if (!success && mission.risk === 'detained') fate = 'detained';
 
@@ -160,18 +193,30 @@ export function startMission(state, content, now, missionId, rivalId, chimeraId,
     notoriety: success ? (mission.notoriety ?? 0) : 0,
     grants: success ? (mission.grants ?? 'none') : 'none',
     setback: mission.setback ?? 1,
-    detainHours: mission.detainHours ?? 9,
+    detainHours: agent ? (mission.agent.detainHours ?? 24) : (mission.detainHours ?? 9),
     fate,
     conscript: fate === 'conscripted' ? conscriptOf(chimera) : null,
     loose: fate === 'released' ? looseOf(state, content, chimera, rng, now) : null,
+    // Only an agent run carries these, so a creature's sealed record is the
+    // shape it was before R189 and a save that never hires one is unchanged.
+    // `freeAt` is when a held agent walks out, or a poached one's non-compete
+    // ends — built here, like every other consequence, so the eager tick
+    // only files it.
+    ...(agent ? {
+      expenses: agent.h.fee ?? 0,
+      freeAt: until + Math.round(fate === 'poached' ? (mission.agent.poachDays ?? 7) * 24 * HOUR
+        : fate === 'detained' ? (mission.agent.detainHours ?? 24) * HOUR : 0),
+    } : {}),
   };
 
   const run = {
-    missionId, rivalId, chimeraId,
-    name: chimera.name,
+    missionId, rivalId,
+    chimeraId: agent ? null : chimeraId,
+    ...(agent ? { henchId: agent.rec.id } : {}),
+    name: agent ? agent.h.name : chimera.name,
     hours,
     startedAt: now,
-    until: now + Math.round(hours * HOUR),
+    until,
     chance: odds.chance,
     outcome,
   };

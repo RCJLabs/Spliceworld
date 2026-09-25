@@ -26028,6 +26028,20 @@ if (inShard('hires')) {
     for (const h of roster) {
       const st = wound(51);
       staff.hire(st, content, T0, h.id);
+      // R189 — AN AGENT WORKS ONLY WHEN SENT, so the week that proves its
+      // line is a week with one job in it: a met lab, and a mission whose
+      // failure holds the agent rather than poaching them, so they are still
+      // on the books to report. A week with no job would pass "legible" on a
+      // line that never prints — this clause's own trap, one duty over.
+      if (content.henchmenMeta?.duties?.[h.duty]?.sent) {
+        const { startMission, missionsFor } = await import('../campaign/caper.js');
+        const rid = Object.keys(content.rivals)[0];
+        st.campaign.rivals = { [rid]: { defeats: 1, losses: 0, lastMetAt: T0 } };
+        const m = missionsFor(content).find((x) => x.agent && x.agent.risk !== 'poached');
+        assert.ok(m, `${h.id}: some mission sends an agent without risking them off the books`);
+        const go = startMission(st, content, T0, m.id, rid, null, m.hourOptions[0], h.id);
+        assert.ok(go.ok, `${h.id}: the week starts with them sent on ${m.id} (${go.msg ?? ''})`);
+      }
       const before = worldSnapshot(st, T0);
       tickWorld(st, content, T0 + WEEK);
       const after = worldSnapshot(st, T0 + WEEK);
@@ -26326,5 +26340,255 @@ if (inShard('capers')) {
   }
 }
 
+
+// --- R189: a henchman runs a mission ------------------------------------
+//
+// THE GATE FIRST, AND IT IS RED ON THE TREE R187 LEFT. R181's entry said a
+// henchman "can also run an R180 mission, which is how espionage stops
+// costing a chimera", and it never shipped: `startMission` refuses anything
+// that is not a fit creature, and no hire carries a number a mission could
+// read. The odds are anatomy and a henchman has none.
+//
+// The criterion has three clauses and each is a block below. A henchman can
+// be SENT (2, 3). Its ODDS AND RISK ARE DATA — asserted by moving the data
+// and watching the engine follow, not by reading the JSON back (4, 5). And
+// it is NOT STRICTLY BETTER THAN THE BEST INFILTRATOR (6): measured against
+// the best build the anatomy can make, found by search rather than named,
+// on every mission and length an agent may take. The axis the agent wins is
+// that no creature leaves the ranch; the axis it must lose is the odds.
+if (inShard('capers')) {
+  const staff = await import('../campaign/staff.js');
+  const mission = await import('../campaign/mission.js');
+  const caper = await import('../campaign/caper.js');
+  const { labCore } = await import('./fixtures.js');
+  const HR = 3600000;
+  const T0 = 1700000000000;
+  const duties = content.henchmenMeta?.duties ?? {};
+  const agents = staff.hireRoster(content).filter((h) => duties[h.duty]?.sent);
+
+  // 1. SOMEBODY ON THE PAYROLL IS SENT RATHER THAN STATIONED, and what they
+  //    bring to a job is a number in the file.
+  assert.ok(agents.length >= 1,
+    `the payroll has a hire whose duty is to be sent on missions (duties: ${Object.keys(duties).join(', ')})`);
+  for (const h of agents) {
+    assert.ok(Number.isFinite(h.aptitude) && h.aptitude > 0 && h.aptitude < 1,
+      `${h.id} states a mission aptitude between 0 and 1 in data/henchmen.json (has ${h.aptitude})`);
+  }
+  const board = caper.missionsFor(content);
+  const open = board.filter((m) => m.agent);
+  assert.ok(open.length >= 1, `at least one mission takes an agent (${board.map((m) => m.id).join(', ')})`);
+  // Every risk an agent can run has a consequence the engine implements and a
+  // sentence the card prints — read off the file, as R180's creature risks are.
+  const AGENT_RISKS = new Set(['detained', 'poached']);
+  for (const m of open) {
+    assert.ok(!m.alwaysSpends,
+      `mission ${m.id} spends its specimen whatever happens, so it cannot take an agent — there is nobody to leave behind`);
+    assert.ok(AGENT_RISKS.has(m.agent.risk), `mission ${m.id} names an agent risk the engine implements (has ${m.agent.risk})`);
+    assert.ok(content.copy?.mission?.[`agent_risk_${m.agent.risk}`],
+      `mission ${m.id}'s agent risk ${m.agent.risk} has a sentence that says what it costs`);
+  }
+
+  // A lab with one met rival, one creature, and the agent on the books.
+  const lab = (h, c0 = null) => {
+    const { s: st, content: fx, chimera } = labCore({ now: T0, funds: 1e6 });
+    const c = c0 ?? fx;
+    st.chimeras = [chimera];
+    const rid = Object.keys(c.rivals)[0];
+    st.campaign.rivals = { [rid]: { defeats: 1, losses: 0, lastMetAt: T0 } };
+    const hired = staff.hire(st, c, T0, h.id);
+    assert.ok(hired.ok, `${h.id} can be hired onto a fresh lab (${hired.msg})`);
+    return { st, c, chimera, rid };
+  };
+  const recOf = (st, id) => staff.hiredOf(st).find((r) => r.id === id);
+
+  // 2. AN AGENT IS SENT, AND NO CREATURE IS. The run names the agent, the
+  //    specimen stays free for anything else, the job resolves on the clock,
+  //    and the agent's tally and expenses move with it.
+  for (const h of agents) {
+    for (const m of open) {
+      const { st, c, chimera, rid } = lab(h);
+      const hours = m.hourOptions[0];
+      const go = caper.startMission(st, c, T0, m.id, rid, null, hours, h.id);
+      assert.ok(go.ok, `${h.id} can be sent on ${m.id} (${go.msg ?? 'no reason given'})`);
+      assert.equal(st.campaign.mission.henchId, h.id, `the ${m.id} run is ${h.id}'s`);
+      assert.equal(caper.missionCommitted(st).size, 0, `and no creature is committed while ${h.id} is out`);
+      assert.ok(mission.missionCandidates(st, T0).some((x) => x.id === chimera.id),
+        'the specimen is still free for a fight, a spar or a trip — the whole point of sending somebody else');
+      const funds = st.funds;
+      const { result } = mission.tickMissions(st, c, T0 + hours * HR);
+      assert.ok(result && result.henchId === h.id, `the ${m.id} job resolves as ${h.id}'s`);
+      const out = go.run.outcome;
+      assert.ok(Number.isFinite(out.expenses) && out.expenses === (h.fee ?? 0),
+        `${h.id}'s expenses on the job are the fee in the file (${out.expenses} vs ${h.fee})`);
+      assert.ok(Math.abs(st.funds - (funds + out.funds - out.expenses)) < 1e-6,
+        `the bank moves by the purse less the expenses (${funds} -> ${st.funds})`);
+      if (out.fate !== 'poached') {
+        assert.equal(recOf(st, h.id)?.done, 1, `${h.id}'s tally counts the job (${recOf(st, h.id)?.done})`);
+      }
+    }
+  }
+
+  // 3. A MISSION THAT NEEDS A SPECIMEN REFUSES AN AGENT, IN WORDS (R161).
+  //    Renewal leaves its creature behind; there is nobody to leave.
+  for (const h of agents) {
+    for (const m of board.filter((x) => !x.agent)) {
+      const { st, c, rid } = lab(h);
+      const go = caper.startMission(st, c, T0, m.id, rid, null, m.hourOptions[0], h.id);
+      assert.ok(!go.ok && go.msg, `${m.id} refuses ${h.id} and says why (${go.msg})`);
+      assert.equal(st.campaign.mission ?? null, null, `and nothing was launched`);
+    }
+  }
+
+  // 4. THE ODDS ARE THE DATA. The chance is the board's own formula with the
+  //    agent's aptitude where a creature's anatomy would be — and moving the
+  //    number in the file moves the chance by exactly what the formula says.
+  const t = mission.missionTuning(content);
+  const clampC = (x) => Math.max(t.minChance, Math.min(t.maxChance, x));
+  for (const h of agents) {
+    for (const m of open) {
+      for (const hours of m.hourOptions) {
+        const o = caper.missionOdds(content, m, hours, null, h);
+        assert.ok(Math.abs(o.chance - clampC(t.baseChance + h.aptitude * t.perAptitude + hours * t.perHour)) < 1e-9,
+          `${h.id} on ${m.id} ${hours}h rolls the board's formula on its stated aptitude (${o.chance})`);
+      }
+    }
+    const moved = { ...content, henchmen: { ...content.henchmen, [h.id]: { ...h, aptitude: h.aptitude + 0.1 } } };
+    const m = open[0];
+    const a = caper.missionOdds(content, m, m.hourOptions[0], null, h).chance;
+    const b = caper.missionOdds(moved, m, m.hourOptions[0], null, moved.henchmen[h.id]).chance;
+    assert.ok(Math.abs((b - a) - 0.1 * t.perAptitude) < 1e-9,
+      `raising ${h.id}'s aptitude in the file by 0.1 raises the odds by ${0.1 * t.perAptitude} (${a} -> ${b})`);
+  }
+
+  // 5. THE RISK IS THE DATA, AND EACH ONE COSTS WHAT IT SAYS.
+  const failing = (c0, id, agent) => ({
+    ...c0,
+    missionMeta: { ...(c0.missionMeta ?? {}), minChance: 0, maxChance: 0 },
+    missions: { ...c0.missions, [id]: { ...c0.missions[id], agent: { ...c0.missions[id].agent, ...agent } } },
+  });
+  for (const h of agents) {
+    // DETAINED: the agent is held for the hours the file names, cannot be
+    // sent again until then, and is still on the books (and the wage).
+    const held = open.find((m) => m.agent.risk === 'detained');
+    if (held) {
+      const { st, c: fx, rid } = lab(h);
+      const c = failing(fx, held.id, {});
+      const go = caper.startMission(st, c, T0, held.id, rid, null, held.hourOptions[0], h.id);
+      assert.ok(go.ok && go.run.outcome.fate === 'detained', `a failed ${held.id} detains ${h.id} (${go.run?.outcome?.fate})`);
+      const end = T0 + held.hourOptions[0] * HR;
+      mission.tickMissions(st, c, end);
+      const rec = recOf(st, h.id);
+      const back = end + held.agent.detainHours * HR;
+      assert.ok(rec && rec.detainedUntil === back,
+        `${h.id} is held for the ${held.agent.detainHours}h the file names (until ${rec?.detainedUntil}, expected ${back})`);
+      assert.ok(rec.missed >= held.agent.detainHours, `and the hours held are ${h.id}'s own tally (${rec.missed})`);
+      assert.ok(!caper.missionAgents(st, c, back - 1).some((x) => x.rec.id === h.id), `${h.id} cannot be sent while held`);
+      st.campaign.missionReadyAt = 0;
+      const early = caper.startMission(st, c, back - 1, held.id, rid, null, held.hourOptions[0], h.id);
+      assert.ok(!early.ok && early.msg, `and sending ${h.id} early is refused in words (${early.msg})`);
+      assert.ok(caper.missionAgents(st, c, back).some((x) => x.rec.id === h.id), `${h.id} is back when the hours run out`);
+    }
+    // POACHED: the agent leaves the books for the days the file names, the
+    // hire card says so in words, and they can be hired again after.
+    const poach = open.find((m) => m.agent.risk === 'poached');
+    if (poach) {
+      const { st, c: fx, rid } = lab(h);
+      const c = failing(fx, poach.id, { catchOnFail: 1 });
+      const go = caper.startMission(st, c, T0, poach.id, rid, null, poach.hourOptions[0], h.id);
+      assert.ok(go.ok && go.run.outcome.fate === 'poached', `a caught ${poach.id} loses ${h.id} to the lab (${go.run?.outcome?.fate})`);
+      const end = T0 + poach.hourOptions[0] * HR;
+      mission.tickMissions(st, c, end);
+      assert.ok(!recOf(st, h.id), `${h.id} is off your books`);
+      const free = end + poach.agent.poachDays * 24 * HR;
+      const block = staff.hireBlock(st, c, h.id, free - 1);
+      assert.ok(block && block.includes(c.rivals[rid].name), `hiring ${h.id} back early is refused, naming the lab (${block})`);
+      assert.equal(staff.hireBlock(st, c, h.id, free), null, `and allowed once the ${poach.agent.poachDays} days are up`);
+      assert.ok(staff.hire(st, c, free, h.id).ok, `${h.id} can be rehired then`);
+      // And a lab that never catches anybody never poaches: the 1 above is
+      // the file's number, not a rule of the engine.
+      const { st: st2, c: fx2, rid: rid2 } = lab(h);
+      const c2 = failing(fx2, poach.id, { catchOnFail: 0 });
+      const go2 = caper.startMission(st2, c2, T0, poach.id, rid2, null, poach.hourOptions[0], h.id);
+      assert.equal(go2.run.outcome.fate, 'home', `with catchOnFail 0 a failed ${poach.id} sends ${h.id} home`);
+    }
+  }
+
+  // 6. NOT STRICTLY BETTER THAN THE BEST INFILTRATOR — and not a trap
+  //    either. The best infiltrator is FOUND, over every purebred with and
+  //    without its hide on every frame, because R180's own notes named the
+  //    frame-M chameleon and the frame-A one scores higher. The agent must
+  //    lose to it on the odds on every mission and length it may take, and
+  //    must beat the median build, so that sending it is a decision rather
+  //    than the obvious answer or a wasted wage.
+  const SOCK = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
+  const scores = [];
+  let bestBuild = null;
+  for (const sp of Object.keys(content.species)) {
+    for (const bare of [false, true]) {
+      const tokens = Object.fromEntries(SOCK.filter((k) => !(bare && k === 'hide') && content.parts[`${sp}_${k}`])
+        .map((k) => [k, { partId: `${sp}_${k}`, grade: 'standard' }]));
+      if (!Object.keys(tokens).length) continue;
+      for (const frame of Object.keys(content.frames)) {
+        const build = { name: sp, frame, tokens };
+        const s = caper.missionAptitude(content, build).score;
+        scores.push(s);
+        if (!bestBuild || s > bestBuild.s) bestBuild = { s, build, label: `${sp}${bare ? ' (no hide)' : ''} on ${frame}` };
+      }
+    }
+  }
+  scores.sort((a, b) => a - b);
+  const median = scores[Math.floor(scores.length / 2)];
+  for (const h of agents) {
+    assert.ok(h.aptitude < bestBuild.s && h.aptitude > median,
+      `${h.id}'s aptitude ${h.aptitude} sits between the median build (${median.toFixed(3)}) and the best infiltrator, ${bestBuild.label} (${bestBuild.s.toFixed(3)})`);
+    for (const m of open) {
+      for (const hours of m.hourOptions) {
+        const agent = caper.missionOdds(content, m, hours, null, h).chance;
+        const best = caper.missionOdds(content, m, hours, bestBuild.build).chance;
+        const mid = clampC(t.baseChance + median * t.perAptitude + hours * t.perHour);
+        assert.ok(agent < best,
+          `${h.id} on ${m.id} ${hours}h is worse odds than the best infiltrator (${agent.toFixed(3)} vs ${best.toFixed(3)}) — otherwise it is strictly better and nobody builds one`);
+        assert.ok(agent > mid,
+          `and better than the median build (${agent.toFixed(3)} vs ${mid.toFixed(3)}) — otherwise the wage buys nothing`);
+      }
+    }
+    console.log(`   R189 ${h.id}: aptitude ${h.aptitude} between median ${median.toFixed(3)} and ${bestBuild.label} ${bestBuild.s.toFixed(3)}`
+      + ` · ${open.map((m) => `${m.id} ${m.hourOptions.map((hr) => Math.round(caper.missionOdds(content, m, hr, null, h).chance * 100)).join('/')}%`).join(' · ')}`);
+  }
+
+  // 7. SEALED AT LAUNCH, like every other job on the board: a reload cannot
+  //    re-roll an agent's bad night.
+  {
+    const h = agents[0];
+    const m = open[0];
+    const { st, c, rid } = lab(h);
+    caper.startMission(st, c, T0, m.id, rid, null, m.hourOptions[0], h.id);
+    const sealed = JSON.stringify(st.campaign.mission);
+    assert.equal(JSON.stringify(JSON.parse(JSON.stringify(st)).campaign.mission), sealed,
+      'an agent run survives the round trip with its outcome intact');
+  }
+
+  // 8. A SAVE IS UNTRUSTED INPUT (R114). The three places this milestone
+  //    writes — the run's `henchId`, a hire's `detainedUntil` and the poached
+  //    book — each take junk without taking the tick or the card down.
+  {
+    const { cleanSave } = await import('../save/schema.js');
+    const h = agents[0];
+    const m = open[0];
+    for (const junk of [null, 42, 'hello', [], true, { until: 'soon' }]) {
+      const { st, c, rid } = lab(h);
+      caper.startMission(st, c, T0, m.id, rid, null, m.hourOptions[0], h.id);
+      st.campaign.mission.henchId = junk;
+      recOf(st, h.id).detainedUntil = junk;
+      st.staff.poached = { [h.id]: junk, nobody: junk };
+      cleanSave(st);
+      assert.doesNotThrow(() => mission.tickMissions(st, c, T0 + m.hourOptions[0] * HR),
+        `the tick survives ${JSON.stringify(junk)} in the agent's fields`);
+      assert.doesNotThrow(() => caper.missionAgents(st, c, T0), `and so does the agent list`);
+      assert.doesNotThrow(() => staff.hireBlock(st, c, h.id, T0), `and so does the hire card`);
+      assert.ok(Number.isFinite(st.funds), `and the bank is still a number (${JSON.stringify(junk)})`);
+    }
+  }
+}
 
 console.log(`smoke ✓  ${Object.keys(content.parts).length} parts · ${Object.keys(content.frames).length} frames · ${Object.keys(content.species).length} species · ${Object.keys(content.enemies).length} enemy units · ${Object.keys(content.rivals).length} rivals · save v${SAVE_VERSION} · M1 care: ${Math.round(cared.condition)} vs ${Math.round(neglected.condition)} · M2 grades: ${resA.grade.id}/${resB.grade.id} · M4 battle: ${runA.outcome} in ${runA.turn} turns, obedience ignores ${ignores}/60`);
