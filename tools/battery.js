@@ -6392,6 +6392,15 @@ const BREAKS = [
     // walker then runs it twelve to nineteen times a campaign, the ranch
     // launders its weakest animal for cash on a loop, and R93's late-game
     // ceiling catches it at 90.5% of post-dominion defences held.
+    //
+    // R190 — IT STOPPED CATCHING IT. The ceiling is 90 and the break read
+    // 90.5, so a walker change elsewhere (the vet policy) moved it to 89.3%
+    // and R190's full battery read 420 MISSED. The defence rate was a side
+    // effect; the defect is the frequency, so a clause beside the R180
+    // mission census now asks that directly: no campaign runs a mission that
+    // spends its specimen more than eight times (clean 4/3/4/3/1, this break
+    // 22/11/12/17/16).
+    // BLIND AGAIN IF the ceiling is raised past what this break produces.
     n: 420, gate: SHARD_A, name: 'renewal rests as briefly as a burglary, and selling your worst animal becomes the answer to being broke',
     file: 'data/missions.json',
     anchor: '      "cooldownHours": 336,',

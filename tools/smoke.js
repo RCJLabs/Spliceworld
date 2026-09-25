@@ -23020,6 +23020,29 @@ if (inShard('empire')) {
         `every mission the board offers is one the walker actually runs (${line})`
         + ' — a mission no campaign reaches is a mission whose consequences only a'
         + ' fixture has ever seen');
+
+      // R190 — AND A MISSION THAT SPENDS ITS SPECIMEN IS AN EVENT, NOT A
+      // CHORE. Renewal rests a fortnight because on the board's shared eleven
+      // hours the walker ran it 10-19 times a campaign: "sell the animal you
+      // least want" became the answer to being short of cash
+      // (data/notes/missions.md). The notes design for one to four. Break 420
+      // used to be caught by R93's defence ceiling above, by half a point —
+      // 90.5% held against 90 — and R190's vet policy moved the walks until
+      // it read 89.3% and the break went MISSED. The cause was always
+      // FREQUENCY, so the frequency is what this asks, per campaign: measured
+      // 4 / 3 / 4 / 3 / 1 on these five, and 22 / 11 / 12 / 17 / 16 with the
+      // cooldown back at eleven hours. The ceiling is twice the notes' four.
+      // BLIND AGAIN IF the walker stops running renewal at all (the clause
+      // above catches that), or a later policy runs it more than twice the
+      // design on a clean tree and the ceiling is raised to match.
+      const SPEND_CEILING = 8;
+      for (const [id, m] of Object.entries(content.missions ?? {})) {
+        if (!m.alwaysSpends) continue;
+        const per = walks.map((w) => (w.log ?? []).filter((e) => e.kind === 'mission' && e.mission === id).length);
+        assert.ok(Math.max(...per) <= SPEND_CEILING,
+          `${id} spends its specimen, so it is an event: it ran ${per.join(' / ')} times across seeds `
+          + `${EMPIRE_SEEDS.join('/')}, over ${SPEND_CEILING} in a campaign — a creature sold that often is a routine, not a decision`);
+      }
     }
 
     // ...and the campaign still has to work. R93's second clause, and the one
