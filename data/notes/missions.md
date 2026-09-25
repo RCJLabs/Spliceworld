@@ -41,9 +41,12 @@ A fortnight lands nearest where the rule was written, and it is the one that mat
 
 THE TONE IS LOAD-BEARING AND IS CHECKED. CLAUDE.md forbids death language, and this is the milestone most able to break it. A flattened city block is evacuated, condemned and rezoned; the only casualties are an insurance adjuster's afternoon and several municipal bylaws; buildings retire loudly the way vehicles already do. Every line goes through R110's tone gate, which reads `data/copy.json` and `data/news.json` rather than trusting the author.
 
-## agent (R189)
+## missions.espionage.agent
 
-What a failure costs a HENCHMAN rather than a creature, per mission. A mission without an `agent` block does not take one, and says so in words (`copy.mission.agent_refused`); renewal has none, because `alwaysSpends` leaves the specimen behind and an agent has no genome to leave. The smoke gate refuses an `agent` block on an `alwaysSpends` mission.
+R189 — what a failure costs a HENCHMAN rather than a creature. Sabotage carries the same block with a different risk.
+
+
+Per mission, a mission without an `agent` block does not take one, and says so in words (`copy.mission.agent_refused`); renewal has none, because `alwaysSpends` leaves the specimen behind and an agent has no genome to leave. The smoke gate refuses an `agent` block on an `alwaysSpends` mission.
 
 **detained** is the agent's version of the creature's night in a cell, and it is longer on purpose: `detainHours` (24 on espionage, against the creature's 9) is long enough to miss the board's next window, and the agent stays on the books and on the wage while they help the police with their enquiries. **poached** is sabotage's price: on a caught failure (`catchOnFail`, the creature's 0.4) the lab hires the agent away. They leave your books, the slot opens, and `hireBlock` refuses them — naming the lab — until `poachDays` have run out. It is milder than conscription on purpose: a conscripted creature is gone for good and fights you next time; a poached agent is a week's non-compete.
 

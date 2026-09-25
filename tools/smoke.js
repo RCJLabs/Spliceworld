@@ -26582,6 +26582,17 @@ if (inShard('capers')) {
       recOf(st, h.id).detainedUntil = junk;
       st.staff.poached = { [h.id]: junk, nobody: junk };
       cleanSave(st);
+      // The load path REPAIRS rather than carries (R114): what it leaves is a
+      // book of real entries and a hold clock that is a time or absent. The
+      // readers below survive junk anyway, which is exactly why "nothing
+      // threw" alone could not tell a repair from a pass-through.
+      const book = st.staff.poached;
+      assert.ok(book && typeof book === 'object' && !Array.isArray(book)
+        && Object.values(book).every((e) => e && typeof e === 'object' && Number.isFinite(e.until)),
+        `a poached entry of ${JSON.stringify(junk)} is repaired away on load (${JSON.stringify(book)})`);
+      const held = recOf(st, h.id);
+      assert.ok(held && (!('detainedUntil' in held) || Number.isFinite(held.detainedUntil)),
+        `a hold clock of ${JSON.stringify(junk)} is repaired to a time or to nothing (${JSON.stringify(held)})`);
       assert.doesNotThrow(() => mission.tickMissions(st, c, T0 + m.hourOptions[0] * HR),
         `the tick survives ${JSON.stringify(junk)} in the agent's fields`);
       assert.doesNotThrow(() => caper.missionAgents(st, c, T0), `and so does the agent list`);

@@ -12,7 +12,9 @@ EVERY QUIRK IS LEGIBLE IN THE DIGEST. Each record keeps two tallies, `done` and 
 
 Adding a henchman to an existing duty is a JSON object here. A new DUTY is an engine edit, the way a new keyword mechanic is.
 
-## R189 — the agent: a hire who is SENT rather than stationed
+## tuning.duties.field
+
+R189 — THE AGENT: A HIRE WHO IS SENT RATHER THAN STATIONED.
 
 R181's entry said a henchman "can also run an R180 mission, which is how espionage stops costing a chimera", and it never shipped: `startMission` refused anything that was not a fit creature, and no hire carried a number a mission could read. A mission's odds are anatomy, and a henchman has none. So an agent needed two things before it could be a choice rather than a free mission: its own aptitude, and its own risk.
 
