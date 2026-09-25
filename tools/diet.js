@@ -298,12 +298,31 @@ sockets across ${bodies} kept chimeras: `
 // the assertion is simply false. This walk runs the full 180 days, which is
 // the only place the claim is true. Measured at sixteen seeds: every campaign
 // ends over the grant, seed 2026 on fifteen against a cap of sixteen.
+//
+// R190 — AND THEN SEED 2026 LANDED ON THE GRANT, because the walker hired a
+// different vet. The roster half used to read one campaign, and one campaign
+// is a sample of one: with Doc Sutures in the Infirmary instead of Nurse
+// Gauze, 13 of 16 campaigns still end over the grant (15 of 16 with Gauze),
+// and 2026 is one of the three that finish on exactly twelve. Nothing about
+// the paddock changed. So the rule reads the seven campaigns this gate
+// already walks for its combos — cached, no extra walk — and asks that a
+// MAJORITY finish over the grant. Measured: 5 of 7 (12, 13, 13, 13, 13, 11,
+// 13). Break 252, which pins the walker's ceiling back to the grant, puts
+// all seven at or under it (12, 12, 12, 11, 11, 12, 12): 0 of 7. The single
+// seed separated the two by one creature; the majority separates them by five
+// campaigns.
+// BLIND AGAIN IF the rule goes back to one seed, or the seed list shrinks to
+// where a majority is two campaigns.
 {
   const { stableRoom } = await import('../splice/facility.js');
   const grant = Math.max(...(content.facility.theater.levels ?? []).map((l) => l.grants?.stable ?? 0));
   const cap = stableRoom(walk.save, content).cap;
-  const roster = walk.save.chimeras?.length ?? 0;
-  if (REPORT) console.log(`\n  stable: Theater grants ${grant}, paddock took it to ${cap}, roster ${roster}`);
+  const rosters = COMBO_SEEDS.map((seed) => (seed === 2026 ? walk.save : walkedSave({ seed, days: 180 })).chimeras?.length ?? 0);
+  const over = rosters.filter((n) => n > grant).length;
+  if (REPORT) {
+    console.log(`\n  stable: Theater grants ${grant}, paddock took it to ${cap};`
+      + ` rosters ${COMBO_SEEDS.map((s, i) => `${s}: ${rosters[i]}`).join(', ')} — ${over} of ${COMBO_SEEDS.length} over`);
+  }
   if (cap <= grant) {
     fails.push(`the paddock buys no stable room: cap ${cap} against the Theater's grant of ${grant}`
       + ` — "Expand the pens" is back to meaning only livestock`);
@@ -311,9 +330,54 @@ sockets across ${bodies} kept chimeras: `
   // And the other half, which is the one worth having: room nobody stands in
   // is not room. A cap that grows while the roster does not would be the
   // feature shipping as a number on a screen.
-  if (roster <= grant) {
-    fails.push(`the stable grew to ${cap} and the campaign finished on ${roster}`
-      + ` — at or under the Theater's own ${grant}, so the stalls a paddock bought went unused`);
+  if (over * 2 <= COMBO_SEEDS.length) {
+    fails.push(`the stable grew to ${cap} and ${over} of ${COMBO_SEEDS.length} campaigns finished over`
+      + ` the Theater's own ${grant} (${rosters.join(', ')}) — so the stalls a paddock bought went unused`);
+  }
+}
+
+// ---- 5. R190: each vet is somebody's pick -----------------------------
+//
+// R188 made the walk hire, and on every seed anybody walked the vet was
+// Nurse Gauze: the walker ranked coverage before cost, and Doc Sutures refuses
+// anything over 40 instability. R190 prices a refusal at what the Infirmary
+// charges to buy the same hours back (`hireBill` in tools/sim.js) and re-makes
+// the choice when the Infirmary's tier — its price — changes. Measured over
+// sixteen full campaigns, Doc holds the slot at day 180 on 11 and Gauze on 5,
+// with dominion unmoved on all sixteen. On the seven this gate walks: Doc on
+// 101, 4242, 900 and 31, Gauze on 2026, 7 and 55.
+//
+// IT LIVES HERE RATHER THAN IN SMOKE for R154's reason: smoke's walks stop
+// at dominion (day 28-36), and Gauze is the vet on all four, because most of
+// Doc's swaps come when tier IV is bought (eight of eleven, days 39-124). The
+// claim is about a campaign, so it is asked of campaigns.
+// BLIND AGAIN IF the seed list shrinks until one seed is the only holder of
+// either vet, or the rule reads `payroll.hires` (which a cached save does not
+// carry) instead of the books.
+{
+  const vets = Object.entries(content.henchmen ?? {}).filter(([, h]) => h.duty === 'infirmary').map(([id]) => id);
+  const held = COMBO_SEEDS.map((seed) => {
+    const save = seed === 2026 ? walk.save : walkedSave({ seed, days: 180 });
+    return (save.staff?.hired ?? []).map((r) => r.id).find((id) => vets.includes(id)) ?? 'nobody';
+  });
+  const said = COMBO_SEEDS.map((s, i) => `${s}: ${held[i]}`).join(', ');
+  // And rule 3b, on the one campaign here that carries its hire log: a vet is
+  // re-chosen when the Infirmary's price moves, so a second vet hire comes at
+  // a higher tier. Without the rule, seed 2026 swapped vets 32 times in 180
+  // days, because its late roster sits at the break-even.
+  const made = (walk.payroll?.hires ?? []).filter((e) => vets.includes(e.id));
+  for (let i = 1; i < made.length; i++) {
+    if (!(made[i].tier > made[i - 1].tier)) {
+      fails.push(`seed 2026 hired ${made[i].id} over ${made[i - 1].id} on day ${made[i].day} at tier ${made[i].tier},`
+        + ` no dearer than the tier-${made[i - 1].tier} Infirmary it was last chosen at — a vet re-hired over one patient`);
+    }
+  }
+  if (REPORT) console.log(`\n  vets at day 180: ${said}; seed 2026 hired ${made.map((e) => `${e.id} (day ${e.day}, tier ${e.tier})`).join(' > ')}`);
+  for (const id of vets) {
+    if (!held.includes(id)) {
+      fails.push(`${content.henchmen[id].name} is the vet on the books at day 180 on none of ${COMBO_SEEDS.length} campaigns`
+        + ` (${said}) — a vet the walker never keeps is R190 again`);
+    }
   }
 }
 

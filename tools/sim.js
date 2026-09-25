@@ -471,7 +471,7 @@ import { pairingForecast, expressedTraits, incubatorSlots, BREEDING, canBreed, b
 const BREEDING_MUTATION = BREEDING.mutationChance;
 import {
   incubatorGrants, extractorGrants, scannerGrants, infirmaryGrants,
-  nextUpgrade, buyUpgrade,
+  nextUpgrade, buyUpgrade, facilityLevel,
 } from '../splice/facility.js';
 
 const HOUR_MS = 3600000;
@@ -1545,32 +1545,65 @@ const WALK_RESERVE_DAYS = 14;
 //   1. THE SLOTS FILL IN DUTY ORDER — `tuning.duties.<duty>.order` — because
 //      a slot is scarce and the data states which job comes first.
 //   2. WITHIN A DUTY, THE HIRE WHO COVERS THE MOST OF THIS RANCH, then the
-//      cheapest quirk, then roster order. Coverage is the share of the herd
+//      cheapest quirk, then roster order — for a duty the game does not sell
+//      (2b prices the one it does). Coverage is the share of the herd
 //      a hand reaches, or of the roster a vet will touch. That is the whole
 //      trade R181 built: which one is right depends on the ranch you have.
 //   3. A HIRE WHO CANNOT DO THE JOB IS REPLACED; ONE WHO CAN IS KEPT. When
 //      the herd outgrows a hand's reach or a vet starts refusing patients,
 //      the better-covering hire takes the slot. Nobody lets a working hand go
-//      to save $2 a meal, so a swap is only ever for coverage.
+//      to save $2 a meal, so a swap is only ever for coverage (or, for a
+//      priced duty, for the bill once its price has moved — 2b, 3b).
 //   4. NEVER ON THE LAST WEEK'S MONEY: a hire needs seven days of its wage in
 //      the bank. Checked once a day, like every other standing decision here.
 //   2b. R190 — WHERE THE GAME SELLS THE WORK, THE BILL DECIDES, NOT COVERAGE.
-//      The Infirmary sells hours (`perHour` in data/rush.json, the price
-//      splice/scars.js charges to end the clock), so a patient a vet refuses
-//      is not lost: the player can buy those hours back. `hireBill` prices
-//      each vet on this ranch at its fee on who it treats plus that price on
-//      who it refuses, and the cheaper bill takes the slot and keeps it.
-//      Rule 3 reads the same bill for a priced duty. Measured over sixteen
+//      The Infirmary sells time (data/rush.json: a $25 call-out plus $18 an
+//      hour, at the tier's `treatScale`), so a patient a vet refuses is not
+//      lost: the player can buy those hours back. `hireBill` prices each vet
+//      on this ranch, per clock-hour of injury, at its fee on who it treats
+//      plus the Infirmary's price for the hours it would have saved on who it
+//      refuses, and the cheaper bill takes the slot. Measured over sixteen
 //      seeds, coverage-first bought Nurse Gauze everywhere and paid ~$45 for
-//      every hour she saved over Doc, against the Infirmary's $18, for no
-//      change in dominion on any seed. Care has no such price (a feed is a
-//      button), so a hand is still ranked on coverage.
+//      every hour she saved over Doc, for no change in dominion on any seed.
+//      Priced properly the answer depends on the ranch: on a tier-I
+//      Infirmary a refusal costs ~$17 a clock-hour against Gauze's $10, so
+//      Doc is the cheaper vet only while he treats over ~42% of the roster;
+//      on a tier-IV one it costs ~$13, and he stays cheaper until ~78% of
+//      the roster is over his ceiling.
+//      Care has no such price (a feed is a button), so a hand is still
+//      ranked on coverage.
+//   3b. R190 — A PRICED DUTY IS RE-DECIDED WHEN ITS PRICE CHANGES, which is
+//      when an Infirmary tier is bought, and kept otherwise. A roster that
+//      sits at the break-even (a late one does, three creatures in thirteen
+//      under Doc's ceiling) flips the cheaper bill whenever one creature
+//      crosses it, and a walker that followed it swapped vets thirty-two
+//      times in one campaign. Nobody re-hires a vet over one patient.
 //   5. R189 — NOT A HIRE WHOSE JOB IS TO BE SENT. A duty the file marks
 //      `sent` (Fieldwork) holds no standing clock: its hire earns the wage
 //      only on missions somebody sends them on, and this walker's mission
 //      policy sends creatures (R180). Hiring one it never sends would be a
 //      wage for nothing and a slot taken from the hand or the vet. Teaching
 //      the walk to weigh an agent against its own infiltrator is R192.
+// R190 — THE CLOCK A REFUSAL IS PRICED ON. The call-out is per patient, so
+// its share of an hour depends on how long an injury runs, and the battle
+// engine types that: (2 + 2u) hours at the Infirmary's `healScale`
+// (battle/statblock.js). Battles are ~78% of a campaign's injuries (measured
+// on four seeds: 1,058-1,303 of 1,357-1,710). The rest run their own clocks,
+// and two of them do NOT shrink with the tier — a rescue's whiplash (1-2h)
+// and a detention (9h) — so on a tier-IV Infirmary the real mean clock is
+// longer than this, the call-out weighs less, and the bill leans toward
+// Nurse Gauze. Typed here, and smoke measures the engine against it.
+export const WALK_INJURY_HOURS = 3;
+
+// What a refused clock-hour costs at the Infirmary on this ranch: the
+// call-out spread over the clock, plus the hours a vet of this `rate` would
+// have saved, all at the tier's discount.
+export function refusalPrice(content, state, rate = 2) {
+  const t = rushTuning(content);
+  const g = infirmaryGrants(state, content);
+  return (t.base / (WALK_INJURY_HOURS * g.healScale) + t.perHour * (1 - 1 / rate)) * g.treatScale;
+}
+
 // R190 — what a hire costs on THIS ranch, per clock-hour of the work, for a
 // duty whose work the game sells; null for one it does not (rule 2b above).
 export function hireBill(content, h, state) {
@@ -1578,7 +1611,7 @@ export function hireBill(content, h, state) {
   const pens = state.chimeras ?? [];
   const cov = pens.length ? pens.filter((c) => (c.instability ?? 0) <= (h.ceiling ?? 100)).length / pens.length : 1;
   const rate = h.rate ?? 2;
-  return cov * (h.fee ?? 0) / rate + (1 - cov) * rushTuning(content).perHour * (1 - 1 / rate);
+  return cov * (h.fee ?? 0) / rate + (1 - cov) * refusalPrice(content, state, rate);
 }
 
 function walkHire(state, content, now, did, introduced) {
@@ -1599,24 +1632,42 @@ function walkHire(state, content, now, did, introduced) {
   const bill = (h) => hireBill(content, h, state);
   const pick = (duty) => roster.filter((h) => h.duty === duty)
     .sort((a, b) => (bill(a) ?? 0) - (bill(b) ?? 0) || coverage(b) - coverage(a) || (a.fee ?? 0) - (b.fee ?? 0))[0] ?? null;
+  // Rule 3b: the Infirmary's tier is the price, so the tier is when to ask.
+  const tier = facilityLevel(state, 'infirmary');
   // Rule 3: a hire who does the job worse than the one on offer is replaced
-  // — by coverage for an unpriced duty, by the bill for a priced one.
-  const worse = (held, want) => (bill(held) === null ? coverage(held) < coverage(want) : bill(held) > bill(want));
+  // — by coverage for an unpriced duty, by the bill for a priced one, and
+  // then only once the price has moved since the choice was last made.
+  const worse = (held, want) => (bill(held) === null ? coverage(held) < coverage(want)
+    : (state.__walkVetTier ?? tier) !== tier && bill(held) > bill(want));
   const affordable = (h) => state.funds >= 7 * wageNow(state, content, h.id);
+  // What the choice was made on, logged with the hire so the gate can check
+  // each one against the prices of its own moment rather than the last day's.
+  const priced = (duty, extra) => Object.assign(extra, {
+    tier, bills: Object.fromEntries(roster.filter((h) => h.duty === duty).map((h) => [h.id, Number(bill(h).toFixed(3))])),
+  });
 
   for (const duty of duties) {
     const want = pick(duty);
     const held = hiredOf(state).find((r) => content.henchmen?.[r.id]?.duty === duty);
     if (!want) continue;
+    const sold = bill(want) !== null;
     if (held) {
       const h = content.henchmen[held.id];
-      if (held.id === want.id || !worse({ ...h, id: held.id }, want) || !affordable(want)) continue;
+      if (held.id === want.id || !worse({ ...h, id: held.id }, want)) {
+        if (sold) state.__walkVetTier = tier;
+        continue;
+      }
+      if (!affordable(want)) continue;
       letGo(state, content, held.id);
-      if (hire(state, content, now, want.id).ok) did('hire', { id: want.id, duty, swapped: held.id });
+      const e = { id: want.id, duty, swapped: held.id };
+      if (hire(state, content, now, want.id).ok) did('hire', sold ? priced(duty, e) : e);
+      if (sold) state.__walkVetTier = tier;
       continue;
     }
     if (hiredOf(state).length >= slotsOf(state, content) || !affordable(want)) continue;
-    if (hire(state, content, now, want.id).ok) did('hire', { id: want.id, duty });
+    const e = { id: want.id, duty };
+    if (hire(state, content, now, want.id).ok) did('hire', sold ? priced(duty, e) : e);
+    if (sold) state.__walkVetTier = tier;
   }
 }
 
