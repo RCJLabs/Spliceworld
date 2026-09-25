@@ -301,16 +301,16 @@ sockets across ${bodies} kept chimeras: `
 //
 // R190 — AND THEN SEED 2026 LANDED ON THE GRANT, because the walker hired a
 // different vet. The roster half used to read one campaign, and one campaign
-// is a sample of one: with Doc Sutures in the Infirmary instead of Nurse
-// Gauze, 13 of 16 campaigns still end over the grant (15 of 16 with Gauze),
-// and 2026 is one of the three that finish on exactly twelve. Nothing about
-// the paddock changed. So the rule reads the seven campaigns this gate
-// already walks for its combos — cached, no extra walk — and asks that a
-// MAJORITY finish over the grant. Measured: 5 of 7 (12, 13, 13, 13, 13, 11,
-// 13). Break 252, which pins the walker's ceiling back to the grant, puts
-// all seven at or under it (12, 12, 12, 11, 11, 12, 12): 0 of 7. The single
-// seed separated the two by one creature; the majority separates them by five
-// campaigns.
+// is a sample of one: under R190's first policy, which put Doc Sutures in
+// every Infirmary, 13 of 16 campaigns still ended over the grant (15 of 16
+// with Nurse Gauze) and 2026 was one of the three that finished on exactly
+// twelve. Nothing about the paddock had changed. So the rule reads the seven
+// campaigns this gate already walks for its combos — cached, no extra walk —
+// and asks that a MAJORITY finish over the grant. On the policy R190 shipped:
+// 7 of 7 (13, 13, 13, 13, 13, 13, 14). Break 252, which pins the walker's
+// ceiling back to the grant, puts all seven at or under it (12, 12, 11, 11,
+// 11, 12, 12): 0 of 7. The single seed separated the two by one creature;
+// the majority separates them by seven campaigns.
 // BLIND AGAIN IF the rule goes back to one seed, or the seed list shrinks to
 // where a majority is two campaigns.
 {

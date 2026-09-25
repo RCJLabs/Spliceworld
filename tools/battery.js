@@ -4447,11 +4447,12 @@ const BREAKS = [
     // R186 did the same before its own tick: re-aimed at R187, the queue's
     // head once R186 and the R191 it folded in have both left it. R187 did
     // it again before ticking itself: re-aimed at R189, the head after it.
-    // R189 likewise, before its own tick: re-aimed at R190.
+    // R189 likewise, before its own tick: re-aimed at R190. R190 likewise:
+    // re-aimed at R192, the head of the queue it leaves.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: "- **R190 — Doc Sutures is never the walker's vet.**",
-    to: "- **R190 — Doc Sutures is never the walker's vet.** ✅",
+    anchor: '- **R192 — The walk never sends an agent.**',
+    to: '- **R192 — The walk never sends an agent.** ✅',
   },
   {
     // The other direction: the count beside the list stops matching the list.

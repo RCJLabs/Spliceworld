@@ -1587,12 +1587,13 @@ const WALK_RESERVE_DAYS = 14;
 // R190 — THE CLOCK A REFUSAL IS PRICED ON. The call-out is per patient, so
 // its share of an hour depends on how long an injury runs, and the battle
 // engine types that: (2 + 2u) hours at the Infirmary's `healScale`
-// (battle/statblock.js). Battles are ~78% of a campaign's injuries (measured
-// on four seeds: 1,058-1,303 of 1,357-1,710). The rest run their own clocks,
-// and two of them do NOT shrink with the tier — a rescue's whiplash (1-2h)
-// and a detention (9h) — so on a tier-IV Infirmary the real mean clock is
-// longer than this, the call-out weighs less, and the bill leans toward
-// Nurse Gauze. Typed here, and smoke measures the engine against it.
+// (battle/statblock.js). Battles are 76-78% of a campaign's injuries
+// (measured on four seeds: 1,058-1,303 of 1,357-1,710). The rest run their
+// own clocks, and two of them do NOT shrink with the tier — a rescue's
+// whiplash (1-2h, 10-13% of injuries) and a detention (9h, 7-8%) — so on a
+// tier-IV Infirmary the real mean clock is longer than this, the call-out
+// weighs less, and the bill leans toward Nurse Gauze (R193). Typed here, and
+// smoke measures the engine against it.
 export const WALK_INJURY_HOURS = 3;
 
 // What a refused clock-hour costs at the Infirmary on this ranch: the
