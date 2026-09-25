@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**2 entries queued.** R192, R193.
+**2 entries queued.** R193, R194.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -6912,7 +6912,7 @@ triangle working, and each region genuinely asks a different question)*.
     one is R192, the way R188 followed R181.
   The full battery that proved it caught all 467 breaks in 334 minutes.
 
-- **R192 — The walk never sends an agent.** Found by R189. The walker's
+- **R192 — The walk never sends an agent.** ✅ Found by R189. The walker's
   hiring policy never takes a Fieldwork hire, because its mission policy
   sends creatures and an agent it never sends is a wage for nothing. So no
   campaign number says what Mister Wicket is worth: how often a real ranch
@@ -6923,6 +6923,44 @@ triangle working, and each region genuinely asks a different question)*.
   infiltrator by a stated policy; a census says how often each is sent and
   what the agent earns against his wage; and every gate the cascade moves is
   re-derived.*
+
+  **Shipped: a policy for the agent, and the numbers on him.**
+  * **Who goes** (rule 5 of the mission policy in `tools/sim.js`). The
+    mission is chosen exactly as before, and then:
+    - a mission with no `agent` block (renewal) takes a creature;
+    - where a creature's failure is permanent (the mission's risk is
+      conscription) and the agent's is not, the agent goes whenever he is
+      free;
+    - otherwise the better odds go.
+    Every choice logs the chances it was made on.
+  * **When he is hired** (hiring rule 5, restated). A duty the file marks
+    `sent` takes a slot only after every stationed duty has a hire. On the
+    shipped file (two slots, two stationed duties) that is never, so the
+    day-180 walk is unchanged, byte for byte.
+  * **The census.** Sixteen campaigns of 180 days, with a third slot open so
+    the agent displaces nobody. The walker sent him on 524 of 3,853 jobs
+    (72 sabotage, 452 espionage) and won 252. His jobs paid $16,390 against
+    $13,100 in expenses: about $206 a campaign net, against about $25,000 a
+    campaign in wages. He was poached 17 times and held for questioning 235
+    times. What he buys is creatures: 6 conscripted, where the same
+    campaigns without him lose 25. Dominion, raids held and late defences
+    moved within noise.
+  * **The rules it was chosen over:**
+    - Always the agent: 2,445 jobs, 7 conscripted, but held 1,263 times.
+    - The better odds alone: 737 jobs, 16 conscripted.
+    - Only when no creature is spare: never sent him at all, because this
+      walker's capers are paced by the board's cooldown, not by its bench.
+    - The agent in place of the vet, sent on odds alone: median dominion
+      30.5 days (as without him), raids held 374 of 742 (358 without him).
+      In place of the hand: 32.8 days and 344 of 741. Neither is a trade
+      the census recommends over the two stationed hires.
+  * **The gate.** The diet gate checks that the shipped walk hires no agent.
+    It then replays the third-slot variant on seeds 2026 and 7 and
+    recomputes every choice made with the agent free from the mission data:
+    7 decided by permanence, 135 by odds, and 234 creatures sent past him.
+    Each branch must appear.
+  * **R194 is filed:** at his price the agent returns about 1% of his wage.
+  Breaks 484-488. Break 199's anchor followed the Vault budget.
 
 - **R193 — The vet bill spreads the call-out over the battle clock alone.**
   Found by R190. A refused patient costs the Infirmary's call-out once, so
@@ -6943,6 +6981,54 @@ triangle working, and each region genuinely asks a different question)*.
   call-out over the clock the Infirmary actually sees at each tier, measured
   over the census; whether a vet treats a detention is decided and stated;
   and every gate the cascade moves is re-derived.*
+  Since session 216's faster table, Nurse Gauze holds the slot at day 180 on
+  only one of the diet gate's seven campaigns (seed 4242; Doc holds the
+  other six). So R190's "each vet is somebody's pick" clause now rests on a
+  single seed. It passes, but whichever fix this entry ships should re-read
+  that split over the census.
+
+- **R194 — The Field Agent never earns his wage.** Found by R192. With a
+  slot open for him, Mister Wicket's jobs pay about $206 a campaign net of
+  his $25 expenses, against about $25,000 a campaign in wages: about 1%.
+  Espionage, which is 86% of what he is sent on, pays $39 on success and
+  $13.65 on failure over three hours. At his 0.45 aptitude that is about
+  $25.50 expected, and his expenses take all of it. What he does buy is
+  creatures: 6 conscripted across sixteen campaigns against 25 without
+  him. On the shipped file he never gets a slot, because the data ranks
+  Fieldwork third of three duties and a lab has two slots. So as priced he
+  is a hire the data never offers room for, and one that would not pay if
+  it did. *Done when: the agent's price, his jobs' pay or the slot count is
+  re-derived so that a ranch that hires him buys something the census can
+  see, or the entry argues from the numbers why a hire that saves one
+  creature a campaign for $25,000 belongs on the roster.*
+
+- **R195 — The surgery table waits a third as long.** ✅ Asked for directly
+  in session 216: "lower the surgery table wait times by 2/3rds. Takes too
+  long now."
+  * **Shipped.** A splice takes 6h40m on Tier I and 3h20m on Tier II (was
+    20h and 10h). A dismantle takes 1h and 10m (was 3h and 30m). This is
+    `data/facility.json`, plus `splice/facility.js`'s fallbacks, which
+    mirror the first rung. Nothing in the game's text states the hours: the
+    screens compute them with `spanOf`.
+  * **What it did to a campaign**, over sixteen seeds, old table against
+    new (medians):
+    - dominion day 28.1 → 30.5;
+    - splices per campaign 29 → 31;
+    - median creature life 113 → 120 days;
+    - hunts before dominion 19 → 21.
+    The walker never waited on the table, so a player who splices when they
+    like simply waits a third as long. Two seeds swing hard, the kind of
+    chaos any change here causes: seed 99 now takes 68 days to dominion
+    (was 35.5) and seed 7 takes 45 (was 36).
+  * **Gates re-derived:**
+    - Seed 4242's first rival win moved from day 23 to day 65, and a lab you
+      have never beaten never breaks out. So the WALK gate's 45-day walk
+      moved to seed 2026 and now checks its own premise (a rival beaten
+      inside the window).
+    - Smoke's per-seed floor of two hunts, re-censused at a minimum of 1,
+      folded into the per-kind clause.
+    - The open Vault's budget rose by exactly two species bays (43 on the
+      shelf where R186 had 41).
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same
