@@ -56,7 +56,14 @@ infiltrator on every job, so he is a choice and not a free mission.**
 
 - The R189 block in smoke (`capers`, shard a): eight clauses.
 - Breaks 469-476; 415 and 276 re-aimed. The list is 467 breaks, numbered to 476.
-- `npm test` alone, the browser gates, and a browser pass at 380px: Wicket's
+- **Full battery** (two existing gates changed their logic: R181's digest
+  clause and the handler fixture): **467 breaks, 467 caught, 0 missed**,
+  BATTERY_EXIT 0 in every chunk and 40 of 40 baseline gates green in each.
+  22m, 84m, 136m and 92m, 334 minutes. `--only` over the ten new or
+  re-aimed breaks first: 10 of 10 in 21 minutes.
+- `npm test` alone: 11 of 11, 1,362 CPU-s of 1,893 (cold: the walks rebuilt
+  on the `tools/sim.js` change), 9m08s.
+- The browser gates, and a browser pass at 380px: Wicket's
   button 96x40, no sideways scroll, sent, reloaded mid-job with the sealed
   run intact, and zero console errors on the agent flow, a fresh save and a
   v63 save (which arrives at v64 with an empty poached book).

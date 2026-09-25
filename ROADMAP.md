@@ -6861,6 +6861,7 @@ triangle working, and each region genuinely asks a different question)*.
   * **The walk never hires an agent** (rule 5 in `walkHire`), so the day-180
     walk and every gate that reads it are unchanged. Teaching it to send
     one is R192, the way R188 followed R181.
+  The full battery that proved it caught all 467 breaks in 334 minutes.
 
 - **R192 — The walk never sends an agent.** Found by R189. The walker's
   hiring policy never takes a Fieldwork hire, because its mission policy
