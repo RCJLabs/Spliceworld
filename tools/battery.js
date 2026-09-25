@@ -4447,11 +4447,12 @@ const BREAKS = [
     // R186 did the same before its own tick: re-aimed at R187, the queue's
     // head once R186 and the R191 it folded in have both left it. R187 did
     // it again before ticking itself: re-aimed at R189, the head after it.
-    // R189 likewise, before its own tick: re-aimed at R190.
+    // R189 likewise, before its own tick: re-aimed at R190. R190 likewise:
+    // re-aimed at R192, the head of the queue it leaves.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: "- **R190 — Doc Sutures is never the walker's vet.**",
-    to: "- **R190 — Doc Sutures is never the walker's vet.** ✅",
+    anchor: '- **R192 — The walk never sends an agent.**',
+    to: '- **R192 — The walk never sends an agent.** ✅',
   },
   {
     // The other direction: the count beside the list stops matching the list.
@@ -6391,6 +6392,15 @@ const BREAKS = [
     // walker then runs it twelve to nineteen times a campaign, the ranch
     // launders its weakest animal for cash on a loop, and R93's late-game
     // ceiling catches it at 90.5% of post-dominion defences held.
+    //
+    // R190 — IT STOPPED CATCHING IT. The ceiling is 90 and the break read
+    // 90.5, so a walker change elsewhere (the vet policy) moved it to 89.3%
+    // and R190's full battery read 420 MISSED. The defence rate was a side
+    // effect; the defect is the frequency, so a clause beside the R180
+    // mission census now asks that directly: no campaign runs a mission that
+    // spends its specimen more than eight times (clean 4/3/4/3/1, this break
+    // 22/11/12/17/16).
+    // BLIND AGAIN IF the ceiling is raised past what this break produces.
     n: 420, gate: SHARD_A, name: 'renewal rests as briefly as a burglary, and selling your worst animal becomes the answer to being broke',
     file: 'data/missions.json',
     anchor: '      "cooldownHours": 336,',
@@ -6512,10 +6522,13 @@ const BREAKS = [
   {
     // Rule 3 comes off: the hand hired for a three-animal herd keeps the job
     // when the herd is twenty, and ends with more meals missed than given.
+    // R190 split rule 3 into a coverage half and a bill half (`worse`), so
+    // this aims at the coverage half alone: the vet's rule is untouched and
+    // only the hand's swap stops.
     n: 433, gate: SHARD_B, name: 'a hand hired for a small herd keeps the job long after the herd has outgrown her',
     file: 'tools/sim.js',
-    anchor: '      if (held.id === want.id || coverage({ ...h, id: held.id }) >= coverage(want) || !affordable(want)) continue;',
-    to: '      if (true) continue;',
+    anchor: '  const worse = (held, want) => (bill(held) === null ? coverage(held) < coverage(want)',
+    to: '  const worse = (held, want) => (bill(held) === null ? false',
   },
   {
     // The payroll priced twenty times over. Every R181 rule still holds —
@@ -6900,6 +6913,94 @@ const BREAKS = [
     file: 'save/schema.js',
     anchor: "        if (!e || typeof e !== 'object' || !Number.isFinite(e.until)) {",
     to: '        if (!e) {',
+  },
+  {
+    // R190 — A VET IS PRICED ON ITS FEE AS WELL AS ITS REFUSALS. Dropping the
+    // fee half makes the vet who treats everybody free, and Nurse Gauze takes
+    // the slot on every seed for the $20 an hour the census measured.
+    // BLIND AGAIN IF the unit clause stops recomputing the bill for a vet
+    // with a fee.
+    n: 477, gate: SHARD_B, name: "a vet's bill forgets the vet's own fee, so the dearest one reads as free",
+    file: 'tools/sim.js',
+    anchor: '  return cov * (h.fee ?? 0) / rate + (1 - cov) * refusalPrice(content, state, rate);',
+    to: '  return (1 - cov) * refusalPrice(content, state, rate);',
+  },
+  {
+    // R190 — THE INFIRMARY'S HOURLY RATE IS READ, NOT TYPED. Eighteen agrees
+    // with data/rush.json today and with nothing after the next repricing;
+    // the gate doubles the rate in a copy of the content and expects the bill
+    // for a refusal to follow.
+    // BLIND AGAIN IF the "dearer hour" clause is dropped, since at the shipped
+    // price the literal and the file agree on every ward.
+    n: 478, gate: SHARD_B, name: "the walker types the Infirmary's hourly rate, so repricing it moves no bill",
+    file: 'tools/sim.js',
+    anchor: '  return (t.base / (WALK_INJURY_HOURS * g.healScale) + t.perHour * (1 - 1 / rate)) * g.treatScale;',
+    to: '  return (t.base / (WALK_INJURY_HOURS * g.healScale) + 18 * (1 - 1 / rate)) * g.treatScale;',
+  },
+  {
+    // R190 — THE DEFECT ITSELF: the walker ranks vets by how many patients
+    // each would touch, and Doc Sutures is nobody's vet again. SMOKE CANNOT
+    // SEE THIS ONE: on all four of its seeds the bill's first pick is Nurse
+    // Gauze too, so coverage-first hires the same vet on the same day and the
+    // walks are identical to dominion. The seven full campaigns can, since
+    // Doc holds four of them at day 180.
+    // BLIND AGAIN IF Doc's ceiling reaches 100 in the data — then he covers
+    // everybody, wins on coverage too, and this stops being a defect.
+    n: 479, gate: DIET, name: 'the walker hires the vet who touches the most patients again, whatever the refusals would cost',
+    file: 'tools/sim.js',
+    anchor: '    .sort((a, b) => (bill(a) ?? 0) - (bill(b) ?? 0) || coverage(b) - coverage(a) || (a.fee ?? 0) - (b.fee ?? 0))[0] ?? null;',
+    to: '    .sort((a, b) => coverage(b) - coverage(a) || (a.fee ?? 0) - (b.fee ?? 0))[0] ?? null;',
+  },
+  {
+    // R190 — A REFUSED PATIENT IS A VISIT, NOT ONLY HOURS. The call-out is
+    // most of what the Infirmary charges for a three-hour clock, and it is
+    // the half of the price that makes Nurse Gauze the cheaper vet on a
+    // young ranch; without it Doc wins everywhere by construction ($9 a
+    // refused clock-hour against her $10), which is the answer R190 wanted
+    // and the reason it had to be checked.
+    // BLIND AGAIN IF the unit clause stops recomputing the bill with the
+    // call-out in it, and the "dearer call-out" clause is dropped.
+    n: 480, gate: SHARD_B, name: "a refusal is priced on the Infirmary's hours alone, so its call-out is free",
+    file: 'tools/sim.js',
+    anchor: '  return (t.base / (WALK_INJURY_HOURS * g.healScale) + t.perHour * (1 - 1 / rate)) * g.treatScale;',
+    to: '  return (t.perHour * (1 - 1 / rate)) * g.treatScale;',
+  },
+  {
+    // R190 — THE TIER IS HALF THE PRICE. A tier-IV Infirmary charges 35% of a
+    // tier-I one; a bill that ignores the discount prices every late refusal
+    // at the first tier's rate and hands the late ranch back to Gauze.
+    // BLIND AGAIN IF the unit clause checks only a tier-I ward, where the
+    // discount is 1 and the break changes nothing.
+    n: 481, gate: SHARD_B, name: "the bill charges a late refusal the first tier's price, whatever Infirmary the ranch has built",
+    file: 'tools/sim.js',
+    anchor: '  return (t.base / (WALK_INJURY_HOURS * g.healScale) + t.perHour * (1 - 1 / rate)) * g.treatScale;',
+    to: '  return (t.base / (WALK_INJURY_HOURS * g.healScale) + t.perHour * (1 - 1 / rate));',
+  },
+  {
+    // R190 — RULE 3b: A VET IS RE-CHOSEN WHEN THE PRICE MOVES. Without it
+    // the walker follows the cheaper bill daily, and a late roster sitting at
+    // the break-even swaps vets 32 times in a campaign (seed 2026). Caught
+    // twice: smoke's seed 7 swaps five times before dominion, and the diet
+    // gate reads seed 2026's whole hire log.
+    // BLIND AGAIN IF both clauses stop comparing consecutive vet hires'
+    // tiers, or the diet gate stops walking seed 2026 itself (a cached save
+    // carries no hire log).
+    n: 482, gate: DIET, name: 'the walker re-hires its vet whenever one patient crosses the ceiling',
+    file: 'tools/sim.js',
+    anchor: '    : (state.__walkVetTier ?? tier) !== tier && bill(held) > bill(want));',
+    to: '    : bill(held) > bill(want));',
+  },
+  {
+    // R190 — THE CLOCK THE CALL-OUT IS SPREAD OVER IS THE ENGINE'S. The walker
+    // types the battle engine's mean injury clock, so the gate inflicts
+    // eighty injuries through `finishBattle` and holds the two together.
+    // BLIND AGAIN IF the probe reuses a creature id (the injury stream is
+    // keyed on the creature, so every roll would be the same one) or the
+    // tolerance widens past the gap between 2 and 3 hours.
+    n: 483, gate: SHARD_B, name: "the walker's injury clock drifts from the battle engine's, and the call-out is spread over the wrong hours",
+    file: 'tools/sim.js',
+    anchor: 'export const WALK_INJURY_HOURS = 3;',
+    to: 'export const WALK_INJURY_HOURS = 2;',
   },
 ];
 

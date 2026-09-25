@@ -1,5 +1,114 @@
 # PROGRESS
 
+## Session 215 — R190: Doc Sutures is never the walker's vet ✅
+
+**A vet now has a price. The walker weighs a vet's fee against what the
+Infirmary would charge to buy back the hours that vet refuses, and makes
+the choice again whenever the Infirmary's tier changes. On that price Doc
+Sutures holds the slot at day 180 on eleven of sixteen campaigns, and
+Nurse Gauze on five.**
+
+### Measured first
+
+- **The census.** Sixteen seeds, 180 days each, one vet taken off the
+  roster per walk. Gauze saved 15,112 hours for $302,243 and refused
+  nobody. Doc saved 8,431 for nothing and refused 15,799 clock-hours.
+  Gauze's extra 6,681 hours cost about $45 each. Dominion fell on the same
+  day on 16 of 16 seeds.
+- **The premise held.** Gauze was the vet on every seed walked. The cause
+  was the policy (coverage before cost), not Doc's ceiling.
+
+### What shipped
+
+- **`hireBill`** (`tools/sim.js`). A vet's cost per clock-hour of injury on
+  this ranch has two parts. On the patients it treats, it charges its own
+  fee. On the patients it refuses, the Infirmary charges to buy back the
+  hours it would have saved: a $25 call-out spread over the battle
+  engine's mean clock (3h × `healScale`), plus $18 an hour, all at
+  `treatScale`. That puts a refused clock-hour at ~$17 on a tier-I
+  Infirmary and ~$13 on a tier-IV one, against Gauze's $10.
+- **Rule 3b.** The walker re-makes the vet choice only when an Infirmary
+  tier is bought, so a campaign has at most three vet hires.
+- **The gates.**
+  - Smoke checks the bill's formula at tiers I and IV, and checks that the
+    call-out, the hourly rate and the tier are each read from data.
+  - Smoke pins the walker's 3-hour clock against 80 battle injuries
+    inflicted through `finishBattle`.
+  - Smoke checks every vet hire against the bills logged at its own moment,
+    and that a second vet hire only happens at a higher tier.
+  - The diet gate asks that each vet holds the slot at day 180 on at least
+    one of its seven campaigns (measured: Doc 4, Gauze 3). It also reads
+    seed 2026's hire log for churn.
+- **Breaks 477-483**, and 433 re-aimed at rule 3's coverage half.
+- **R193 filed**: the bill spreads the call-out over the battle clock alone.
+
+### Found on the way
+
+- **My first bill was wrong in the criterion's favour.** Priced on the
+  hourly rate alone, a refusal cost $9 a clock-hour and Doc won on every
+  seed by construction. I had told Evan that Gauze would never be picked
+  and that R193 would reprice her. The call-out is most of what the
+  Infirmary charges for a 2-4 hour clock, and with it the answer depends
+  on the ranch. That R193 was never filed. The R193 that was filed is
+  about the clock.
+- **Following the cheaper bill daily churned.** Seed 2026 swapped vets 32
+  times, because a late roster sits at the break-even (3 of 13 creatures
+  under Doc's ceiling). A one-creature margin stopped the churn, but it
+  kept whichever vet was hired first (usually Gauze, at tier I), and the
+  saves could not show why. Re-deciding at a tier change does both jobs.
+- **The injury mix** (four seeds, final policy): battles 76-78%, rescue
+  whiplash 10-13%, detentions 7-8%, failed jobs 3-5%. Whiplash and
+  detentions don't shrink with the tier. That is R193.
+- **A vet treats a detention.** A creature held after a failed mission
+  carries an Infirmary clock (9h, reason `detained`), so Doc and Gauze
+  halve a police hold and Gauze bills for it. Nothing states whether that
+  is intended. It is folded into R193.
+- **The diet gate's stable-room rule read one campaign.** R190's first bill
+  put seed 2026 exactly on the grant (12). It now asks for a majority of
+  its seven campaigns: 7 of 7 over on the shipped policy, 0 of 7 under
+  break 252. On the shipped policy seed 2026 keeps Gauze all campaign, so
+  its day-180 walk is exactly what it was before R190.
+- **Break 433's anchor** went stale when the first R190 commit rewrote rule
+  3's swap line. `--anchors` caught it.
+- **The full battery read 473 of 474.** Break 420 (renewal's cooldown back
+  to the board's 11 hours) had been caught by R93's defence ceiling, at
+  90.5% held against a limit of 90. The vet policy moved the walks, and it
+  read 89.3%, so the break went MISSED. The notes already said the cause
+  was frequency, so smoke's R180 mission census now asks it directly: no
+  campaign runs a specimen-spending mission more than 8 times, twice the
+  notes' four. Clean runs read 4/3/4/3/1; the break reads 22/11/12/17/16.
+  With the clause in, `--only 420` has a green baseline and catches the
+  break.
+- **A scratch-path slip.** A shell variable was empty in one command, so a
+  scratch worktree was created at `/wt252`. The worktree was removed. The
+  commit in that command used the repo path, and nothing in the tree was
+  touched.
+
+### Verification
+
+- `npm test` passed after the vet work (cold: 590s wall, 1,467 of 1,893
+  budgeted CPU-seconds, 13 walks rebuilt), and again after the renewal
+  clause (warm: 294s wall, 1,105 of 1,425).
+- Full battery (existing gate logic changed), in four chunks at 23m, 85m,
+  143m and 105m: 356 minutes, the tenth reading. All four baselines were
+  green, and 473 of 474 breaks were caught. The miss was 420, fixed above
+  and re-run with `--only 420`: green baseline, 1 of 1 caught,
+  BATTERY_EXIT 0. A new assertion can only add ways for a gate to fail, so
+  the other 473 catches stand.
+- No game code changed (walker, gates, notes, docs), so the save,
+  console-error and 380px checks are unchanged since R189. SAVE_VERSION
+  stays 64.
+
+### Known issues
+
+- R193: see above.
+- The bill's clock is typed in two places (engine and walker). Smoke pins
+  one to the other, but neither is data.
+
+### Next session
+
+R192 — the walk never sends an agent.
+
 ## Session 214 — R189: A henchman runs a mission ✅
 
 **A hire can now be sent where a creature used to be. Mister Wicket, the

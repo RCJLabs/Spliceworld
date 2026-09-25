@@ -18289,9 +18289,82 @@ if (inShard('contest')) {
   //     the books did the job they are paid for. Red on the tree that
   //     shipped R181, where every walk ends with an empty payroll.
   {
-    const { slotsOf } = await import('../campaign/staff.js');
+    const { slotsOf, hireRoster } = await import('../campaign/staff.js');
+    const { hireBill } = await import('./sim.js');
     const duties = Object.keys(content.henchmenMeta?.duties ?? {});
     const said = [];
+
+    // R190 — A REFUSAL HAS A PRICE, AND THE GAME STATES IT. The walker ranked
+    // vets by how much of the roster each would touch, so the one who refuses
+    // anybody over 40 instability lost to the one who bills $20 an hour on
+    // every seed ever walked. Measured over sixteen seeds, the $20 bought 6,681
+    // hours more than Doc for $302,243, about $45 an extra hour, and moved
+    // dominion by nothing on sixteen of sixteen. So the bill is the rule for a
+    // duty whose work the game sells: a vet's fee on the patients it treats,
+    // plus what the Infirmary charges (data/rush.json: a call-out and an hourly
+    // rate, at the tier's `treatScale`) for the hours it would have saved on
+    // the ones it refuses. Stated from the data, so moving a price moves the
+    // bill, and checked at the first tier and the last, because the tier is
+    // half of the answer.
+    {
+      const { rushTuning } = await import('../splice/rush.js');
+      const { infirmaryGrants } = await import('../splice/facility.js');
+      const { WALK_INJURY_HOURS } = await import('./sim.js');
+      const vets = hireRoster(content).filter((h) => h.duty === 'infirmary');
+      assert.ok(typeof hireBill === 'function' && vets.length >= 2,
+        'the walker states what a vet costs on this ranch (hireBill in tools/sim.js) — R190 has not shipped');
+      const top = content.facility.infirmary.levels.length;
+      const ward = (insts, lvl = 1) => ({ chimeras: insts.map((i, n) => ({ id: `w${n}`, instability: i })), ranch: { stock: [] }, facility: { infirmary: lvl } });
+      const t = rushTuning(content);
+      for (const lvl of [1, top]) {
+        const g = infirmaryGrants(ward([], lvl), content);
+        for (const insts of [[10, 20, 30], [10, 90], [90, 95]]) {
+          for (const h of vets) {
+            const cov = insts.filter((i) => i <= (h.ceiling ?? 100)).length / insts.length;
+            const rate = h.rate ?? 2;
+            const refused = (t.base / (WALK_INJURY_HOURS * g.healScale) + t.perHour * (1 - 1 / rate)) * g.treatScale;
+            const want = cov * (h.fee ?? 0) / rate + (1 - cov) * refused;
+            const got = hireBill(content, h, ward(insts, lvl));
+            assert.ok(Math.abs(got - want) < 1e-9,
+              `${h.id} on a tier-${lvl} ward at ${insts.join('/')} bills its fee on who it treats and the Infirmary's price on who it refuses (${got} vs ${want})`);
+          }
+        }
+      }
+      const doc = vets.find((h) => (h.ceiling ?? 100) < 100);
+      const priced = (over) => ({ ...content, rushMeta: { ...(content.rushMeta ?? {}), ...over } });
+      assert.ok(hireBill(priced({ perHour: t.perHour * 2 }), doc, ward([10, 90])) > hireBill(content, doc, ward([10, 90])),
+        'a dearer hour at the Infirmary makes a refusal dearer — the rate is read, not typed');
+      assert.ok(hireBill(priced({ base: t.base * 2 }), doc, ward([10, 90])) > hireBill(content, doc, ward([10, 90])),
+        'and so does a dearer call-out — a refused patient is a visit, not only hours');
+      assert.ok(hireBill(content, doc, ward([10, 90], top)) < hireBill(content, doc, ward([10, 90], 1)),
+        'a better Infirmary makes a refusal cheaper — the tier is read');
+      assert.equal(hireBill(content, hireRoster(content).find((h) => h.duty === 'care'), ward([10])), null,
+        'a duty whose work the game does not sell (a feed is a button) has no bill, and keeps R188\'s coverage rule');
+
+      // THE CLOCK THE CALL-OUT IS SPREAD OVER IS THE ENGINE'S. The walker types
+      // it (WALK_INJURY_HOURS) because battle/statblock.js types it; this
+      // inflicts eighty battle injuries on a tier-I ranch through the engine's
+      // own `finishBattle` and holds the mean to the walker's number. The
+      // injury stream is keyed on the creature, so every casualty is new.
+      const s = { ...newGameState(), seed: 91, funds: 0 };
+      ensureRanchSeeded(s, content, t0); s.lastTickAt = t0;
+      const enc = content.encounters[content.regions.greenfield.nodes[0].encounter];
+      const clocks = [];
+      for (let n = 0; n < 40; n++) {
+        const at = t0 + n * 24 * HOUR;
+        s.chimeras = ['a', 'b'].map((x) => ({
+          ...makeSimChimera(STARTER_BUILD.frame, STARTER_BUILD.partIds, 'prime', content),
+          id: `probe${n}${x}`, name: `P${n}${x}`, injuryCount: 0, settleUntil: 0, injury: null,
+        }));
+        const b = createBattle(s.chimeras.map((c) => ({ ...c })), enc, content, 7, at, { kind: 'assault' });
+        b.over = true; b.outcome = 'loss';
+        for (const c of b.player.team) c.hp = 0;
+        for (const i of finishBattle(s, b, content, at).injuries) clocks.push((i.injury.until - at) / HOUR);
+      }
+      const mean = clocks.reduce((x, y) => x + y, 0) / clocks.length;
+      assert.ok(clocks.length === 80 && Math.abs(mean - WALK_INJURY_HOURS) < 0.25,
+        `the battle engine's mean injury clock on a tier-I ranch is ${mean.toFixed(2)}h over ${clocks.length} casualties, and the walker prices a refusal on ${WALK_INJURY_HOURS}h`);
+    }
     for (const w of walks) {
       const p = w.payroll;
       assert.ok(p && p.openDay != null, `${w.seed}: the walk reaches the moment the game introduces the payroll`);
@@ -18303,6 +18376,33 @@ if (inShard('contest')) {
       assert.equal(p.hired.length, open, `${w.seed}: every slot the map opens is filled (${p.hired.length} of ${open})`);
       for (const h of p.hired) {
         assert.ok(h.done > 0, `${w.seed}: ${h.id} did the job they are paid for (done ${h.done})`);
+        const same = hireRoster(content).filter((r) => r.duty === h.duty);
+        const bills = same.map((r) => ({ id: r.id, bill: hireBill(content, r, w.save) }));
+        if (bills.every((b) => b.bill !== null)) {
+          // R190 — A PRICED DUTY'S OBSERVABLE IS THE BILL AT THE MOMENT OF
+          // CHOOSING. A vet who refuses more hours than it treats is the
+          // right hire when buying those hours back costs less than the
+          // other's fee, so R188's "covers most of their duty" is the wrong
+          // question here — and the end of the walk is the wrong moment, since
+          // rule 3b keeps a vet until the Infirmary's price moves. So every
+          // vet hire carries the bills it was made on, and each is checked
+          // against its own.
+          const made = p.hires.filter((e) => e.duty === h.duty);
+          for (const e of made) {
+            const logged = Object.entries(e.bills ?? {});
+            assert.equal(logged.length, same.length, `${w.seed}: the ${h.duty} hire on day ${e.day} logged the bills it was chosen on`);
+            const least = Math.min(...logged.map(([, v]) => v));
+            assert.ok(e.bills[e.id] <= least + 1e-9, `${w.seed}: day ${e.day}, tier ${e.tier}: ${e.id} was the cheaper ${h.duty} hire `
+              + `(${logged.map(([id, v]) => `${id} $${v.toFixed(2)}`).join(', ')} a clock-hour)`);
+          }
+          // Rule 3b: a vet is re-chosen when the price moves, which is a tier.
+          for (let i = 1; i < made.length; i++) {
+            assert.ok(made[i].tier > made[i - 1].tier, `${w.seed}: ${made[i].id} replaced ${made[i - 1].id} on day ${made[i].day} `
+              + `at tier ${made[i].tier}, the tier ${made[i - 1].id} was chosen at on day ${made[i - 1].day} — a vet re-hired over one patient`);
+          }
+          assert.equal(made.at(-1)?.id, h.id, `${w.seed}: the last ${h.duty} hire is the one on the books`);
+          continue;
+        }
         // Rule 3's observable: a hire who cannot cover the job is replaced.
         // Mopsy is right for a three-animal herd and wrong for twenty, and a
         // walker that kept her would end with more meals missed than given.
@@ -18312,6 +18412,11 @@ if (inShard('contest')) {
       said.push(`${w.seed}:${p.hires.map((e) => `${e.id}@d${e.day}`).join('>')}`);
     }
     console.log(`   R188 payroll: ${said.join(' ')}`);
+    // R190's last clause — Doc Sutures is somebody's vet — is asked in
+    // tools/diet.js, over seven full campaigns. These four stop at dominion
+    // (day 28-36) and Nurse Gauze is the vet on all four; over sixteen full
+    // campaigns Doc holds the slot at day 180 on eleven, eight of them by a
+    // swap made when tier IV was bought (days 39-124).
 
     // THE DAY-180 NUMBERS THE ENTRY REPORTS, off the save the height and
     // untrusted-input gates already read. Printed, not pinned: a wage share
@@ -22915,6 +23020,29 @@ if (inShard('empire')) {
         `every mission the board offers is one the walker actually runs (${line})`
         + ' — a mission no campaign reaches is a mission whose consequences only a'
         + ' fixture has ever seen');
+
+      // R190 — AND A MISSION THAT SPENDS ITS SPECIMEN IS AN EVENT, NOT A
+      // CHORE. Renewal rests a fortnight because on the board's shared eleven
+      // hours the walker ran it 10-19 times a campaign: "sell the animal you
+      // least want" became the answer to being short of cash
+      // (data/notes/missions.md). The notes design for one to four. Break 420
+      // used to be caught by R93's defence ceiling above, by half a point —
+      // 90.5% held against 90 — and R190's vet policy moved the walks until
+      // it read 89.3% and the break went MISSED. The cause was always
+      // FREQUENCY, so the frequency is what this asks, per campaign: measured
+      // 4 / 3 / 4 / 3 / 1 on these five, and 22 / 11 / 12 / 17 / 16 with the
+      // cooldown back at eleven hours. The ceiling is twice the notes' four.
+      // BLIND AGAIN IF the walker stops running renewal at all (the clause
+      // above catches that), or a later policy runs it more than twice the
+      // design on a clean tree and the ceiling is raised to match.
+      const SPEND_CEILING = 8;
+      for (const [id, m] of Object.entries(content.missions ?? {})) {
+        if (!m.alwaysSpends) continue;
+        const per = walks.map((w) => (w.log ?? []).filter((e) => e.kind === 'mission' && e.mission === id).length);
+        assert.ok(Math.max(...per) <= SPEND_CEILING,
+          `${id} spends its specimen, so it is an event: it ran ${per.join(' / ')} times across seeds `
+          + `${EMPIRE_SEEDS.join('/')}, over ${SPEND_CEILING} in a campaign — a creature sold that often is a routine, not a decision`);
+      }
     }
 
     // ...and the campaign still has to work. R93's second clause, and the one

@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**2 entries queued.** R190, R192.
+**2 entries queued.** R192, R193.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -6804,7 +6804,7 @@ triangle working, and each region genuinely asks a different question)*.
   whose target already carries the append. The finding it could not fix is
   filed as R190: Doc Sutures is never the walker's vet.
 
-- **R190 — Doc Sutures is never the walker's vet.** Found by R188. On every
+- **R190 — Doc Sutures is never the walker's vet.** ✅ Found by R188. On every
   seed that has been walked — the four smoke seeds and a sixteen-seed census
   — the second slot opens on day 17-19 and goes to Nurse Gauze, because every
   roster by then holds at least one chimera over Doc's 40-instability ceiling
@@ -6819,6 +6819,55 @@ triangle working, and each region genuinely asks a different question)*.
   points at ships, in the walker's policy or in the data; and Doc is the
   walker's pick on at least one seed, or the entry argues from the numbers
   why a vet nobody should hire belongs on the roster.*
+
+  **Shipped: a vet is priced, and re-chosen when the price moves.**
+  * **The census.** Sixteen seeds, 180 days each, one vet taken off the
+    roster per walk. Nurse Gauze saved 15,112 hours for $302,243 in fees and
+    refused nobody; Doc saved 8,431 for nothing and refused 15,799
+    clock-hours. So Gauze's extra 6,681 hours cost about $45 each, and
+    dominion fell on the same day on sixteen of sixteen seeds. The ceiling
+    was never the problem. The policy never weighed what a refusal costs.
+  * **The bill** (`hireBill` in `tools/sim.js`). Per clock-hour of injury on
+    this ranch, a vet costs its fee on the patients it treats, plus what the
+    Infirmary charges to buy back the hours it would have saved on the ones
+    it refuses: the $25 call-out spread over the battle engine's mean clock
+    (3 hours at the tier's `healScale`), plus $18 an hour, all at the tier's
+    `treatScale`. At tier I a refusal costs ~$17 a clock-hour against
+    Gauze's $10, so Doc is the cheaper vet only while he treats over ~42% of
+    the roster. At tier IV it costs ~$13, and he stays cheaper until ~78% of
+    the roster is over his ceiling.
+  * **The first bill was wrong in the criterion's favour.** Priced on the
+    hourly rate alone, a refusal cost $9 a clock-hour, and Doc won on every
+    seed by construction, which is the answer this entry asked for. The
+    call-out is most of what the Infirmary charges for a three-hour clock.
+    With it, the right vet depends on the ranch.
+  * **Re-chosen when the price moves** (rule 3b). Following the cheaper bill
+    every day, the walker swapped vets 32 times on seed 2026, because a late
+    roster sits at the break-even. It now re-makes the choice only when an
+    Infirmary tier is bought, so a campaign has at most three vet hires.
+  * **Measured.** Over sixteen full campaigns, Doc holds the slot at day 180
+    on eleven and Gauze on five. Eight of Doc's eleven came by a swap when
+    tier IV was bought (days 39-124). Dominion is unmoved on all sixteen.
+    Smoke's four walks stop at dominion with Gauze on all four, so the
+    criterion's clause lives in the diet gate, over seven full campaigns
+    (Doc on four, Gauze on three). Smoke checks every vet hire against the
+    bills logged at its own moment, and measures the engine's injury clock
+    against the walker's.
+  * **What the bill leaves out** is filed as R193. Battles are 76-78% of
+    injuries. A rescue's whiplash and a detention run clocks that do not
+    shrink with the tier, so at tier IV the real mean clock is longer than
+    the bill's, and the bill leans toward Gauze.
+  * **One cascade.** The diet gate's stable-room rule read one campaign's
+    roster, and R190's first bill put seed 2026 exactly on the grant. The
+    rule now asks for a majority of its seven campaigns: 7 of 7 over on the
+    shipped policy, 0 of 7 under break 252.
+  Breaks 477-483, and 433 re-aimed at rule 3's coverage half. The full
+  battery read 473 of 474 in 356 minutes. The miss was break 420 (renewal
+  back on the board's eleven hours), which R93's defence ceiling had caught
+  by half a point (90.5% held against 90). The vet policy moved the walks to
+  89.3%, so the gate now asks renewal's frequency directly: no campaign runs
+  a specimen-spending mission more than eight times (clean 4/3/4/3/1, the
+  break 22/11/12/17/16).
 
 - **R189 — A henchman runs a mission.** ✅ R181's entry said a henchman "can
   also run an R180 mission, which is how espionage stops costing a chimera."
@@ -6874,6 +6923,26 @@ triangle working, and each region genuinely asks a different question)*.
   infiltrator by a stated policy; a census says how often each is sent and
   what the agent earns against his wage; and every gate the cascade moves is
   re-derived.*
+
+- **R193 — The vet bill spreads the call-out over the battle clock alone.**
+  Found by R190. A refused patient costs the Infirmary's call-out once, so
+  the bill spreads it over the mean injury clock, and no single clock is
+  stated anywhere a policy can read. `battle/statblock.js` types a battle's
+  2-4 hours. `data/operations.json` states a failed job's 1.5-3.75.
+  `campaign/campaign.js` types a rescue's 1-2, and a detention's 9 is in
+  `data/missions.json`. The walker types the battle engine's 3 hours, and
+  smoke pins that to the engine. Battles are 76-78% of injuries (four seeds),
+  but whiplash (10-13%) and detentions (7-8%) do not shrink with the
+  Infirmary's tier. So on a tier-IV Infirmary the real mean clock is about
+  1.5 hours, against the bill's 0.9, and the call-out weighs much less than
+  the bill says. The late choice between the two vets sits right at the
+  break-even, so this is not a rounding error. Separately, nothing states
+  whether a vet should treat a detention at all: Doc and Gauze both halve a
+  police hold, and Gauze bills for it. *Done when: every injury clock is
+  stated in data and read by the code that inflicts it; the bill spreads the
+  call-out over the clock the Infirmary actually sees at each tier, measured
+  over the census; whether a vet treats a detention is decided and stated;
+  and every gate the cascade moves is re-derived.*
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same
