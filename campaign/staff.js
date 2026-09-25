@@ -37,20 +37,39 @@ export function hiredOf(state) {
 // Why this hire cannot happen, as a sentence, or null when it can. One
 // reason at a time, the most specific first, so a refusal names the thing
 // the player can actually change.
-export function hireBlock(state, content, id) {
+export function hireBlock(state, content, id, now = state.lastTickAt ?? 0) {
   const h = content.henchmen?.[id];
   if (!h) return copy(content, 'staff.unknown');
   if (hiredOf(state).some((r) => r.id === id)) return copy(content, 'staff.already', { name: h.name });
+  // R189 — an agent a lab hired away is theirs until the file's days run out.
+  const gone = poachedOf(state, id);
+  if (gone && gone.until > now) {
+    return copy(content, 'staff.poached', {
+      name: h.name,
+      rival: content.rivals?.[gone.rivalId]?.name ?? copy(content, 'staff.poached_somebody'),
+      days: Math.max(1, Math.ceil((gone.until - now) / 86400000)),
+    });
+  }
   const taken = onDuty(state, content, h.duty);
   if (taken) return copy(content, 'staff.duty_taken', { name: taken.h.name });
   if (hiredOf(state).length >= slotsOf(state, content)) return copy(content, 'staff.no_slot');
   return null;
 }
 
+// R189 — the book of who a lab hired away, read defensively: R114 says a
+// save is untrusted input, and this is a map the tick writes and a player's
+// file can carry anything in.
+export function poachedOf(state, id) {
+  const book = state.staff?.poached;
+  const entry = book && typeof book === 'object' && !Array.isArray(book) ? book[id] : null;
+  return entry && typeof entry === 'object' && Number.isFinite(entry.until) ? entry : null;
+}
+
 export function hire(state, content, now, id) {
-  const block = hireBlock(state, content, id);
+  const block = hireBlock(state, content, id, now);
   if (block) return { ok: false, msg: block };
   state.staff ??= {};
+  if (poachedOf(state, id)) delete state.staff.poached[id];
   state.staff.hired = hiredOf(state);
   state.staff.hired.push({ id, at: now, done: 0, missed: 0 });
   const h = content.henchmen[id];

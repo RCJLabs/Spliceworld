@@ -40,3 +40,14 @@ The cause is FREQUENCY, not the payout, and the isolation says so. Espionage and
 A fortnight lands nearest where the rule was written, and it is the one that matches the brief: a city block is an event, not a chore. One to four a campaign is a decision the player weighs; nineteen is a routine. The override lives in data, so a fourth mission sets its own pace without an engine edit, and `missionCooldownMs` is its one home — R180 shipped the arithmetic written out twice, in the tick that ends a run and the recall that calls one off, which is exactly the R174 defect planted fresh and exactly where an override would have landed in one and not the other.
 
 THE TONE IS LOAD-BEARING AND IS CHECKED. CLAUDE.md forbids death language, and this is the milestone most able to break it. A flattened city block is evacuated, condemned and rezoned; the only casualties are an insurance adjuster's afternoon and several municipal bylaws; buildings retire loudly the way vehicles already do. Every line goes through R110's tone gate, which reads `data/copy.json` and `data/news.json` rather than trusting the author.
+
+## missions.espionage.agent
+
+R189 — what a failure costs a HENCHMAN rather than a creature. Sabotage carries the same block with a different risk.
+
+
+Per mission, a mission without an `agent` block does not take one, and says so in words (`copy.mission.agent_refused`); renewal has none, because `alwaysSpends` leaves the specimen behind and an agent has no genome to leave. The smoke gate refuses an `agent` block on an `alwaysSpends` mission.
+
+**detained** is the agent's version of the creature's night in a cell, and it is longer on purpose: `detainHours` (24 on espionage, against the creature's 9) is long enough to miss the board's next window, and the agent stays on the books and on the wage while they help the police with their enquiries. **poached** is sabotage's price: on a caught failure (`catchOnFail`, the creature's 0.4) the lab hires the agent away. They leave your books, the slot opens, and `hireBlock` refuses them — naming the lab — until `poachDays` have run out. It is milder than conscription on purpose: a conscripted creature is gone for good and fights you next time; a poached agent is a week's non-compete.
+
+EVERY CLOCK IS BUILT AT LAUNCH, the board's own rule. `freeAt` (when a held agent walks out, or a poached one's non-compete ends) and `expenses` are sealed into the outcome by `startMission`, so the eager tick only files them and a reload cannot re-roll an agent's bad night. Only an agent run carries those fields, so a creature's sealed record is the shape it was before R189.

@@ -22,6 +22,15 @@
           "fee": "down"
         },
         "order": 2
+      },
+      "field": {
+        "name": "Fieldwork",
+        "sent": true,
+        "axes": {
+          "aptitude": "up",
+          "fee": "down"
+        },
+        "order": 3
       }
     }
   },
@@ -73,6 +82,17 @@
       "quirk": "Halves the Infirmary clock for anything with a pulse. Bills by the hour.",
       "report": "{name} cut {done} hours off the Infirmary clock, however unstable the patient, and sent a bill for {billed}.",
       "order": 4
+    },
+    "wicket": {
+      "name": "Mister Wicket",
+      "title": "Field Agent",
+      "duty": "field",
+      "wage": 3,
+      "aptitude": 0.45,
+      "fee": 25,
+      "quirk": "Goes in so your creatures stay home. Not as slippery as a chameleon with nothing on, and bills every job for sandwiches.",
+      "report": "{name} worked the board while you were out. Jobs run: {done}. Hours helping the police with their enquiries: {missed}. Sandwiches billed: {billed}.",
+      "order": 5
     }
   }
 }

@@ -11,3 +11,17 @@ NO HIRE IS STRICTLY BETTER THAN ANOTHER AT THE SAME PRICE. Each duty declares it
 EVERY QUIRK IS LEGIBLE IN THE DIGEST. Each record keeps two tallies, `done` and `missed`; `worldSnapshot` reports them per hire in whole units and `awayDigest` prints one line per hire whose tallies moved, filled from that henchman's `report` template, with `{billed}` derived from `done` at the henchman's own fee. `report` must name both sides of the quirk.
 
 Adding a henchman to an existing duty is a JSON object here. A new DUTY is an engine edit, the way a new keyword mechanic is.
+
+## tuning.duties.field
+
+R189 — THE AGENT: A HIRE WHO IS SENT RATHER THAN STATIONED.
+
+R181's entry said a henchman "can also run an R180 mission, which is how espionage stops costing a chimera", and it never shipped: `startMission` refused anything that was not a fit creature, and no hire carried a number a mission could read. A mission's odds are anatomy, and a henchman has none. So an agent needed two things before it could be a choice rather than a free mission: its own aptitude, and its own risk.
+
+A DUTY MARKED `sent` HOLDS NO STANDING CLOCK. Fieldwork (`tuning.duties.field`) is the first: its hire works nothing on the elapsed clock, earns the wage only on missions somebody sends them on, and takes the same scarce slot a hand or a vet would. That slot is most of the price — the first hire of a lab is now a hand, a vet OR an agent. `sent` is read by the engine (`missionAgents` in campaign/caper.js lists who can go), by the War Room (an agent is offered beside the creatures on "Sending whom?"), and by the walker (rule 5 in `walkHire`: the walk never hires one, because its mission policy sends creatures — R192).
+
+`aptitude` IS THE AGENT'S WHOLE ANATOMY. It goes into the mission board's own formula where a creature's Camo / speed / mass blend would, so an agent's odds are the board's odds and nothing else. Mister Wicket's 0.45 was measured into place, not chosen: the median purebred build (every species, with and without its hide, on every frame) reads 0.375, and the best infiltrator the anatomy can make — the chameleon with no hide, on frame A — reads 1.000. The day-180 walk's best creature reads 0.420 and the median 0.123. So Wicket beats the animal a typical ranch would send and loses, on every mission and every length, to a player who built the infiltrator. `tools/smoke.js` finds that best build by search and holds the agent between the two, so a later balance pass that makes an agent strictly better — or a wage for nothing — goes red.
+
+`fee` is expenses per job, billed when the job resolves and reported on the mission's report and in the digest (`{billed}` is `done` times the fee, as for the hand). `done` counts jobs run; `missed` counts hours held for questioning, which is the side of the quirk a quiet week never shows. A week away through the game's tick sends the agent on one job in the digest gate, because an agent idle all week has no line to print and would pass "legible" on a line that never appears.
+
+WHAT AN AGENT IS NOT. It never adds a mission: the board runs one at a time, so an agent replaces the body that goes, not the throughput. It never takes a mission that spends its specimen (renewal leaves the creature behind, and there is nobody to leave). What it can cost is in data/missions.md under `agent`.

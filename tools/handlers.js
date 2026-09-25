@@ -240,7 +240,15 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
     // paints BOTH verbs: `data-staff-fire` exists only for somebody hired and
     // `data-staff-hire` only for somebody who could be. Hired through the
     // real `hire`, for the reason the visitor below is imported for real.
-    hire(s, content, now, hireRoster(content).find((h) => h.duty === 'care').id);
+    //
+    // R189 — and that one hire is an AGENT, read off the file's `sent` duty
+    // rather than named, because an agent on the books is the only thing
+    // that paints the mission card's other answer (`data-cap-agent`). A hand
+    // here painted the same two payroll verbs and nothing else; the slot
+    // left open still paints every Hire, so no verb is lost to the swap.
+    const duties = content.henchmenMeta?.duties ?? {};
+    hire(s, content, now, (hireRoster(content).find((h) => duties[h.duty]?.sent)
+      ?? hireRoster(content).find((h) => h.duty === 'care')).id);
 
     // R108 — a visitor signed in at the gate, so the War Room paints its
     // Answer and Show-it-out buttons. Built by exporting one of the fixture's

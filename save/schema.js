@@ -237,8 +237,29 @@ export function cleanSave(save, { limit = TEXT_LIMIT } = {}) {
       for (const k of ['at', 'done', 'missed']) {
         if (!Number.isFinite(r[k])) { r[k] = 0; repairs.push({ at: `staff.hired.${k}`, why: 'not-a-number' }); }
       }
+      // R189 — an agent's hold clock. Absent means free; anything that is
+      // not a time is repaired to absent, which releases them rather than
+      // holding them forever on a string.
+      if ('detainedUntil' in r && !Number.isFinite(r.detainedUntil)) {
+        delete r.detainedUntil; repairs.push({ at: 'staff.hired.detainedUntil', why: 'not-a-number' });
+      }
     }
     save.staff.hired = kept;
+  }
+  // 7. R189 — the book of agents a lab hired away. An entry without a time
+  //    is not a non-compete, so it is dropped: the agent can be hired again,
+  //    which is the value that costs the player nothing.
+  const book = save.staff?.poached;
+  if (book !== undefined) {
+    if (!book || typeof book !== 'object' || Array.isArray(book)) {
+      save.staff.poached = {}; repairs.push({ at: 'staff.poached', why: 'not-a-book' });
+    } else {
+      for (const [id, e] of Object.entries(book)) {
+        if (!e || typeof e !== 'object' || !Number.isFinite(e.until)) {
+          delete book[id]; repairs.push({ at: 'staff.poached', why: 'not-an-entry' });
+        }
+      }
+    }
   }
 
   return { save, repairs };

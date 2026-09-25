@@ -66,7 +66,7 @@ export function tickMissions(state, content, now) {
 
   const out = run.outcome ?? {};
   const funds = Number.isFinite(out.funds) ? out.funds : 0;
-  state.funds = (state.funds ?? 0) + funds;
+  state.funds = (state.funds ?? 0) + funds - (+out.expenses || 0);
   if (Number.isFinite(out.notoriety) && out.notoriety > 0) {
     state.campaign.notoriety = (state.campaign.notoriety ?? 0) + out.notoriety;
   }
@@ -83,7 +83,17 @@ export function tickMissions(state, content, now) {
     funds,
     fate: out.fate ?? 'home',
     granted: null,
+    ...(typeof run.henchId === 'string' && { henchId: run.henchId, expenses: out.expenses }),
   };
+  // R189 — an agent's night, built at launch in caper.js: data/notes/henchmen.md.
+  const rec = result.henchId && state.staff?.hired?.find?.((r) => r?.id === result.henchId);
+  if (rec && result.fate === 'poached') {
+    state.staff.hired = state.staff.hired.filter((r) => r !== rec);
+    state.staff.poached = { ...state.staff.poached, [rec.id]: { rivalId: run.rivalId, until: out.freeAt } };
+  } else if (rec) {
+    rec.done = (+rec.done || 0) + 1;
+    if (result.fate === 'detained') Object.assign(rec, { detainedUntil: out.freeAt, missed: (+rec.missed || 0) + (+out.detainHours || 0) });
+  }
 
   // The three fates. Each is a move of data the composer already built.
   if (result.fate === 'conscripted' && out.conscript && content.rivals?.[run.rivalId]) {

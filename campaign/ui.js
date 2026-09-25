@@ -49,7 +49,7 @@ import { missionTuning, activeMission, missionCandidates } from './mission.js';
 import { hireRoster, slotsOf, nextSlotAt, hiredOf, hireBlock, hire, letGo, wageNow } from './staff.js';
 import {
   missionsFor, missionHours, missionReadyAt, missionRemainingMs,
-  recallMission, missionOdds, missionTargets, startMission, missionAptitude,
+  recallMission, missionOdds, missionTargets, startMission, missionAptitude, missionAgents,
 } from './caper.js';
 import { directorRead } from './director.js';
 import {
@@ -89,7 +89,9 @@ let expDraft = { regionId: null, hours: 0, crew: [] };
 // R180 — the caper draft. One creature rather than a crew, so it is an id
 // and not a list, and the same rule holds: a half-composed mission is a UI
 // state and never touches the save.
-let capDraft = { missionId: null, rivalId: null, hours: 0, chimeraId: null };
+// R189 — `agentId` is the other answer to "Sending whom?": a hire rather
+// than a creature. Picking one clears the other, so the draft names one.
+let capDraft = { missionId: null, rivalId: null, hours: 0, chimeraId: null, agentId: null };
 // R108 — what the visitors' gate last said. Module-level for the same
 // reason `lastAftermath` above it is: this screen answers in a full
 // re-render, so a line appended to a DOM the next paint replaces is a line
@@ -498,7 +500,7 @@ function renderMap(root, ctx) {
 
   const views = {
     map: regions,
-    jobs: `${staffCard(state, ctx)}${expeditionCard(state, ctx, t)}${missionCard(state, ctx, t)}${jobsCard(state, ctx, t)}`,
+    jobs: `${staffCard(state, ctx, t)}${expeditionCard(state, ctx, t)}${missionCard(state, ctx, t)}${jobsCard(state, ctx, t)}`,
     labs: `
       ${releaseCard}
       ${dossier}
@@ -998,10 +1000,17 @@ function missionCard(state, ctx, t) {
       ? fill(content.copy?.mission?.conscripted, { creature: esc(report.name), rival: esc(report.rival) })
       : report.fate === 'released'
         ? fill(content.copy?.mission?.released, { creature: esc(report.name) })
-        : report.success
-          ? fill(content.copy?.mission?.landed, {})
-          : fill(content.copy?.mission?.missed, {})}${
+        // R189 — an agent's two prices, in their own words.
+        : report.fate === 'poached'
+          ? fill(content.copy?.mission?.poached, { creature: esc(report.name), rival: esc(report.rival) })
+          : report.fate === 'detained' && report.henchId
+            ? fill(content.copy?.mission?.agent_detained, { creature: esc(report.name),
+              hours: content.missions?.[report.missionId]?.agent?.detainHours ?? 24 })
+            : report.success
+              ? fill(content.copy?.mission?.landed, {})
+              : fill(content.copy?.mission?.missed, {})}${
       report.funds ? ` <strong>+${fmtMoney(report.funds)}</strong>.` : ''}${
+      report.expenses ? ` ${fill(content.copy?.mission?.expenses, { amount: fmtMoney(report.expenses) })}.` : ''}${
       report.granted === 'intel' ? ` ${fill(content.copy?.mission?.intel, { rival: esc(report.rival) })}` : ''}${
       report.granted === 'setback' ? ` ${fill(content.copy?.mission?.setback, { rival: esc(report.rival) })}` : ''}</span></div>
         <button type="button" data-cap-dismiss="1">OK</button>
@@ -1035,14 +1044,19 @@ function missionCard(state, ctx, t) {
   const mission = board.find((m) => m.id === capDraft.missionId) ?? board[0];
   const rival = targets.find((r) => r.id === capDraft.rivalId) ?? targets[0];
   const hours = missionHours(mission).includes(capDraft.hours) ? capDraft.hours : missionHours(mission)[0];
-  const who = candidates.find((c) => c.id === capDraft.chimeraId) ?? null;
-  const odds = missionOdds(content, mission, hours, who);
+  // R189 — the hires who could go instead, offered only on a mission whose
+  // file says what a failure costs an agent. Renewal has no such line.
+  const agents = mission.agent ? missionAgents(state, content, t) : [];
+  const agent = agents.find((a) => a.rec.id === capDraft.agentId) ?? null;
+  const who = agent ? null : candidates.find((c) => c.id === capDraft.chimeraId) ?? null;
+  const odds = missionOdds(content, mission, hours, who, agent?.h);
   const apt = who ? missionAptitude(content, who) : null;
   // The one-line read on the creature you picked, off the score the launch
   // actually rolls against rather than a second opinion about it.
-  const aptLine = !apt ? '' : apt.score >= 0.6
+  const aptLine = agent ? fill(content.copy?.mission?.apt_agent, {}) : !apt ? '' : apt.score >= 0.6
     ? fill(content.copy?.mission?.apt_good, {})
     : apt.score >= 0.3 ? fill(content.copy?.mission?.apt_mixed, {}) : fill(content.copy?.mission?.apt_poor, {});
+  const onBooks = !mission.agent && missionAgents(state, content, t).length > 0;
 
   const row = (label, cells) => `<p class="fine-print">${label}</p><div class="op-row exp-row">${cells}</div>`;
   return `
@@ -1056,24 +1070,34 @@ function missionCard(state, ctx, t) {
     r.id === rival.id ? ' class="is-selected"' : ''}>${esc(r.name)}</button>`).join(''))}
       ${row(fill(content.copy?.mission?.how_long, {}), missionHours(mission).map((h) => `<button type="button" data-cap-hours="${h}"${
     h === hours ? ' class="is-selected"' : ''}>${h}h</button>`).join(''))}
-      ${row(fill(content.copy?.mission?.who, {}), candidates.length
+      ${row(fill(content.copy?.mission?.who, {}), candidates.length || agents.length
     ? candidates.map((c) => `<button type="button" data-cap-who="${c.id}"${
       c.id === who?.id ? ' class="is-selected"' : ''}>${esc(c.name)}</button>`).join('')
+      + agents.map((a) => `<button type="button" data-cap-agent="${a.rec.id}"${
+        a.rec.id === agent?.rec.id ? ' class="is-selected"' : ''}>${esc(a.h.name)}</button>`).join('')
     : `<span class="locked-tag">${fill(content.copy?.mission?.nobody, {})}</span>`)}
+      ${onBooks ? `<p class="fine-print">${fill(content.copy?.mission?.agent_refused, {})}</p>` : ''}
       <p class="fine-print">${esc(mission.brief ?? '')}</p>
-      <p class="fine-print">${mission.risk === 'conscripted'
-    ? fill(content.copy?.mission?.risk_conscripted, {})
-    : mission.risk === 'released'
-      ? fill(content.copy?.mission?.risk_released, {})
-      : fill(content.copy?.mission?.risk_detained, {})}</p>
+      <p class="fine-print">${agent
+    ? fill(mission.agent.risk === 'poached'
+      ? content.copy?.mission?.agent_risk_poached
+      : content.copy?.mission?.agent_risk_detained, {
+      hours: mission.agent.detainHours ?? 24, days: mission.agent.poachDays ?? 7,
+    })
+    : mission.risk === 'conscripted'
+      ? fill(content.copy?.mission?.risk_conscripted, {})
+      : mission.risk === 'released'
+        ? fill(content.copy?.mission?.risk_released, {})
+        : fill(content.copy?.mission?.risk_detained, {})}</p>
       ${apt && !apt.hidden && apt.camoParts > 0
     ? `<p class="fine-print">${fill(content.copy?.mission?.armored_warning, {})}</p>` : ''}
       <p class="fine-print">${fill(content.copy?.mission?.odds, {
     pct: Math.round(odds.chance * 100), why: aptLine,
-  })} &middot; <strong>${fmtMoney(odds.funds)}</strong></p>
+  })} &middot; <strong>${fmtMoney(odds.funds)}</strong>${agent && agent.h.fee
+    ? ` ${fill(content.copy?.mission?.expenses, { amount: fmtMoney(agent.h.fee) })}` : ''}</p>
       ${resting
     ? `<span class="locked-tag">${fill(content.copy?.mission?.resting, {})} ${fmtDuration(resting)}</span>`
-    : who
+    : who || agent
       // R161 again — a greyed Send is a refusal that will not say what it
       // wants. Before a specimen is picked the card says so in words.
       ? `<button type="button" data-cap-go="1">${fill(content.copy?.mission?.send, {})}</button>`
@@ -1085,7 +1109,7 @@ function missionCard(state, ctx, t) {
 // keeps working after the app is closed. Every row prints the quirk and the
 // wage at TODAY's size, from the same function the clock bills with, and a
 // refusal says what would change it (R161) instead of greying a button.
-function staffCard(state, ctx) {
+function staffCard(state, ctx, t) {
   const { content } = ctx;
   const roster = hireRoster(content);
   if (!roster.length) return '';
@@ -1106,12 +1130,18 @@ function staffCard(state, ctx) {
     const rec = hired.find((r) => r.id === h.id);
     if (rec) {
       const vars = { done: Math.floor(rec.done ?? 0), missed: Math.floor(rec.missed ?? 0) };
+      // R189 — an agent's tally is jobs and hours held, and a held agent's
+      // row says when they are back rather than leaving a missing button to
+      // explain itself on the mission card.
+      const held = rec.detainedUntil > t
+        ? ` ${copy(content, 'staff.detained', { time: fmtDuration(rec.detainedUntil - t) })}` : '';
       return row(h, {
-        note: h.duty === 'infirmary' ? copy(content, 'staff.tally_infirmary', vars) : copy(content, 'staff.tally_care', vars),
+        note: (h.duty === 'infirmary' ? copy(content, 'staff.tally_infirmary', vars)
+          : h.duty === 'care' ? copy(content, 'staff.tally_care', vars) : copy(content, 'staff.tally_field', vars)) + held,
         html: `<button type="button" data-staff-fire="${h.id}">${copy(content, 'staff.let_go_button')}</button>`,
       });
     }
-    const block = hireBlock(state, content, h.id);
+    const block = hireBlock(state, content, h.id, t);
     return row(h, block
       ? { note: esc(block) }
       : { html: `<button type="button" data-staff-hire="${h.id}">${copy(content, 'staff.hire')}</button>` });
@@ -1306,7 +1336,15 @@ function bindJobs(root, ctx, redraw) {
   root.querySelectorAll('button[data-cap-who]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.capWho;
-      capDraft = { ...capDraft, chimeraId: capDraft.chimeraId === id ? null : id };
+      capDraft = { ...capDraft, chimeraId: capDraft.chimeraId === id ? null : id, agentId: null };
+      redraw();
+    });
+  });
+  // R189 — the agent is the other answer, and picking one clears a creature.
+  root.querySelectorAll('button[data-cap-agent]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.capAgent;
+      capDraft = { ...capDraft, agentId: capDraft.agentId === id ? null : id, chimeraId: null };
       redraw();
     });
   });
@@ -1318,9 +1356,14 @@ function bindJobs(root, ctx, redraw) {
       const rival = targets.find((r) => r.id === capDraft.rivalId) ?? targets[0];
       const hours = missionHours(mission).includes(capDraft.hours)
         ? capDraft.hours : missionHours(mission)[0];
-      const res = startMission(state, content, ctx.now(), mission?.id, rival?.id, capDraft.chimeraId, hours);
+      // The card offers an agent only where the mission takes one, so the
+      // launch does too — a draft left naming Wicket after a switch to
+      // renewal sends the creature picked, or nobody, and never refuses.
+      const henchId = mission?.agent ? capDraft.agentId : null;
+      const res = startMission(state, content, ctx.now(), mission?.id, rival?.id,
+        henchId ? null : capDraft.chimeraId, hours, henchId);
       lastAftermath = res.msg ?? null;
-      if (res.ok) capDraft = { missionId: null, rivalId: null, hours: 0, chimeraId: null };
+      if (res.ok) capDraft = { missionId: null, rivalId: null, hours: 0, chimeraId: null, agentId: null };
       ctx.save();
       redraw();
     });
