@@ -291,7 +291,13 @@ const BUDGET = {
   // instead of beside a guess. The slack is 35px, less than one bay (81px),
   // so a species shipping goes red here ON PURPOSE and the milestone that
   // adds it raises this by exactly one bay. The open half is still a reading.
-  vault:          { folded: 3300,  tallest: 4440, opens: 20 },
+  // Session 216 — 4440 -> 4600 open, measured at 4,507, and it is the
+  // mechanism above for the FOURTH time: the Theater's table got three times
+  // faster, the day-180 walk is a different campaign, and its shelf holds 43
+  // species (349 parts) where R186's held 41 (345). Two bays at 81px predict
+  // +162 over R186's 4,353 and the screen grew 154. Raised by exactly two
+  // bays, keeping R186's headroom. The shut half is a bound and did not move.
+  vault:          { folded: 3300,  tallest: 4600, opens: 20 },
   'dex:roster':   { folded: 3100,  tallest: 3100 },
   // R117 — 1100 -> 1150, and `dex:genes` below by the same 50, which is the
   // SHARED CHROME rather than the tab: the Dex's six-tab bar goes to two
