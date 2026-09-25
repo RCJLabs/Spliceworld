@@ -18498,10 +18498,23 @@ if (inShard('contest')) {
     // floor is re-derived rather than nudged: 4 halved is 2, and 2 still
     // cannot pass on a loose board that has stopped spawning, which is the
     // claim the block says it is making.
+    //
+    // SESSION 216 — AND THE HUNT MINIMUM FELL TO ONE, when the Theater's table
+    // got three times faster. Re-censused on the same sixteen seeds, hunts
+    // before dominion:
+    //   2026:21 7:52 99:69 4242:1 42:15 900:14 55:17 11:22
+    //   3:17 77:30 123:26 512:27 808:19 1337:24 2718:19 31415:22   min 1
+    // 4242 reaches dominion on day 25.5 without having beaten a rival (its
+    // first win moved from day 23 to day 65, over 180 days), and a lab you
+    // have not beaten never breaks out; the one creature it hunted was one
+    // its own renewal released. Halved, the minimum is below the per-kind
+    // clause above, which already asks every seed for a hunt, so the hunt
+    // floor is retired into it rather than kept at a number no seed's
+    // minimum supports. "Barely hunted" is the WALK gate's to ask
+    // (tools/battery.js), over 45 days of a campaign that beats a rival.
+    // The duel floor stands: these four read 5 / 7 / 10 / 4.
     assert.ok(shapes.every((w) => w.duels >= 2),
       `the ladder is climbed rather than glanced at (${shapes.map((w) => w.duels).join(', ')} duels)`);
-    assert.ok(shapes.every((w) => w.breakouts >= 2),
-      `and the loose board is hunted (${shapes.map((w) => w.breakouts).join(', ')})`);
     // The capture chain, end to end: the cannon fires, bays fill, and the
     // Wing turns at least one specimen into a member of the roster. This is
     // the only route onto the roster that does not go through the Theater,

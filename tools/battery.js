@@ -1976,6 +1976,17 @@ const BREAKOUT = ['node', '-e', `
 // filled bay. What is being defended is coverage: before R83 the walk had
 // never fought a rival in 180 days, and no gate noticed for eighty
 // milestones because none of them asked.
+//
+// SEED 2026 SINCE THE THEATER'S TABLE GOT THREE TIMES FASTER (session 216).
+// It was 4242, and on the faster table 4242's first rival win moved from day
+// 23 to day 65: a lab you have never beaten never breaks out, so its 45 days
+// held two hunts, both of creatures its own renewals had released. Measured
+// over sixteen seeds at 45 days, the other fifteen hunt 30-58 and 4242 hunts
+// 2. The seed was always a stand-in for "a campaign that reaches every
+// system inside the window", so it moves to 2026, the seed every day-180
+// fixture already walks (32 hunts, 6 duels, 193 bagged, 5 Rumblers), and the
+// gate now checks that premise itself: a walk that beats no rival cannot
+// reach the loose board, and says so instead of saying "barely hunted".
 const WALK = ['node', '-e', `
   const { readFileSync } = await import('node:fs');
   const { indexContent } = await import('./render/renderer.js');
@@ -1984,7 +1995,9 @@ const WALK = ['node', '-e', `
   const { CONTENT_FILES: files } = await import('./data/loader.js');
   const content = indexContent(Object.fromEntries(files.map((n) => [n, R(n)])));
   const fail = (m) => { console.error('walk ✗  ' + m); process.exit(1); };
-  const w = campaignWalk(content, { seed: 4242, days: 45, stopAtDominion: false });
+  const w = campaignWalk(content, { seed: 2026, days: 45, stopAtDominion: false });
+  const defeats = Object.values(w.save.campaign.rivals ?? {}).reduce((n, r) => n + (r.defeats ?? 0), 0);
+  if (!defeats) fail('seed 2026 beat no rival in 45 days, so no lab ever broke out and the window cannot cover the game');
   for (const kind of ['assault', 'defend', 'sparring', 'rival', 'breakout']) {
     if (!(w.fights?.[kind] > 0)) fail('the walk never fought a "' + kind + '" (' + JSON.stringify(w.fights) + ')');
   }
@@ -2006,7 +2019,8 @@ const WALK = ['node', '-e', `
   // frame for owning a leg, and returning on the first chassis that
   // validated — is now asserted deterministically in smoke's shard a, by
   // asking \`bestSplice\` which frame it picks in front of a wall that swings.
-  // R148 — and a Rumbler. Measured on this seed and window: 5 of 17 splices.
+  // R148 — and a Rumbler. Measured on this seed and window: 5 of 21 builds
+  // (4242, the seed before session 216, built 5 of 17).
   if (!(w.framesBuilt?.L > 0)) fail('the walk never builds a Rumbler (' + JSON.stringify(w.framesBuilt) + ')');
   console.log('walk ✓  ' + w.duels + ' duels, ' + w.breakouts + ' hunts, ' + w.bagged
     + ' bagged, lab at ' + levels + ', frames ' + JSON.stringify(w.framesBuilt) + ' over 45 days');
