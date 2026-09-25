@@ -79,7 +79,10 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (4h45m to 5h35m. R189 is the NINTH reading: 467 breaks
+**The full battery (4h45m to 6h. R190 is the TENTH reading: 474 breaks at
+23m, 85m, 143m and 105m, which is 356 minutes — 22 over R189 with seven more
+breaks, most of it in chunk 4, where the new ones live — so the top of the
+range is now six hours. R189 was the NINTH reading: 467 breaks
 at 22m, 84m, 136m and 92m, which is 334 minutes: ten over R186 with eleven
 more breaks, and the top of the range moved with it. R187 was the EIGHTH reading: 459 breaks
 at 21m, 62m, 121m and 81m, which is 285 minutes. That is 39 minutes under
