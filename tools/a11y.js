@@ -2293,6 +2293,115 @@ async function main() {
       await sleep(300);
     }
 
+    // ---- 1h2. R187 - THE HELD ROW'S WORST CASE, BUILT RATHER THAN WAITED FOR --
+    //
+    //      The lap above measures whatever the day-180 walk left on the map,
+    //      and that is a question about the walk. Break 372 (the row stops
+    //      wrapping) went MISSED in R180's rot check because a richer ranch
+    //      left the Spar button on its short label, and was caught again in
+    //      R186's because a different campaign left a longer node on the map.
+    //      Neither reading was about the layout.
+    //
+    //      The row is a node name, a HELD tag and a Spar button, and the
+    //      button says one of exactly three things (campaign/warroom.js's
+    //      `kind`): `Spar N`, `no-one fit`, or the countdown to the next
+    //      charge. So the worst case is finite and can be BUILT: every node on
+    //      the map held, in each of the three states, at 150% text. The clock
+    //      is pinned to the save's own last tick for these three loads only,
+    //      so the page settles no absence, and nothing it would settle (a
+    //      contest, a raid) can turn a held row into some other row first.
+    //
+    //      WHAT WOULD MAKE IT BLIND AGAIN: a fourth Spar state nobody adds here,
+    //      or a row that stops rendering as `.node-held`. Both are checked
+    //      below: each state must actually paint its label, and every node
+    //      must paint as held. A pass that measured nothing says so.
+    {
+      const { walkedSave, fixtureContent } = await import('./fixtures.js');
+      const worstContent = fixtureContent();
+      const base = walkedSave({ days: 180 });
+      const T = base.lastTickAt;
+      const nodes = Object.values(worstContent.regions ?? {}).flatMap((r) => (r.nodes ?? []).map((n) => n.id));
+      const ringMax = worstContent.training?.sparCharges ?? 3;
+      const regenMs = (worstContent.training?.sparRegenMinutes ?? 10) * 60000;
+      const STATES = [
+        { kind: 'charges', label: /Spar\s*\d/, set: (s) => { s.sparRefillAt = 0; } },
+        { kind: 'nobody-fit', label: /no-one fit/, set: (s) => {
+          s.sparRefillAt = 0;
+          for (const c of s.chimeras ?? []) c.injury = { ...(c.injury ?? {}), until: T + 48 * 3600000 };
+        } },
+        { kind: 'cooling', label: /\d+[mhd]/, set: (s) => { s.sparRefillAt = T + ringMax * regenMs; } },
+      ];
+      // `send` resolves with the whole CDP message, so the id is under
+      // `.result`. A pin that cannot be removed would carry this clock into
+      // every pass after this one, which is how the first draft broke R107's
+      // welcome-back card: a week's gap measured against a day in spring.
+      const pin = (await send('Page.addScriptToEvaluateOnNewDocument', {
+        source: `(() => { const F = ${T}; const R = Date;
+          function P(...a) { if (!(this instanceof P)) return new R(F).toString(); return a.length ? new R(...a) : new R(F); }
+          P.prototype = R.prototype; P.now = () => F; P.parse = R.parse; P.UTC = R.UTC; globalThis.Date = P; })();`,
+      }))?.result?.identifier;
+      if (!pin) throw new Error('the held-row pass could not pin the clock, and an unremovable pin would poison every pass after it');
+      try {
+        for (const st of STATES) {
+          const s = structuredClone(base);
+          s.battle = null;
+          s.campaign.heldNodes = [...nodes];
+          s.campaign.contested = [];
+          // Every region card OPEN. A held row inside a shut card is in the
+          // DOM with no box, and the first draft of this pass counted 30 of 30
+          // rows "held" while measuring none of them.
+          s.ui = { ...(s.ui ?? {}), collapsed: { ...(s.ui?.collapsed ?? {}),
+            ...Object.fromEntries(Object.keys(worstContent.regions ?? {}).map((id) => [`region:${id}`, false])) } };
+          st.set(s);
+          await evaluate(`(async () => {
+            localStorage.clear();
+            await new Promise((r) => { const q = indexedDB.deleteDatabase('spliceworld'); q.onsuccess = r; q.onerror = r; q.onblocked = r; });
+          })()`);
+          await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(s))})`);
+          await send('Page.navigate', { url });
+          let booted = false;
+          for (let i = 0; i < 100 && !booted; i++) {
+            await sleep(200);
+            booted = await evaluate(`!!document.querySelector('main > .screen:not([hidden])')`);
+          }
+          if (!booted) { note(`held-row worst case (${st.kind}): the app never booted, so nothing was measured`); continue; }
+          await evaluate(`document.documentElement.style.fontSize = '${16 * TEXT_SCALE}px'`);
+          await evaluate(`document.querySelector('#tabs button[data-screen="battle"]')?.click()`);
+          await sleep(600);
+          await evaluate(OPEN_DETAILS);
+          await sleep(300);
+          const seen = JSON.parse(await evaluate(`JSON.stringify({
+            held: [...document.querySelectorAll('#screen-battle .encounter.node-held')]
+              .filter((r) => r.getBoundingClientRect().height > 0).length,
+            labels: [...document.querySelectorAll('#screen-battle .encounter.node-held .spar-btn')]
+              .filter((b) => b.getBoundingClientRect().height > 0).map((b) => b.textContent.trim()),
+          })`));
+          if (seen.held < nodes.length) {
+            note(`held-row worst case (${st.kind}): ${seen.held} of ${nodes.length} nodes painted as held rows on screen, so the rows it exists to measure were not all there`);
+          }
+          if (!seen.labels.length || !seen.labels.every((l) => st.label.test(l))) {
+            note(`held-row worst case (${st.kind}): the Spar button said ${JSON.stringify(seen.labels[0] ?? 'nothing')}, so this state was never reached`);
+          }
+          // ONE line per state, naming the worst: with the wrap gone every
+          // held row spills at once, and ninety-seven lines of the same
+          // finding bury the one that says how bad it is.
+          const spilt = (await evaluate(CONTAINED))
+            .map((o) => ({ ...o, worst: Math.max(o.right, o.left, o.past) }))
+            .filter((o) => o.worst > 1)
+            .sort((x, y) => y.worst - x.worst);
+          if (spilt.length) {
+            const w = spilt[0];
+            note(`at ${Math.round(TEXT_SCALE * 100)}% text with every node held and the ring ${st.kind},`
+              + ` ${spilt.length} element(s) leave their card; the worst is ${w.sel} "${w.label}"`
+              + ` leaving its ${w.card} or the phone by ${Math.round(w.worst)}px`);
+          }
+          await evaluate(`document.documentElement.style.fontSize = ''`);
+        }
+      } finally {
+        await send('Page.removeScriptToEvaluateOnNewDocument', { identifier: pin });
+      }
+    }
+
     // Nothing reads the DOM after this, so there is no need to navigate back.
 
     // ---- 1f. and every word of it can be read off the screen -------------

@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**3 entries queued.** R187, R189, R190.
+**2 entries queued.** R189, R190.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -6829,7 +6829,7 @@ triangle working, and each region genuinely asks a different question)*.
   on a mission, its odds and risk are stated in data, and it is not strictly
   better than sending the best infiltrator.*
 
-- **R187 — The gates that measure a fixture instead of a bound.** R180's rot
+- **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same
   defect wearing four costumes: a rule whose threshold was set beside one
   reading of the day-180 walk, so the next milestone that touches the economy
@@ -6873,6 +6873,50 @@ triangle working, and each region genuinely asks a different question)*.
   one existing budget is restated as a bound with its worst case measured
   rather than assumed; and the battery's own notes say, for each rule
   touched, what would make it blind again.*
+
+  **Shipped: three rules that build the state they guard, and one budget
+  that no campaign can move.** Each of the three breaks was measured on a
+  clean tree first, and each was blind or lucky for a reason that had nothing
+  to do with its rule.
+  * **389 was caught by a lottery.** The fuzz draws 200 of a day-180 save's
+    560 paths, and only a `null` (one mutant in fourteen) on one of five rival
+    records trips a raw read: p = 6.4e-4 a draw, 12% a run. R186's battery
+    won it. Smoke's 6d now finds every record map a save carries and gives
+    each every junk value, at a real key and at one nobody names; 389 fails
+    there with the fuzz switched off.
+  * **388 was invisible to its only witness.** The county says 446 phrasings
+    with the retainer's daily line and 423 without it, against R109's floor
+    of 400. The line is now asserted where it is written: a week on a
+    retainer files eight (the signing day is a day), a second visit the same
+    day none, two months a capped few.
+  * **372 depended on the walk's map.** The 150% lap measures whatever held
+    nodes the walk left, and whether one of them overflows is the whole
+    answer. a11y's new 1h2 holds EVERY node in each of the Spar button's
+    three states on a pinned clock, and reads 154px on the break
+    (`no-one fit`) where the lap reads 86.
+
+  **The Vault's shut budget is a bound now.** A pass at the end of
+  `tools/height.js` builds sixteen shelves (every species, tight and full,
+  with spares and without, a resequence running, at all four Extractor
+  levels) and measures the tallest: 3,265px and 582 words, against the
+  walk's 2,720 and 405. The budget is 3,300 / 600, with less than one bay of
+  slack, so a species shipping goes red on purpose and the walk cannot move
+  it at all. Break 465 proves it sees what the walk cannot: a render-duplicates
+  row that lists every duplicate adds sixty lines to a shelf with spares, and
+  the day-180 shelf has none.
+
+  **Every rule touched says what would blind it again**, in the gate and
+  beside its break. Breaks 465-468 prove the new rules on states the walk
+  does not reach: the bound's spares shelf, the held-row pass's open cards,
+  the record-map detector, and the retainer's long-absence cap. The full
+  battery that proved it caught all 459 breaks, with no miss, in 285
+  minutes.
+
+  *Of the four worked examples above:* R152's median and R95's variant rule
+  were settled in R186 (the median band, and break 347 retired on its own
+  note's instruction). The Vault is the bound. The Dex combos budget is still
+  a reading, because its driver is which part names wrap and no fixture pins
+  that down; R136's instruction to page the tab stands.
 
 - **R186 — The rare, the unique, and the run that remembers one.** ✅ R179
   shipped the machinery and one uncommon; this is the content the machinery

@@ -5592,6 +5592,46 @@ if (inShard('curve')) {
     // row of switches to turn all on.
     signContract(broke, offers[1].id, content, t0 + 24 * 3600000);
     assert.equal(activeContract(broke)?.opId, offers[1].id, 'signing replaces rather than adds');
+
+    // R187 — AND IT FILES ITS LINE, asserted where it is written rather than
+    // inferred from the whole wire. Break 388 (the ledger line stops reaching
+    // the wire) was MISSED in R180's rot check and again in R186's full
+    // battery. Its only witness was R109's floor of 400 distinct phrasings
+    // over a day-180 walk, and that walk now says 446 with the retainer and
+    // 423 without it: the line is worth 23 phrasings and 181 lines, and the
+    // floor has 46 of headroom. The rule was true; the aggregate stopped being
+    // able to see it the day enough other content arrived.
+    //
+    // THE WORST CASE IS A LONG ABSENCE, because that is where a per-day rule
+    // and a per-visit rule part company: a week away hears the arrangement
+    // once a day for the week, capped so a month cannot bury the wire, and a
+    // second visit the same day hears nothing new.
+    //
+    // WHAT WOULD MAKE IT BLIND AGAIN: a contract that files its line
+    // somewhere other than `settleContracts`' return (the caller pushes that
+    // list to the wire, and a second route would need its own witness), or a
+    // cap raised past the absence this asserts over.
+    {
+      const away = lab(802, { funds: 0 });
+      away.chimeras = [];
+      const offer = contractList(content)[0];
+      assert.ok(signContract(away, offer.id, content, t0).ok, 'a retainer can be signed');
+      const week = settleContracts(away, content, t0 + 7 * 24 * 3600000);
+      // Eight, not seven: the day it was signed is a day on the ledger too.
+      assert.equal(week.news.length, 8,
+        `a week on a retainer files one ledger line a day, the signing day included (${week.news.length} of 8)`);
+      assert.ok(week.news.every((l) => typeof l === 'string' && l.trim().length > 0),
+        'and every one of them is a sentence');
+      assert.ok(new Set(week.news).size > 1,
+        `drawn from its pools rather than one line repeated (${new Set(week.news).size} distinct)`);
+      assert.equal(settleContracts(away, content, t0 + 7 * 24 * 3600000 + 3600000).news.length, 0,
+        'and a second visit the same day hears nothing new');
+      const month = settleContracts(away, content, t0 + 60 * 24 * 3600000);
+      // Fewer lines than days away, and not none: the cap is operations.js's
+      // own and is not re-typed here; what this holds is that it exists.
+      assert.ok(month.news.length > 0 && month.news.length < 53,
+        `53 days away is capped rather than silent or buried (${month.news.length} lines)`);
+    }
   }
 
   // RULE 2 — failure never costs a creature. You cannot punish a losing
@@ -25610,6 +25650,73 @@ if (inShard('untrusted')) {
         const { repairs } = cleanSave(s);
         assert.ok(!repairs.some((r) => r.at === at),
           `${at} = ${String(fine)} is already empty and is not "repaired" (${JSON.stringify(repairs)})`);
+      }
+    }
+  }
+
+  // 6d. R187 — EVERY RECORD MAP, EXPLICITLY, FOR THE SAME REASON AS 6c.
+  //
+  //     Break 389 (the guide reads `campaign.rivals` raw, and one null record
+  //     stops the Ranch rendering) was MISSED in R180's rot check and caught in
+  //     R186's, with nothing about the rule changed either time. Measured on
+  //     R187's tree: the day-180 save has 560 paths, five of them rival
+  //     records, and only the `null` mutant (one of fourteen) trips a raw
+  //     read, so each of the fuzz's 200 draws lands on it with p = 6.4e-4 and
+  //     a whole run finds it 12% of the time. It is caught today because this
+  //     save's shape happens to win that lottery.
+  //
+  //     A RECORD MAP is an object whose every value is an object, keyed by an
+  //     id: `campaign.rivals` is the one a day-180 save carries. Found off the
+  //     save rather than typed, so a second one is covered the day it ships.
+  //     Each gets every junk value at a real key AND at a key no content
+  //     names, because a raw `Object.values` reads both and `rivalRecord` only
+  //     ever asks for the first.
+  //
+  //     WHAT WOULD MAKE IT BLIND AGAIN: a save with no record map at all (the
+  //     count below says so rather than passing), or a reader that walks some
+  //     other shape of untrusted collection — an array of records is not a
+  //     map, and 6c and the fuzz are what reach those.
+  {
+    const base = walkedSave({ days: 180 });
+    const isRecord = (v) => v && typeof v === 'object' && !Array.isArray(v);
+    const maps = [];
+    (function walk(o, p) {
+      for (const [k, v] of Object.entries(o ?? {})) {
+        const at = p ? `${p}.${k}` : k;
+        if (!isRecord(v)) continue;
+        const vals = Object.values(v);
+        if (vals.length && vals.every(isRecord)) maps.push(at);
+        walk(v, at);
+      }
+    })(base, '');
+    assert.ok(maps.length >= 1,
+      `a day-180 save carries at least one record map for this pass to junk (found ${maps.length})`);
+    const JUNK = [null, 42, 'hello', [], true];
+    for (const at of maps) {
+      for (const key of [null, '__nobody__']) {
+        for (const junk of JUNK) {
+          const s = structuredClone(base);
+          let node = s;
+          for (const k of at.split('.')) node = node[k];
+          const slot = key ?? Object.keys(node)[0];
+          node[slot] = structuredClone(junk);
+          const where = `${at}.${slot} = ${JSON.stringify(junk)}`;
+          let r;
+          try {
+            r = await importSave(JSON.stringify(s));
+          } catch (err) {
+            assert.fail(`${where} THREW out of importSave: ${err.message}`);
+          }
+          if (!r.ok) continue;
+          for (const { screen, fn, file } of shellScreenMap()) {
+            try {
+              (await import(`../${file}`))[fn](stubEl(),
+                { state: r.save, content, now: () => now, save: () => {}, refreshTicker: () => {} });
+            } catch (err) {
+              assert.fail(`${where} broke the ${screen} render: ${err.message}`);
+            }
+          }
+        }
       }
     }
   }

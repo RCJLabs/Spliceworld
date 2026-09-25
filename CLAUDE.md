@@ -79,7 +79,13 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (~5h25m. R186 is the SEVENTH reading: 456 breaks at 22m,
+**The full battery (4h45m to 5h25m. R187 is the EIGHTH reading: 459 breaks
+at 21m, 62m, 121m and 81m, which is 285 minutes. That is 39 minutes under
+R186 on a tree that only ADDED work (four breaks and three new gate passes),
+so the difference is the host. There are now two readings near 4h40m (R188,
+R187) and three near 5h25m (R118, R185, R186), all on the same box, so this
+is a range, not a number: plan an evening on the top of it.
+R186 was the SEVENTH reading: 456 breaks at 22m,
 83m, 133m and 86m, which is 324 minutes. It agrees with R118 and R185 below
 and not with R188, so the four chunks cost what they did before R188.
 R188 was the sixth reading, and it disagreed with
@@ -112,15 +118,16 @@ R116 before chunking: one to a tree edited underneath it, one to a restart
 twenty-five minutes in. Build the id list from the file, because break
 numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327, 347
 are retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
-455 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
+459 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
 gene probe, R183 added 399-401 for the job headline, R185 added 402-404 for
 the Dex tab list, R176 added 405-407 for the lazy synth, R179 added 408-412
 for the expedition, R180 added 413-422 for the mission board, R181 added
 423-430 for the payroll, R188 added 431-435 for the walker running it, R182
 added 436-445 for the Vault's way out, R184 added 446-450 for the room
-inside `main`, and R186 added 451-464 for the rare, the unique and the run
-that remembers one. The count and the top id have not agreed since the
-retirements: 455 breaks, numbered to 464. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
+inside `main`, R186 added 451-464 for the rare, the unique and the run
+that remembers one, and R187 added 465-468 for the gates that build their
+worst case. The count and the top id have not agreed since the
+retirements: 459 breaks, numbered to 468. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
 against a tree carrying 410, because a milestone that adds breaks has to
 remember to come back here and nobody had. Trust `--anchors`, which prints
 the real total, over this sentence. Count with `--anchors`, which
