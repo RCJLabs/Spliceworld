@@ -4462,11 +4462,12 @@ const BREAKS = [
     // head once R186 and the R191 it folded in have both left it. R187 did
     // it again before ticking itself: re-aimed at R189, the head after it.
     // R189 likewise, before its own tick: re-aimed at R190. R190 likewise:
-    // re-aimed at R192, the head of the queue it leaves.
+    // re-aimed at R192, the head of the queue it leaves. R192 likewise:
+    // re-aimed at R193.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: '- **R192 — The walk never sends an agent.**',
-    to: '- **R192 — The walk never sends an agent.** ✅',
+    anchor: '- **R193 — The vet bill spreads the call-out over the battle clock alone.**',
+    to: '- **R193 — The vet bill spreads the call-out over the battle clock alone.** ✅',
   },
   {
     // The other direction: the count beside the list stops matching the list.
@@ -5380,13 +5381,14 @@ const BREAKS = [
     // stopped opening, which is why 198 went MISSED the first time.
     // R143 moved `tallest` 4100 -> 4120 (the shelf summarises a different
     // spread), so the anchor follows the number it sits beside, and R186
-    // moved it again for R182's least-missed card. R187 restated it as a
-    // bound measured on the worst case, so it should now move only when a
-    // species ships. What the break aims at is `opens`, which is untouched.
+    // moved it again for R182's least-missed card. R187 bounded the SHUT half
+    // on the worst case; the open half is still a reading, and session 216's
+    // faster table moved it by two species bays (4440 -> 4600). What the
+    // break aims at is `opens`, which is untouched.
     n: 199, gate: HEIGHT, name: 'the height gate stops asking whether a folding screen still opens',
     file: 'tools/height.js',
-    anchor: '  vault:          { folded: 3300,  tallest: 4440, opens: 20 },',
-    to: '  vault:          { folded: 3300,  tallest: 4440 },',
+    anchor: '  vault:          { folded: 3300,  tallest: 4600, opens: 20 },',
+    to: '  vault:          { folded: 3300,  tallest: 4600 },',
   },
   {
     // R137 — the five rows that point at the Ranch go back to navigating to
@@ -7015,6 +7017,60 @@ const BREAKS = [
     file: 'tools/sim.js',
     anchor: 'export const WALK_INJURY_HOURS = 3;',
     to: 'export const WALK_INJURY_HOURS = 2;',
+  },
+  {
+    // R192 — A SENT DUTY WAITS FOR THE STATIONED ONES. Inverted, the agent
+    // takes the first slot and the hand waits for him, so the shipped
+    // campaign pays an agent's wage from day one for a board it has not met.
+    // BLIND AGAIN IF the diet gate stops checking the shipped walk's hires for
+    // a sent duty, and only checks the third-slot variant.
+    n: 484, gate: DIET, name: 'the walker hires its agent first and stations nobody until he is on the books',
+    file: 'tools/sim.js',
+    anchor: '    if (meta[duty]?.sent && duties.some((d) => !meta[d]?.sent && !staffed(d))) continue;',
+    to: '    if (!meta[duty]?.sent && duties.some((d) => meta[d]?.sent && !staffed(d))) continue;',
+  },
+  {
+    // R192 — A CAUGHT CREATURE IS CONSCRIPTED FOR GOOD. Forgetting that sends
+    // the better infiltrator onto sabotage even when losing it is permanent
+    // and losing the agent is a week. Measured: 7 of the 376 choices on
+    // seeds 2026/7 are decided by this clause alone.
+    // BLIND AGAIN IF the gate reads the walker's logged `permanent` instead of
+    // recomputing it from the mission's own `risk`.
+    n: 485, gate: DIET, name: 'the walker risks a creature it can never get back where its agent would only lose a week',
+    file: 'tools/sim.js',
+    anchor: "      const permanent = mission?.risk === 'conscripted';",
+    to: '      const permanent = false;',
+  },
+  {
+    // R192 — THE AGENT IS WEIGHED, NOT ASSUMED. Sending him whenever he is free
+    // is the census's "always" policy: held for questioning 1,263 times where
+    // weighing gets 235. The creature branch disappears where he is free.
+    // BLIND AGAIN IF the gate stops requiring each branch to occur.
+    n: 486, gate: DIET, name: 'the agent goes on every job he is free for, however much better the creature is',
+    file: 'tools/sim.js',
+    anchor: '      const sendAgent = !!odds && (odds.creature === null || permanent || odds.agent >= odds.creature);',
+    to: '      const sendAgent = !!odds;',
+  },
+  {
+    // R192 — AND THE CREATURE IS NOT ASSUMED EITHER. "Only when no creature is
+    // spare" is the census policy that sent him NEVER: the board's cooldown
+    // paces this walker's capers, not its bench.
+    // BLIND AGAIN IF the gate stops recomputing each choice from its logged
+    // chances.
+    n: 487, gate: DIET, name: 'the agent only goes when no creature is spare, which on this walker is never',
+    file: 'tools/sim.js',
+    anchor: '      const sendAgent = !!odds && (odds.creature === null || permanent || odds.agent >= odds.creature);',
+    to: '      const sendAgent = !!odds && odds.creature === null;',
+  },
+  {
+    // R192 — THE CHOICE IS LOGGED WITH WHAT IT WAS MADE ON. Without the
+    // chances in the log, the gate has nothing to check and would pass on
+    // silence; it asks each branch to appear so silence reads as a failure.
+    // BLIND AGAIN IF the branch-count clause is dropped.
+    n: 488, gate: DIET, name: "the walk stops saying what each caper's sender was chosen on",
+    file: 'tools/sim.js',
+    anchor: '        ...(pick.odds ? { odds: pick.odds, permanent: pick.permanent } : {}),',
+    to: '',
   },
 ];
 
