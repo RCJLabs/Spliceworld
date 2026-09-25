@@ -6861,7 +6861,13 @@ triangle working, and each region genuinely asks a different question)*.
     roster, and R190's first bill put seed 2026 exactly on the grant. The
     rule now asks for a majority of its seven campaigns: 7 of 7 over on the
     shipped policy, 0 of 7 under break 252.
-  Breaks 477-483, and 433 re-aimed at rule 3's coverage half.
+  Breaks 477-483, and 433 re-aimed at rule 3's coverage half. The full
+  battery read 473 of 474 in 356 minutes. The miss was break 420 (renewal
+  back on the board's eleven hours), which R93's defence ceiling had caught
+  by half a point (90.5% held against 90). The vet policy moved the walks to
+  89.3%, so the gate now asks renewal's frequency directly: no campaign runs
+  a specimen-spending mission more than eight times (clean 4/3/4/3/1, the
+  break 22/11/12/17/16).
 
 - **R189 — A henchman runs a mission.** ✅ R181's entry said a henchman "can
   also run an R180 mission, which is how espionage stops costing a chimera."
