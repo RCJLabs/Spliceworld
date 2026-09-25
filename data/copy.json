@@ -205,7 +205,7 @@
     "no_slot": "Every slot is taken. Hold more of the county, or let somebody go.",
     "unknown": "Nobody by that name answered the advert.",
     "not_hired": "That person does not work here, which is news to them too.",
-    "tally_field": "{done} jobs run, {missed}h helping the police",
+    "tally_field": "Jobs run: {done} · {missed}h helping the police",
     "detained": "Helping the police with their enquiries. Back in {time}.",
     "poached": "{name} works for {rival} now. The non-compete runs out in {days} days.",
     "poached_somebody": "a rival lab"

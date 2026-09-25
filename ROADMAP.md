@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**2 entries queued.** R189, R190.
+**2 entries queued.** R190, R192.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -6820,7 +6820,7 @@ triangle working, and each region genuinely asks a different question)*.
   walker's pick on at least one seed, or the entry argues from the numbers
   why a vet nobody should hire belongs on the roster.*
 
-- **R189 — A henchman runs a mission.** R181's entry said a henchman "can
+- **R189 — A henchman runs a mission.** ✅ R181's entry said a henchman "can
   also run an R180 mission, which is how espionage stops costing a chimera."
   Not shipped: every mission still sends a creature. The shape is the same
   as a duty — one hire, one standing job — but the odds are anatomy, and a
@@ -6828,6 +6828,51 @@ triangle working, and each region genuinely asks a different question)*.
   is a choice rather than a free mission. *Done when: a henchman can be sent
   on a mission, its odds and risk are stated in data, and it is not strictly
   better than sending the best infiltrator.*
+
+  **Shipped: Fieldwork, and Mister Wicket.** A duty the file marks `sent`
+  holds no standing clock. Its hire is offered beside the creatures on the
+  mission board's "Sending whom?", and takes the same scarce slot a hand or
+  a vet would, so the first hire of a lab is now a hand, a vet or an agent.
+  * **The odds are data.** Wicket's `aptitude` (0.45, in
+    `data/henchmen.json`) goes into the board's own formula where a
+    creature's Camo, speed and mass blend would. It was measured into place:
+    the median purebred build reads 0.375, and the best infiltrator the
+    anatomy can make (the chameleon with no hide, on frame A) reads 1.000.
+    So Wicket runs 47-56% on espionage and 48-59% on sabotage: better than
+    what a typical ranch would send, worse than a built infiltrator on every
+    mission and every length.
+  * **The risk is data.** Each mission's `agent` block says what a failure
+    costs him. Espionage holds him 24 hours, on full pay. A caught sabotage
+    (`catchOnFail` 0.4) gets him hired away by that lab for 7 days, and the
+    hire card names the lab until the days are up. Renewal, which leaves its
+    specimen behind, takes no agent at all. He bills $25 in expenses a job,
+    and the welcome-back card says so.
+  * **Not strictly better.** The smoke gate finds the best infiltrator by
+    search, over every purebred with and without its hide on every frame,
+    and holds the agent strictly between it and the median build on every
+    mission and length. What the agent wins is that no creature leaves the
+    ranch; what it pays is the odds, a wage per head of the operation, and a
+    slot.
+  * **SAVE_VERSION 64** adds the poached book and an agent's hold clock.
+    Every clock is built at launch (`freeAt`), so the eager tick only files
+    it. The agenda's mission row still counts creatures only: lighting it
+    for a free agent would have cost the eager graph more than the 0.7 KB of
+    code and 0.2 KB of prose it had left.
+  * **The walk never hires an agent** (rule 5 in `walkHire`), so the day-180
+    walk and every gate that reads it are unchanged. Teaching it to send
+    one is R192, the way R188 followed R181.
+
+- **R192 — The walk never sends an agent.** Found by R189. The walker's
+  hiring policy never takes a Fieldwork hire, because its mission policy
+  sends creatures and an agent it never sends is a wage for nothing. So no
+  campaign number says what Mister Wicket is worth: how often a real ranch
+  would rather send him than its best creature, what his wage costs against
+  what his jobs pay, and whether a poaching ever happens. R181's proof lived
+  in fixtures until R188 made the walk hire; this is the same gap, one duty
+  over. *Done when: the walker weighs an agent against its own best
+  infiltrator by a stated policy; a census says how often each is sent and
+  what the agent earns against his wage; and every gate the cascade moves is
+  re-derived.*
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same

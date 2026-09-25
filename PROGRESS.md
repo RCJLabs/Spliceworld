@@ -1,5 +1,78 @@
 # PROGRESS
 
+## Session 214 — R189: A henchman runs a mission ✅
+
+**A hire can now be sent where a creature used to be. Mister Wicket, the
+first Field Agent, brings a stated aptitude to the mission board's own
+formula, pays for a failure in ways the file names, and loses to a built
+infiltrator on every job, so he is a choice and not a free mission.**
+
+### Measured first
+
+- The premise held: `startMission` refused anything but a fit creature, and
+  no hire carried a number a mission could read.
+- The aptitude spread the agent had to sit inside: the best infiltrator the
+  anatomy can make is the chameleon with no hide on frame A (1.000; R180's
+  notes named the frame-M one at 0.883). The median purebred build reads
+  0.375, and the day-180 walk's best creature 0.420 (median 0.123).
+
+### What shipped
+
+- **Fieldwork**, a duty marked `sent`: no standing clock, the same scarce
+  slot. **Mister Wicket**: aptitude 0.45, wage 3 a head, $25 expenses a job.
+  47-56% on espionage, 48-59% on sabotage.
+- **Each mission's `agent` block.** Espionage detains him 24h on full pay;
+  a caught sabotage (0.4) has the lab hire him away for 7 days, and the hire
+  card names the lab. Renewal takes no agent.
+- **The War Room** offers him beside the creatures, prices his job
+  (odds, purse, expenses, his own risk), and the Payroll row shows his jobs,
+  his hours held, and when he is back.
+- **SAVE_VERSION 64**, a migration, a v64 fixture, and load-time repair of
+  the poached book and the hold clock.
+- **The walker never hires an agent** (rule 5 in `walkHire`), so the day-180
+  walk is unchanged. R192 is filed to teach it.
+
+### Found on the way
+
+- **The eager graph had no room for the agenda.** The first draft put the
+  agent list and the whole settle in `campaign/mission.js` and read 335.87 KB
+  of code (cap 335) and 261.46 of prose (cap 261). Building every clock at
+  launch (`freeAt`, R180's own rule), moving `missionAgents` to the lazy
+  `caper.js`, and leaving the agenda's mission row counting creatures only
+  brought it to 334.94 / 260.91. No budget moved.
+- **R181's digest clause could not see an agent.** An agent idle all week
+  has no line; the week-away fixture now sends him on one job that cannot
+  poach him, so his line has something true to say.
+- **The handler fixture's one hire is now the agent**, which still paints
+  both payroll verbs and is the only thing that paints `data-cap-agent`.
+- **Clause 8 asked only that nothing threw.** Every reader survives junk, so
+  that could not tell a repair from a pass-through; it now asserts the shape
+  `cleanSave` leaves (break 476).
+- The first suite run went red on two rules the milestone had not read: a
+  notes heading must be a data path, and §4.0 states the save version.
+- "Mister Wicket ran 1 jobs" — the report is a ledger now, right at any count.
+
+### Gates
+
+- The R189 block in smoke (`capers`, shard a): eight clauses.
+- Breaks 469-476; 415 and 276 re-aimed. The list is 467 breaks, numbered to 476.
+- `npm test` alone, the browser gates, and a browser pass at 380px: Wicket's
+  button 96x40, no sideways scroll, sent, reloaded mid-job with the sealed
+  run intact, and zero console errors on the agent flow, a fresh save and a
+  v63 save (which arrives at v64 with an empty poached book).
+
+### Known issues
+
+- The agenda's mission row still counts creatures only: a lab whose only
+  free hand is Wicket is not prompted. The eager budgets are the reason.
+- On the card Wicket is a button among the creatures; only the risk and odds
+  lines say "your agent" once he is picked.
+- No campaign measures him (R192).
+
+### Next session's first task
+
+The §9.0 queue: R190, R192.
+
 ## Session 213 — R187: The gates that measure a fixture instead of a bound ✅
 
 **Three rules that saw their defect only when the day-180 walk happened to

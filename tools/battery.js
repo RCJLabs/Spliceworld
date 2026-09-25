@@ -4447,10 +4447,11 @@ const BREAKS = [
     // R186 did the same before its own tick: re-aimed at R187, the queue's
     // head once R186 and the R191 it folded in have both left it. R187 did
     // it again before ticking itself: re-aimed at R189, the head after it.
+    // R189 likewise, before its own tick: re-aimed at R190.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: '- **R189 — A henchman runs a mission.**',
-    to: '- **R189 — A henchman runs a mission.** ✅',
+    anchor: "- **R190 — Doc Sutures is never the walker's vet.**",
+    to: "- **R190 — Doc Sutures is never the walker's vet.** ✅",
   },
   {
     // The other direction: the count beside the list stops matching the list.
@@ -6344,8 +6345,10 @@ const BREAKS = [
   {
     n: 415, gate: SHARD_A, name: 'renewal hands the specimen back, and the loudest mission in the game costs nothing',
     file: 'campaign/caper.js',
-    anchor: "  if (mission.alwaysSpends) fate = 'released';",
-    to: "  if (false) fate = 'released';",
+    // R189 re-aimed: the creature branch now follows the agent's, so the
+    // line opens with `} else`. Same edit, same rule.
+    anchor: "  } else if (mission.alwaysSpends) fate = 'released';",
+    to: "  } else if (false) fate = 'released';",
   },
   {
     n: 416, gate: SHARD_A, name: 'armour stops cancelling camouflage, and a plated bruiser is as quiet as a chameleon',
@@ -6809,6 +6812,94 @@ const BREAKS = [
     file: 'campaign/operations.js',
     anchor: '  for (let d = last + 1; d <= day && news.length < CONTRACT_LINES_MAX; d++) {',
     to: '  for (let d = last + 1; d <= day; d++) {',
+  },
+  {
+    // R189 — THE AGENT'S ODDS ARE ITS STATED APTITUDE, AND NOTHING ELSE. A
+    // perfect score is the strictly-better agent the criterion forbids: it
+    // ties the best infiltrator the anatomy can make on every job, so the
+    // gate's search-found ceiling and the formula both go red.
+    // BLIND AGAIN IF the best build the search finds scores under 1.0, so a
+    // perfect agent beats it and the `agent < best` clause is the only one
+    // left asking — or if clause 4 stops recomputing the formula.
+    n: 469, gate: SHARD_A, name: 'an agent brings a perfect score to every job, whatever the file says',
+    file: 'campaign/caper.js',
+    anchor: '  const apt = agent ? { score: clamp01(agent.aptitude) } : chimera ? missionAptitude(content, chimera) : { score: 0 };',
+    to: '  const apt = agent ? { score: 1 } : chimera ? missionAptitude(content, chimera) : { score: 0 };',
+  },
+  {
+    // R189 — THE RISK IS THE FILE'S. A catch rate typed into the engine
+    // agrees with sabotage's 0.4 by coincidence and with nothing else; the
+    // gate re-runs the job at catchOnFail 0 and expects the agent home.
+    // BLIND AGAIN IF clause 5 only tests the shipped 0.4, where the literal
+    // and the file agree.
+    n: 470, gate: SHARD_A, name: 'a lab catches an agent at the rate it always catches, whatever the mission says',
+    file: 'campaign/caper.js',
+    anchor: "    if (!success && risk.risk === 'poached' && rng() < (risk.catchOnFail ?? 0)) fate = 'poached';",
+    to: "    if (!success && risk.risk === 'poached' && rng() < 0.4) fate = 'poached';",
+  },
+  {
+    // R189 — A HELD AGENT IS HELD. Dropping the clock keeps the tally
+    // honest (the hours are still counted) and frees the agent at once,
+    // which is the one thing detention exists to stop.
+    // BLIND AGAIN IF clause 5 stops reading `detainedUntil` or stops trying
+    // to send the agent before the hours are up.
+    n: 471, gate: SHARD_A, name: 'a held agent walks straight out of the cell and back onto the board',
+    file: 'campaign/mission.js',
+    anchor: "    if (result.fate === 'detained') Object.assign(rec, { detainedUntil: out.freeAt, missed: (+rec.missed || 0) + (+out.detainHours || 0) });",
+    to: "    if (result.fate === 'detained') Object.assign(rec, { missed: (+rec.missed || 0) + (+out.detainHours || 0) });",
+  },
+  {
+    // R189 — A POACHED AGENT IS THE LAB'S FOR THE FILE'S DAYS. Reading the
+    // book as empty lets the player hire them straight back, and the price
+    // of a caught sabotage is a button press.
+    // BLIND AGAIN IF clause 5 asks `hireBlock` only after the days are up.
+    n: 472, gate: SHARD_A, name: 'the lab that hired an agent away hands them straight back',
+    file: 'campaign/staff.js',
+    anchor: '  const gone = poachedOf(state, id);',
+    to: '  const gone = null;',
+  },
+  {
+    // R189 — A MISSION THAT SPENDS ITS SPECIMEN TAKES NO AGENT. Written into
+    // the data rather than the engine: renewal grows an `agent` block, and
+    // the engine would happily send somebody with nothing to leave behind.
+    // BLIND AGAIN IF clause 1 stops checking `alwaysSpends` against `agent`.
+    n: 473, gate: SHARD_A, name: 'renewal takes an agent, and leaves nobody behind',
+    file: 'data/missions.json',
+    anchor: '      "alwaysSpends": true,',
+    to: '      "alwaysSpends": true,\n      "agent": {\n        "risk": "detained",\n        "detainHours": 24\n      },',
+  },
+  {
+    // R189 — AN AGENT'S QUIRK COSTS MONEY, SO ITS LINE SAYS HOW MUCH. R181's
+    // digest clause, reached for an agent only because the week now carries
+    // a job: without one the agent has no line at all to be wrong in.
+    // BLIND AGAIN IF the week-away fixture stops sending the agent, or sends
+    // it on a job that can poach it off the books before it reports.
+    n: 474, gate: SHARD_D, name: "an agent's report stops saying what the sandwiches cost",
+    file: 'data/henchmen.json',
+    anchor: 'Sandwiches billed: {billed}.',
+    to: 'Sandwiches billed: plenty.',
+  },
+  {
+    // R189 — THE CARD OFFERS THE AGENT. An engine nobody can reach from the
+    // War Room is the mission board's R95 lesson again; the handler gate is
+    // the rule that sees a control no surface paints.
+    // BLIND AGAIN IF the handler fixture stops hiring an agent (a hand
+    // there paints the payroll's verbs and not this one).
+    n: 475, gate: HANDLERS, name: 'the mission card stops offering an agent, so nobody can pick one',
+    file: 'campaign/ui.js',
+    anchor: '  const agents = mission.agent ? missionAgents(state, content, t) : [];',
+    to: '  const agents = [];',
+  },
+  {
+    // R189 — THE LOAD PATH REPAIRS THE POACHED BOOK. An entry with no time
+    // is not a non-compete; kept, it rides the save forever and a reader
+    // that forgets to check it holds an agent on a string.
+    // BLIND AGAIN IF clause 8 stops asserting the book's shape after
+    // `cleanSave`, and only asks that nothing threw.
+    n: 476, gate: SHARD_A, name: "a save's junk poached book is carried into the game rather than repaired",
+    file: 'save/schema.js',
+    anchor: "        if (!e || typeof e !== 'object' || !Number.isFinite(e.until)) {",
+    to: '        if (!e) {',
   },
 ];
 

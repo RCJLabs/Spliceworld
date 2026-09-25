@@ -91,7 +91,7 @@
       "aptitude": 0.45,
       "fee": 25,
       "quirk": "Goes in so your creatures stay home. Not as slippery as a chameleon with nothing on, and bills every job for sandwiches.",
-      "report": "{name} ran {done} jobs while you were out, spent {missed} hours helping the police with their enquiries, and billed {billed} in sandwiches.",
+      "report": "{name} worked the board while you were out. Jobs run: {done}. Hours helping the police with their enquiries: {missed}. Sandwiches billed: {billed}.",
       "order": 5
     }
   }

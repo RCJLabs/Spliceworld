@@ -1079,7 +1079,9 @@ function missionCard(state, ctx, t) {
       ${onBooks ? `<p class="fine-print">${fill(content.copy?.mission?.agent_refused, {})}</p>` : ''}
       <p class="fine-print">${esc(mission.brief ?? '')}</p>
       <p class="fine-print">${agent
-    ? fill(content.copy?.mission?.[`agent_risk_${mission.agent.risk}`], {
+    ? fill(mission.agent.risk === 'poached'
+      ? content.copy?.mission?.agent_risk_poached
+      : content.copy?.mission?.agent_risk_detained, {
       hours: mission.agent.detainHours ?? 24, days: mission.agent.poachDays ?? 7,
     })
     : mission.risk === 'conscripted'
