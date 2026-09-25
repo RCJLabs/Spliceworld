@@ -18289,9 +18289,45 @@ if (inShard('contest')) {
   //     the books did the job they are paid for. Red on the tree that
   //     shipped R181, where every walk ends with an empty payroll.
   {
-    const { slotsOf } = await import('../campaign/staff.js');
+    const { slotsOf, hireRoster } = await import('../campaign/staff.js');
+    const { hireBill } = await import('./sim.js');
     const duties = Object.keys(content.henchmenMeta?.duties ?? {});
     const said = [];
+
+    // R190 — A REFUSAL HAS A PRICE, AND THE GAME STATES IT. The walker ranked
+    // vets by how much of the roster each would touch, so the one who refuses
+    // anybody over 40 instability lost to the one who bills $20 an hour on
+    // every seed ever walked. Measured over sixteen seeds, the $20 bought 6,681
+    // hours more than Doc for $302,243, which is about $45 an extra hour against
+    // the Infirmary's own $18 (data/rush.json, the price splice/scars.js charges
+    // to end the clock), and it moved dominion by nothing on sixteen of sixteen.
+    // So the bill is the rule for a duty whose work the game sells: a vet's
+    // fee on the patients it treats, plus the Infirmary's price for the hours
+    // it would have saved on the ones it refuses. Stated from the data, so
+    // moving the price moves the bill.
+    {
+      const { rushTuning } = await import('../splice/rush.js');
+      const vets = hireRoster(content).filter((h) => h.duty === 'infirmary');
+      assert.ok(typeof hireBill === 'function' && vets.length >= 2,
+        'the walker states what a vet costs on this ranch (hireBill in tools/sim.js) — R190 has not shipped');
+      const ward = (insts) => ({ chimeras: insts.map((i, n) => ({ id: `w${n}`, instability: i })), ranch: { stock: [] } });
+      const price = rushTuning(content).perHour;
+      for (const insts of [[10, 20, 30], [10, 90], [90, 95]]) {
+        for (const h of vets) {
+          const cov = insts.filter((i) => i <= (h.ceiling ?? 100)).length / insts.length;
+          const rate = h.rate ?? 2;
+          const want = cov * (h.fee ?? 0) / rate + (1 - cov) * price * (1 - 1 / rate);
+          assert.ok(Math.abs(hireBill(content, h, ward(insts)) - want) < 1e-9,
+            `${h.id} on a ward at ${insts.join('/')} bills its fee on who it treats and the Infirmary's price on who it refuses (${hireBill(content, h, ward(insts))} vs ${want})`);
+        }
+      }
+      const dearer = { ...content, rushMeta: { ...(content.rushMeta ?? {}), perHour: price * 2 } };
+      const doc = vets.find((h) => (h.ceiling ?? 100) < 100);
+      assert.ok(hireBill(dearer, doc, ward([10, 90])) > hireBill(content, doc, ward([10, 90])),
+        'and a dearer Infirmary makes a refusal dearer — the price is read, not typed');
+      assert.equal(hireBill(content, hireRoster(content).find((h) => h.duty === 'care'), ward([10])), null,
+        'a duty whose work the game does not sell (a feed is a button) has no bill, and keeps R188\'s coverage rule');
+    }
     for (const w of walks) {
       const p = w.payroll;
       assert.ok(p && p.openDay != null, `${w.seed}: the walk reaches the moment the game introduces the payroll`);
@@ -18303,6 +18339,18 @@ if (inShard('contest')) {
       assert.equal(p.hired.length, open, `${w.seed}: every slot the map opens is filled (${p.hired.length} of ${open})`);
       for (const h of p.hired) {
         assert.ok(h.done > 0, `${w.seed}: ${h.id} did the job they are paid for (done ${h.done})`);
+        const same = hireRoster(content).filter((r) => r.duty === h.duty);
+        const bills = same.map((r) => ({ id: r.id, bill: hireBill(content, r, w.save) }));
+        if (bills.every((b) => b.bill !== null)) {
+          // R190 — A PRICED DUTY'S OBSERVABLE IS THE BILL. A vet who refuses
+          // more hours than it treats is the right hire when buying those
+          // hours back at the Infirmary costs less than the other's fee, so
+          // R188's "covers most of their duty" is the wrong question here.
+          const cheapest = [...bills].sort((a, b) => a.bill - b.bill)[0];
+          assert.equal(h.id, cheapest.id, `${w.seed}: the ${h.duty} hire is the cheapest on the roster the walk ended with `
+            + `(${bills.map((b) => `${b.id} $${b.bill.toFixed(2)}`).join(', ')} a clock-hour)`);
+          continue;
+        }
         // Rule 3's observable: a hire who cannot cover the job is replaced.
         // Mopsy is right for a three-animal herd and wrong for twenty, and a
         // walker that kept her would end with more meals missed than given.
@@ -18312,6 +18360,10 @@ if (inShard('contest')) {
       said.push(`${w.seed}:${p.hires.map((e) => `${e.id}@d${e.day}`).join('>')}`);
     }
     console.log(`   R188 payroll: ${said.join(' ')}`);
+    // R190 — THE CRITERION'S LAST CLAUSE. Doc Sutures was the vet on none of
+    // the twenty seeds R188 walked; on the bill he is somebody's.
+    assert.ok(walks.some((w) => w.payroll.hired.some((h) => h.id === 'sutures')),
+      `Doc Sutures is the walker's vet on at least one seed (${walks.map((w) => `${w.seed}:${w.payroll.hired.map((h) => h.id).join('+')}`).join(' ')})`);
 
     // THE DAY-180 NUMBERS THE ENTRY REPORTS, off the save the height and
     // untrusted-input gates already read. Printed, not pinned: a wage share

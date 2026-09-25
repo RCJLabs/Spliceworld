@@ -13,7 +13,7 @@ import { dirname, join } from 'node:path';
 import { indexContent, slotOfSocket } from '../render/renderer.js';
 import { CONTENT_FILES } from '../data/loader.js';
 import { seedTemperament } from '../splice/temperament.js';
-import { rushable, rush } from '../splice/rush.js';
+import { rushable, rush, rushTuning } from '../splice/rush.js';
 import { activeRaid, raidEncounter } from '../campaign/taskforce.js';
 import { gauntletState, gauntletEncounter } from '../campaign/gauntlet.js';
 import { treatInjury, treatmentCost } from '../splice/scars.js';
@@ -1554,12 +1554,33 @@ const WALK_RESERVE_DAYS = 14;
 //      to save $2 a meal, so a swap is only ever for coverage.
 //   4. NEVER ON THE LAST WEEK'S MONEY: a hire needs seven days of its wage in
 //      the bank. Checked once a day, like every other standing decision here.
+//   2b. R190 — WHERE THE GAME SELLS THE WORK, THE BILL DECIDES, NOT COVERAGE.
+//      The Infirmary sells hours (`perHour` in data/rush.json, the price
+//      splice/scars.js charges to end the clock), so a patient a vet refuses
+//      is not lost: the player can buy those hours back. `hireBill` prices
+//      each vet on this ranch at its fee on who it treats plus that price on
+//      who it refuses, and the cheaper bill takes the slot and keeps it.
+//      Rule 3 reads the same bill for a priced duty. Measured over sixteen
+//      seeds, coverage-first bought Nurse Gauze everywhere and paid ~$45 for
+//      every hour she saved over Doc, against the Infirmary's $18, for no
+//      change in dominion on any seed. Care has no such price (a feed is a
+//      button), so a hand is still ranked on coverage.
 //   5. R189 — NOT A HIRE WHOSE JOB IS TO BE SENT. A duty the file marks
 //      `sent` (Fieldwork) holds no standing clock: its hire earns the wage
 //      only on missions somebody sends them on, and this walker's mission
 //      policy sends creatures (R180). Hiring one it never sends would be a
 //      wage for nothing and a slot taken from the hand or the vet. Teaching
 //      the walk to weigh an agent against its own infiltrator is R192.
+// R190 — what a hire costs on THIS ranch, per clock-hour of the work, for a
+// duty whose work the game sells; null for one it does not (rule 2b above).
+export function hireBill(content, h, state) {
+  if (h?.duty !== 'infirmary') return null;
+  const pens = state.chimeras ?? [];
+  const cov = pens.length ? pens.filter((c) => (c.instability ?? 0) <= (h.ceiling ?? 100)).length / pens.length : 1;
+  const rate = h.rate ?? 2;
+  return cov * (h.fee ?? 0) / rate + (1 - cov) * rushTuning(content).perHour * (1 - 1 / rate);
+}
+
 function walkHire(state, content, now, did, introduced) {
   if (!introduced) return;
   const day = Math.floor(now / WALK_DAY);
@@ -1575,8 +1596,12 @@ function walkHire(state, content, now, did, introduced) {
   const coverage = (h) => (h.duty === 'care'
     ? (herd ? Math.min(1, (h.reach ?? Infinity) / herd) : 1)
     : (pens.length ? pens.filter((c) => (c.instability ?? 0) <= (h.ceiling ?? 100)).length / pens.length : 1));
+  const bill = (h) => hireBill(content, h, state);
   const pick = (duty) => roster.filter((h) => h.duty === duty)
-    .sort((a, b) => coverage(b) - coverage(a) || (a.fee ?? 0) - (b.fee ?? 0))[0] ?? null;
+    .sort((a, b) => (bill(a) ?? 0) - (bill(b) ?? 0) || coverage(b) - coverage(a) || (a.fee ?? 0) - (b.fee ?? 0))[0] ?? null;
+  // Rule 3: a hire who does the job worse than the one on offer is replaced
+  // — by coverage for an unpriced duty, by the bill for a priced one.
+  const worse = (held, want) => (bill(held) === null ? coverage(held) < coverage(want) : bill(held) > bill(want));
   const affordable = (h) => state.funds >= 7 * wageNow(state, content, h.id);
 
   for (const duty of duties) {
@@ -1585,7 +1610,7 @@ function walkHire(state, content, now, did, introduced) {
     if (!want) continue;
     if (held) {
       const h = content.henchmen[held.id];
-      if (held.id === want.id || coverage({ ...h, id: held.id }) >= coverage(want) || !affordable(want)) continue;
+      if (held.id === want.id || !worse({ ...h, id: held.id }, want) || !affordable(want)) continue;
       letGo(state, content, held.id);
       if (hire(state, content, now, want.id).ok) did('hire', { id: want.id, duty, swapped: held.id });
       continue;
