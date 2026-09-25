@@ -1,5 +1,77 @@
 # PROGRESS
 
+## Session 213 — R187: The gates that measure a fixture instead of a bound ✅
+
+**Three rules that saw their defect only when the day-180 walk happened to
+leave the right state behind now build that state themselves. The Vault's
+shut budget is the first number in the height table that no campaign can
+move.**
+
+### Measured first, on a clean tree
+
+- **389** (junk rival record) was caught, but by a lottery. The fuzz draws
+  200 of the save's 560 paths, and only a `null` on one of five rival
+  records trips it: p = 6.4e-4 a draw, 12% a run.
+- **388** (retainer line) was MISSED. The county says 446 phrasings with it
+  and 423 without it, against a floor of 400.
+- **372** (held row stops wrapping) was caught, because this walk left a
+  node whose row overflows by 86px at 150%. R180's walk did not.
+
+### What shipped
+
+- **smoke 6d:** every record map a day-180 save carries gets every junk
+  value, at a real key and at one nobody names. 389 now fails with the fuzz
+  switched off.
+- **smoke, Operations:** a week on a retainer files eight ledger lines (the
+  signing day counts), a second visit the same day none, and 53 days away a
+  capped few.
+- **a11y 1h2:** every node held, in each of the Spar button's three states,
+  at 150% text on a pinned clock. 372 reads 154px there (`no-one fit`).
+- **height, the Vault as a bound:** sixteen built shelves (every species,
+  tight/full, spares/none, a resequence running, all four Extractor
+  levels). The worst is 3,265px and 582 words; the walk reads 2,720 / 405.
+  The budget is 3,300 / 600, less than one bay of slack, so a species
+  shipping goes red on purpose.
+- **Blind-again notes** on every rule touched, in the gate and beside its
+  break.
+
+### Found on the way
+
+- The first a11y draft used `send(...).identifier`, but `send` resolves with
+  the whole CDP message. The Date pin was never removed and broke R107's
+  welcome-back card. It now reads `.result.identifier` and refuses to run
+  without it.
+- The first held-row draft counted rows in shut region cards: every one in
+  the DOM, none on screen. It counts rows with a box now (break 466).
+- The first Vault draft never showed R182's card at the top two levels,
+  because a gene-carrying duplicate is kept as the one of its anatomy and
+  the plain original becomes a spare. Two shelves now, `spares` and `none`.
+- Break 467 first inverted the record-map detector and went MISSED: an
+  inverted detector finds other objects and junks those harmlessly. It now
+  removes the detector's recursion, so it finds nothing (0 maps) and the
+  count assertion fires.
+
+### Gates
+
+- Breaks 465-468 (the bound's spares shelf, the held-row pass's open cards,
+  the record-map detector, the retainer's cap).
+- 199 re-aimed with the Vault line again, and 276 re-aimed at R189 before
+  the tick. The list is 459 breaks, numbered to 468.
+- A full battery, because three existing gates changed their logic (a11y,
+  height, smoke's untrusted block).
+
+### Known issues
+
+- The Dex combos budget is still a reading of the walk. Its driver is which
+  part names wrap, which no fixture pins down; R136's paging instruction
+  stands.
+- The Ranch's shut budget is a reading too. R186 argued its bands are at
+  their ceiling, but its agenda chrome is not.
+
+### Next session's first task
+
+The §9.0 queue: R189, R190.
+
 ## Session 212 — R186: The rare, the unique, and the run that remembers one ✅
 
 **R179 built the expedition machinery and shipped one uncommon. This session

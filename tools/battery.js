@@ -4445,11 +4445,12 @@ const BREAKS = [
     //
     // R184 shipped and was told before it ticked anything: re-aimed at R186.
     // R186 did the same before its own tick: re-aimed at R187, the queue's
-    // head once R186 and the R191 it folded in have both left it.
+    // head once R186 and the R191 it folded in have both left it. R187 did
+    // it again before ticking itself: re-aimed at R189, the head after it.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: '- **R187 — The gates that measure a fixture instead of a bound.**',
-    to: '- **R187 — The gates that measure a fixture instead of a bound.** ✅',
+    anchor: '- **R189 — A henchman runs a mission.**',
+    to: '- **R189 — A henchman runs a mission.** ✅',
   },
   {
     // The other direction: the count beside the list stops matching the list.
@@ -6784,15 +6785,19 @@ const BREAKS = [
     to: "            ...Object.fromEntries(Object.keys(worstContent.regions ?? {}).map((id) => [`region:${id}`, true])) } };",
   },
   {
-    // THE RECORD-MAP PASS HAS TO FIND A MAP. If its detector stops matching,
-    // it junks nothing and passes, which is exactly the lottery it replaced
-    // wearing a deterministic face. The count is asserted, so it cannot.
-    // BLIND AGAIN IF a save carries its records in some shape other than an
-    // id-keyed object; the note in smoke's 6d says which.
-    n: 467, gate: SHARD_B, name: 'the record-map pass finds no map to junk, and passes on nothing',
+    // THE RECORD-MAP PASS HAS TO FIND A MAP. A detector that stops looking
+    // below the top level finds nothing (a day-180 save carries no record map
+    // at its root; `campaign.rivals` is one level down), junks nothing, and
+    // would pass: the lottery it replaced, wearing a deterministic face. The
+    // count is asserted, so it cannot. The first aim of this break inverted
+    // the test instead and went MISSED, because an inverted detector finds
+    // OTHER objects and junks those harmlessly: a break has to remove what
+    // the rule sees, not redirect it. BLIND AGAIN IF a save carries its
+    // records in some shape other than an id-keyed object.
+    n: 467, gate: SHARD_B, name: 'the record-map pass stops looking below the top of the save, and finds nothing to junk',
     file: 'tools/smoke.js',
-    anchor: '        if (vals.length && vals.every(isRecord)) maps.push(at);',
-    to: '        if (vals.length && vals.every((v) => !isRecord(v))) maps.push(at);',
+    anchor: '        if (vals.length && vals.every(isRecord)) maps.push(at);\n        walk(v, at);',
+    to: '        if (vals.length && vals.every(isRecord)) maps.push(at);',
   },
   {
     // A MONTH AWAY BURIES THE WIRE. The retainer's line is once a day and
