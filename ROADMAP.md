@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**2 entries queued.** R193, R194.
+**2 entries queued.** R194, R196.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -6962,7 +6962,7 @@ triangle working, and each region genuinely asks a different question)*.
   * **R194 is filed:** at his price the agent returns about 1% of his wage.
   Breaks 484-488. Break 199's anchor followed the Vault budget.
 
-- **R193 — The vet bill spreads the call-out over the battle clock alone.**
+- **R193 — The vet bill spreads the call-out over the battle clock alone.** ✅
   Found by R190. A refused patient costs the Infirmary's call-out once, so
   the bill spreads it over the mean injury clock, and no single clock is
   stated anywhere a policy can read. `battle/statblock.js` types a battle's
@@ -6986,6 +6986,74 @@ triangle working, and each region genuinely asks a different question)*.
   other six). So R190's "each vet is somebody's pick" clause now rests on a
   single seed. It passes, but whichever fix this entry ships should re-read
   that split over the census.
+
+  **Shipped: one table of clocks, a hold that is not a wound, and a bill on
+  the clock the Infirmary sees.**
+  * **Measured first.** Sixteen campaigns of 180 days, 22,596 injuries, every
+    infliction instrumented. Battles were 76% of them (a mean 1.15h, since
+    most of a campaign is spent on tier IV), rescue whiplash 10% (1.49h), a
+    failed job's bruise 5% (1.09h) and holds 8.5% (9h). No campaign fought a
+    last stand.
+    - The entry's premise held only because of the holds. Without them the
+      Infirmary's mean clock was 2.86h, 1.93h, 1.35h and 0.97h on tiers I-IV,
+      and R190's typed 3h × `healScale` read 3.0h, 1.98h, 1.35h and 0.90h.
+      With them it was 1.67h at tier IV.
+    - The holds were most of the rest of the story: 41% of all injury hours,
+      94% of the hours the vets turned away, $32,800 of Nurse Gauze's $75,533
+      bill, 46 Infirmary buy-outs and 105 of 423 scars. And a held creature's
+      Pens card read "Infirmary: undefined — 9h 0m of dramatic convalescing
+      left", with a Treat button.
+  * **Every Infirmary clock is data** (`injuries` in `data/scars.json`): the
+    battle's, a last stand's, a rescue's and a failed job's, each with its
+    hours, whether a better Infirmary shortens it (`tierScaled`) and its
+    names. `battle/statblock.js`, `campaign/campaign.js` and
+    `campaign/operations.js` read their rows; the job's clock moved out of
+    `data/operations.json` so the table is whole. The move changed nothing:
+    180-day walks on seeds 2026 and 99 hashed the same before and after it.
+  * **A hold is not a wound** (the decision the entry asked for). R180 wrote
+    espionage's price as "a night in a holding pen and a stern letter", and
+    the copy says the creature is "held overnight". So a hold rides the
+    injury clock, because the creature is away and every availability check
+    still asks `isInjured`, and nothing else rides with it:
+    - no vet shortens a hold or bills for one;
+    - the Infirmary will not sell one ("does not do bail");
+    - it cannot set badly;
+    - the agenda's Infirmary row and the Welcome-back digest do not count it;
+    - the Pens and the War Room say the creature is helping the police with
+      its enquiries.
+    One test, `isHold` in `splice/facility.js`. No save changed: holds have
+    carried `reason: "detained"` since R180. A hold's hours stay with its
+    mission (`detainHours` in `data/missions.json`).
+  * **The bill's clock** (`infirmaryClock` in `tools/sim.js`) is the table
+    weighted by how often each wound came in over the census: battles 83%,
+    whiplash 11%, jobs 6%, last stands none. It prices a refusal on 2.81h,
+    1.91h, 1.36h and 0.96h on tiers I-IV. A refused clock-hour now costs
+    $17.89 at tier I and $12.27 at tier IV (R190's bill: $17.33 and $12.87).
+  * **The census after.** Median dominion day 29.5 (was 30.5); seed 99 gets
+    there on day 50.9 (was 68.1). The vet on the books at day 180 is Doc on
+    15 of 16 campaigns and Gauze on 1 (was 14 and 2). Gauze is still the
+    first hire on 12 of the 16, and keeps the slot until an Infirmary tier
+    III or IV is bought. R190's diet clause (each vet holds day 180 on at
+    least one of seven campaigns) still stands on one seed, 4242.
+  * **The gates.**
+    - Smoke inflicts each of the four clocks through its own engine path, on
+      the shipped table and on one with that clock moved, and the clock
+      follows. A rescue is checked at tier IV both ways round `tierScaled`.
+    - Smoke holds a hold to its rule: the vet leaves it alone and bills only
+      the wound beside it, the Infirmary refuses it, a certain scar roll
+      scars only the wound, and the Pens card reads the hold's line with no
+      Treat button. The walker's mix must name every kind the table does.
+    - Diet section 7 re-measures the mix on seed 2026: at every tier that saw
+      thirty wounds, the bill's clock is within 5% of what those wounds ran
+      (2.82h against 2.81h, 1.35h against 1.36h, 0.97h against 0.96h).
+    - The A10 clock roll carries the table's four rows.
+  * **Breaks 489-500.** Breaks 2, 478, 480, 481 and 483 were re-aimed.
+  * **Budgets.** Eager code rose 898 bytes to 335.82 KB, so the cap moved
+    from 335 to 336 KB, with its argument in smoke: the table and the hold
+    rule are both read on the tick. Eager comments rose 9 bytes; the
+    argument went to `data/notes/scars.md`.
+  * **R196 filed:** the bill prices Doc's refusals on the roster, and he
+    refuses almost nobody who is hurt.
 
 - **R194 — The Field Agent never earns his wage.** Found by R192. With a
   slot open for him, Mister Wicket's jobs pay about $206 a campaign net of
@@ -7029,6 +7097,25 @@ triangle working, and each region genuinely asks a different question)*.
       folded into the per-kind clause.
     - The open Vault's budget rose by exactly two species bays (43 on the
       shelf where R186 had 41).
+
+- **R196 — The vet bill prices Doc's refusals on the roster, not on the
+  patients.** Found by R193. `hireBill` takes Doc Sutures' coverage as the
+  share of the roster under his ceiling. Averaged over his time on duty in
+  the census that was 31%, while the share of injury hours he actually
+  treated was 94%, before R193 took the holds away from him. After it, on
+  seed 2026, he saved 512 hours and turned away 45. Wounds land on the
+  creatures that fight, and the walker fights with its stable ones; the
+  unstable ones were its spies, and their holds are nobody's patients now.
+  So the bill overprices Doc severalfold, and that is the only reason Nurse
+  Gauze is anybody's hire. Priced on the hours he actually saw, Doc is the
+  cheaper vet on every one of the fifteen campaigns he was hired on. The
+  worst of them (seed 99) had him refusing 45% of its wound hours, against a
+  break-even near 80% at tier IV.
+  R190's "each vet is somebody's pick" would then have nothing to stand on.
+  *Done when: the bill prices a refusal on the patients a vet would actually
+  see, measured over the census; and either Gauze's price or ceiling is
+  re-derived so that a ranch that hires her buys something the census can
+  see, or the entry argues from the numbers why she belongs on the roster.*
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same

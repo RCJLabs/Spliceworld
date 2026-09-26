@@ -1489,7 +1489,7 @@ const COPY_BUDGET = {
 
   'battle/forecast.js': 149,
   'battle/move-text.js': 18,
-  'battle/statblock.js': 14,
+  'battle/statblock.js': 11,
   'battle/tagtext.js': 18,
   'battle/ui.js': 47,
   'campaign/breakout.js': 7,
