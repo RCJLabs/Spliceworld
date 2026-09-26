@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**2 entries queued.** R194, R196.
+**3 entries queued.** R194, R196, R197.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -7047,13 +7047,14 @@ triangle working, and each region genuinely asks a different question)*.
       thirty wounds, the bill's clock is within 5% of what those wounds ran
       (2.82h against 2.81h, 1.35h against 1.36h, 0.97h against 0.96h).
     - The A10 clock roll carries the table's four rows.
-  * **Breaks 489-500.** Breaks 2, 478, 480, 481 and 483 were re-aimed.
+  * **Breaks 489-500.** Breaks 2, 276, 478, 480, 481 and 483 were re-aimed.
   * **Budgets.** Eager code rose 898 bytes to 335.82 KB, so the cap moved
     from 335 to 336 KB, with its argument in smoke: the table and the hold
     rule are both read on the tick. Eager comments rose 9 bytes; the
     argument went to `data/notes/scars.md`.
   * **R196 filed:** the bill prices Doc's refusals on the roster, and he
-    refuses almost nobody who is hurt.
+    refuses almost nobody who is hurt. **R197 filed:** the battery's excerpt
+    of a red gate cut off the only line that said why.
 
 - **R194 — The Field Agent never earns his wage.** Found by R192. With a
   slot open for him, Mister Wicket's jobs pay about $206 a campaign net of
@@ -7116,6 +7117,18 @@ triangle working, and each region genuinely asks a different question)*.
   see, measured over the census; and either Gauze's price or ceiling is
   re-derived so that a ranch that hires her buys something the census can
   see, or the entry argues from the numbers why she belongs on the roster.*
+
+- **R197 — The battery shows a failing gate's first four lines, and the
+  keyboard gate's problems come after them.** Found by R193. When a
+  baseline gate goes red, `tools/battery.js` prints the first four lines of
+  what it said. `tools/a11y.js` prints four summary lines first and its
+  problems after them, on stderr, so a red keyboard gate reads exactly like
+  a green one with the verdict cut off. R193's chunk 4 baseline went red
+  that way, once in six runs of the gate on one tree, and what it had
+  found could not be recovered. *Done when: a failing gate's excerpt always
+  carries its verdict (the problem lines, wherever the gate prints them),
+  and a break that makes the keyboard gate fail late shows its problem in
+  the battery's own output.*
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same
