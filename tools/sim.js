@@ -1174,7 +1174,7 @@ import {
   expTuning, expeditionHours, expeditionRegions, expeditionCandidates, expeditionCrew,
 } from '../campaign/expedition.js';
 import { findsFor, expeditionOdds, startExpedition } from '../campaign/outfit.js';
-import { activeMission, missionCandidates } from '../campaign/mission.js';
+import { activeMission, missionCandidates, missionCooldownMs } from '../campaign/mission.js';
 import { missionsFor, missionHours, missionTargets, missionAptitude, startMission, missionCommitted, missionAgents, missionOdds } from '../campaign/caper.js';
 import { hireRoster, slotsOf, hiredOf, hire, letGo, wageNow } from '../campaign/staff.js';
 import { guideStates } from '../ranch/onboarding.js';
@@ -1643,6 +1643,18 @@ export function hireBill(content, h, state) {
   const cov = pens.length ? pens.filter((c) => (c.instability ?? 0) <= (h.ceiling ?? 100)).length / pens.length : 1;
   const rate = h.rate ?? 2;
   return cov * (h.fee ?? 0) / rate + (1 - cov) * refusalPrice(content, state, rate);
+}
+
+// R194 — rule 6 of the mission policy: the agent's length. The board runs
+// one job at a time and rests after it, so a job costs the board its hours
+// plus the rest, and the agent's fee is billed per job.
+export function agentHours(content, mission, h) {
+  const rest = missionCooldownMs(content, mission) / 3600000;
+  const net = (hrs) => {
+    const o = missionOdds(content, mission, hrs, null, h);
+    return (o.chance + (1 - o.chance) * (mission.consolation ?? 0)) * o.funds - (h.fee ?? 0);
+  };
+  return missionHours(mission).reduce((a, b) => (net(b) / (b + rest) > net(a) / (a + rest) ? b : a));
 }
 
 function walkHire(state, content, now, did, introduced) {
@@ -2327,6 +2339,12 @@ function walkAct(state, content, now, open, opts = {}) {
     //      spare" sent him NEVER: the board's cooldown paces this walker's
     //      capers, not its bench. The chances it chose on are logged with
     //      every mission, so the gate checks each choice at its own moment.
+    //   6. R194 — HOW LONG THE AGENT GOES: `agentHours`, the length that
+    //      pays him most per hour of the board, net of his fee. Rule 4's
+    //      reason is the animal's time, and he is not an animal: the only
+    //      other thing his hours buy is the next job, which the board's rest
+    //      paces. On the shipped data that is the longest length of both
+    //      missions he takes. Why, in data/notes/henchmen.md.
     const busyCap = new Set([
       ...activeOps(state).map((r) => r.chimeraId).filter(Boolean),
       ...missionCommitted(state),
@@ -2389,7 +2407,8 @@ function walkAct(state, content, now, open, opts = {}) {
       const permanent = mission?.risk === 'conscripted';
       const sendAgent = !!odds && (odds.creature === null || permanent || odds.agent >= odds.creature);
       if (mission && rival && hours > 0 && (sendAgent || canCreature)) {
-        pick = { mission, rival, hours, who: sendAgent ? null : who, agent: sendAgent ? agentFree : null, odds, permanent };
+        pick = { mission, rival, hours: sendAgent ? agentHours(content, mission, agentFree.h) : hours,
+          who: sendAgent ? null : who, agent: sendAgent ? agentFree : null, odds, permanent };
       }
     }
     const ran = pick && startMission(state, content, now, pick.mission.id, pick.rival.id, pick.who?.id ?? null, pick.hours, pick.agent?.rec.id ?? null);
@@ -2406,6 +2425,8 @@ function walkAct(state, content, now, open, opts = {}) {
         ...(pick.odds ? { odds: pick.odds, permanent: pick.permanent } : {}),
         funds: ran.run.outcome.funds,
         expenses: ran.run.outcome.expenses ?? 0,
+        // R194 — his day rate when he went, so the gate can set the job against it.
+        ...(pick.agent ? { wage: wageNow(state, content, pick.agent.rec.id) } : {}),
       });
     }
   }
