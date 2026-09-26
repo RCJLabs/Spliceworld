@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**3 entries queued.** R196, R197, R198.
+**3 entries queued.** R196, R198, R199.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -7173,7 +7173,7 @@ triangle working, and each region genuinely asks a different question)*.
   see, or the entry argues from the numbers why she belongs on the roster.*
 
 - **R197 — The battery shows a failing gate's first four lines, and the
-  keyboard gate's problems come after them.** Found by R193. When a
+  keyboard gate's problems come after them.** ✅ Found by R193. When a
   baseline gate goes red, `tools/battery.js` prints the first four lines of
   what it said. `tools/a11y.js` prints four summary lines first and its
   problems after them, on stderr, so a red keyboard gate reads exactly like
@@ -7183,6 +7183,57 @@ triangle working, and each region genuinely asks a different question)*.
   carries its verdict (the problem lines, wherever the gate prints them),
   and a break that makes the keyboard gate fail late shows its problem in
   the battery's own output.*
+
+  **Shipped: the battery reads what a red gate said, and says it.**
+  * **Measured first, and the premise was too narrow.** One real break for
+    each of the 52 gates the battery aims at, run in scratch trees with
+    stdout and stderr kept apart. The four-line excerpt missed the verdict
+    on 16 of the 52. Five of those are baseline gates: the keyboard gate,
+    the boot gate, the service worker, smoke's union gate and its facility
+    lane. Every smoke lane prints progress first and dies of an uncaught
+    assertion, and the assertion's words come after Node's own rethrow
+    frame (`run_main:123`), so four lines of a red smoke lane never reached
+    them. The line `--verbose` printed under a caught break was wrong on the
+    same 16. No gate was silent: 13 fail by an uncaught throw, 39 complain in
+    words, and all 52 do it on stderr.
+  * **The reader** (`verdict` in `tools/battery.js`), in order:
+    - an uncaught throw: the error's own words, and the first stack frame
+      on disk as where (`thrown at tools/smoke.js:15745`);
+    - otherwise stderr, less Node's warnings. It is shown whole if it fits
+      in eight lines, and otherwise as a window on its first ✗ line, what
+      follows first and then what came before (scopecheck prints the
+      unbound name ahead of its count);
+    - otherwise the last ✗ line on stdout;
+    - a gate that says nothing is reported as saying nothing, with the last
+      lines it printed.
+    It reads all 52 surveyed reds. `run` now returns the two streams apart.
+  * **Where it shows.** A red baseline gate prints its verdict. Every caught
+    break prints one line of what its gate said, without `--verbose`, so a
+    break caught for the wrong reason (a crash in the gate, another clause)
+    shows without a rerun. `--verbose` prints the whole excerpt.
+  * **Scoring did not change.** A red gate is a caught break whatever it
+    printed, so no gate's logic moved and the full battery was not owed.
+  * **The gate** (`node tools/battery.js --self`, in the baseline, well
+    under a second):
+    - eleven reds read as their gates meant them: seven exactly as real
+      gates wrote them, and four built for shapes the survey could not
+      produce (a runtime warning first, a count after twelve details, a
+      cross on stdout only, a gate that says nothing);
+    - three tiny gates run end to end through `run`, `pool` and both
+      printers.
+    Breaks 505-512.
+  * **Proved on the keyboard gate.** `--only` on three of its breaks, each
+    failing late, prints the problem under the break:
+    - 180: `a11y ✗  2 problems · pens#pen-a11y-feral: p.fine-print ... reads
+      3.42:1 ... under the 4.5:1 floor`;
+    - 294: `a11y ✗  1 problem · a week away opens the app with no
+      welcome-back card (R107)`.
+  * **And it found something on its first run.** Break 59 is caught by a
+    crash: `Error: TypeError: Cannot read properties of null (reading
+    'click') · (thrown at tools/cdp.js:90)`. The keyboard check it is named
+    for never runs. **R199 filed.**
+  * **Not explained yet:** the keyboard gate's intermittent red under four
+    lanes (R193, R194). The next one will say why.
 
 - **R198 — The agent's odds branch rests on one choice.** Found by R194.
   Diet section 6 replays the third-slot variant on seeds 2026 and 7 and
@@ -7196,6 +7247,24 @@ triangle working, and each region genuinely asks a different question)*.
   campaigns where each one occurs with a margin (more seeds, or seeds
   chosen by what the census measured), or the entry argues from a
   re-measurement why one choice is enough.*
+
+- **R199 — Break 59 is caught by the keyboard gate crashing, not by its
+  keyboard check.** Found by R197, on the first run that printed what each
+  caught break's gate said. Break 59 turns the Dex tab into a `<div>` ("a
+  nav tab stops being a button, so the keyboard cannot reach that screen").
+  `tools/a11y.js` visits screens with
+  `document.querySelector('#tabs button[data-screen="dex"]').click()`,
+  which throws on the missing button: the gate dies of a TypeError at
+  `tools/cdp.js:90` before its keyboard walk runs. The break reads caught,
+  but for a reason that has nothing to do with the keyboard, and a gate
+  that dies on a missing element cannot report the other problems on the
+  same page. How many other breaks are caught this way is not known, and the
+  next full battery will say: every caught break now prints one line of what
+  its gate said, and a crash reads as an `Error:` line, not an assertion or
+  a ✗. *Done when: the keyboard gate reports a nav tab it cannot reach as a
+  problem rather than crashing, break 59 is caught by that problem, and the
+  next full battery's caught-by-a-crash lines are counted and each one is
+  either fixed or argued.*
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same

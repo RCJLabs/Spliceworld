@@ -134,7 +134,7 @@ R116 before chunking: one to a tree edited underneath it, one to a restart
 twenty-five minutes in. Build the id list from the file, because break
 numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327, 347
 are retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
-495 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
+503 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
 gene probe, R183 added 399-401 for the job headline, R185 added 402-404 for
 the Dex tab list, R176 added 405-407 for the lazy synth, R179 added 408-412
 for the expedition, R180 added 413-422 for the mission board, R181 added
@@ -144,9 +144,10 @@ inside `main`, R186 added 451-464 for the rare, the unique and the run
 that remembers one, R187 added 465-468 for the gates that build their
 worst case, R189 added 469-476 for the agent, R190 added 477-483 for the
 vet's bill, R192 added 484-488 for the agent's policy, R193 added
-489-500 for the injury clocks and the hold, and R194 added 501-504 for the
-agent's wage and the length he is sent on. The count and the top id have
-not agreed since the retirements: 495 breaks, numbered to 504. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
+489-500 for the injury clocks and the hold, R194 added 501-504 for the
+agent's wage and the length he is sent on, and R197 added 505-512 for the
+battery reading what a red gate said. The count and the top id have
+not agreed since the retirements: 503 breaks, numbered to 512. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
 against a tree carrying 410, because a milestone that adds breaks has to
 remember to come back here and nobody had. Trust `--anchors`, which prints
 the real total, over this sentence. Count with `--anchors`, which
@@ -164,7 +165,11 @@ release-gate failure and not a break failure.), on these triggers only:**
 the **baseline** caught in 7 minutes and a stale anchor **`--anchors`** would
 have caught in a second; the other 203 breaks were green twice, for forty
 minutes each time. Judge every battery run by `BATTERY_EXIT`, never the
-summary line — a clean break score can sit on top of a red baseline.
+summary line — a clean break score can sit on top of a red baseline. Since
+R197 a red baseline gate prints what it said (not its first four lines), and
+every caught break prints one line of its gate's verdict: read those lines,
+because a break caught by a crash (`Error: TypeError: ...`) is not the check
+it is named for (R199).
 
 ## Definition of Done (every milestone)
 1. Acceptance criterion from ROADMAP.md §6 demonstrably passes.

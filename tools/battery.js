@@ -11,7 +11,14 @@
 //   node tools/battery.js --anchors  # every anchor still matches (~1 sec)
 //   node tools/battery.js --baseline # every gate green on a clean tree (~7 min)
 //   node tools/battery.js --only 1,2 # these breaks and nothing else
-//   node tools/battery.js --verbose  # the gate's own words for each
+//   node tools/battery.js --verbose  # the whole of what each red gate said
+//   node tools/battery.js --self     # the battery reads a red gate right (~1 sec)
+//
+// R197: a red gate is reported by what it SAID, not by its first lines. The
+// baseline prints the verdict of a red gate, and every caught break prints
+// one line of it under its name, so a break caught for the wrong reason (a
+// crash in the gate, some other clause) shows without a rerun. How the
+// verdict is found is at `verdict` below.
 //   SW_BATTERY_JOBS=1 node ...       # one worker, for a machine under load
 //
 // WHAT TO RUN WHEN. The full battery is a forty-seven minute answer to a
@@ -439,6 +446,9 @@ const DIET = ['node', 'tools/diet.js'];
 // is the only reason a gate this load-bearing can afford eight breaks.
 const WORKER = ['node', 'tools/worker.js'];
 const COVSELF = ['node', 'tools/coverage.js', '--self'];
+// R197 — the battery reads what a red gate said. Its own `--self`: seven real
+// reds, four built ones, and three tiny gates run end to end. A second or two.
+const SELF = ['node', 'tools/battery.js', '--self'];
 
 // R95 — CAN A PLAYER ACTUALLY GET TO THE CONTENT? Three rules of one gate:
 // every species is reachable by a mechanism that resolves, a 180-day walk
@@ -7239,6 +7249,81 @@ const BREAKS = [
     anchor: '        ...(pick.agent ? { wage: wageNow(state, content, pick.agent.rec.id) } : {}),\n',
     to: '',
   },
+  // R197 — the battery reads what a red gate said. Every anchor below points
+  // into this file, so each is written in two pieces: a contiguous copy here
+  // would be a second match, and `--anchors` would call every one of them
+  // stale.
+  {
+    // THE R193 BLINDNESS, PUT BACK: the first four lines, stdout first. The
+    // keyboard gate's four summary lines are all the baseline would print.
+    // BLIND AGAIN IF the self-test stops running a gate that complains late.
+    n: 505, gate: SELF, name: "the baseline prints a red gate's first four lines, and a late verdict falls off the end",
+    file: 'tools/battery.js',
+    anchor: '  const excerpt = v.lines' + '.map((l) => `    ${l}`);',
+    to: "  const excerpt = (r.stdout + r.stderr).split('\\n').slice(0, 4).map((l) => `    ${l}`);",
+  },
+  {
+    // An uncaught throw not recognised as one: a smoke lane reads as Node's
+    // rethrow frame, `run_main:123`, which is what four lines of it said.
+    // BLIND AGAIN IF no fixture is a real smoke assertion.
+    n: 506, gate: SELF, name: 'an uncaught assertion reads as the frame Node rethrew it from',
+    file: 'tools/battery.js',
+    anchor: 'const ERROR_' + 'HEAD = /^(?:Uncaught )?',
+    to: 'const ERROR_HEAD = /^(?!)(?:Uncaught )?',
+  },
+  {
+    // The words without the place: a smoke assertion that cannot say which
+    // of 26,000 lines threw it.
+    // BLIND AGAIN IF no fixture's stack has a frame on disk.
+    n: 507, gate: SELF, name: 'an uncaught assertion loses the line it was thrown at',
+    file: 'tools/battery.js',
+    anchor: "        if (m) { where = `${m[1].split('/')" + ".slice(-2).join('/')}:${m[2]}`; break; }",
+    to: '        if (m) break;',
+  },
+  {
+    // The stack read as words, so the excerpt is frames and not the message.
+    // BLIND AGAIN IF the self-test stops refusing a stack frame in any excerpt.
+    n: 508, gate: SELF, name: 'stack frames are read as the error’s own words',
+    file: 'tools/battery.js',
+    anchor: '      if (STACK_' + 'FRAME.test(l)) {\n        inStack = true;',
+    to: '      if (false) {\n        inStack = true;',
+  },
+  {
+    // A gate that said nothing, dressed up as a verdict: its last progress
+    // lines would print as though they were the complaint.
+    // BLIND AGAIN IF the silent fixture and the silent gate both go.
+    n: 509, gate: SELF, name: 'a gate that says nothing is read as having said something',
+    file: 'tools/battery.js',
+    anchor: '  return { found: ' + 'false, lines: out.filter((l) => l.trim()).slice(-4) };',
+    to: '  return { found: true, lines: out.filter((l) => l.trim()).slice(-4) };',
+  },
+  {
+    // Node's warnings read as the verdict: an ExperimentalWarning printed
+    // first would be the only thing the baseline showed.
+    // BLIND AGAIN IF the built warning fixture goes.
+    n: 510, gate: SELF, name: "a runtime warning ahead of the verdict is read as the verdict",
+    file: 'tools/battery.js',
+    anchor: 'const VERDICT_' + 'NOISE = [/^\\s*$/, /^\\(node:\\d+\\) /, ',
+    to: 'const VERDICT_NOISE = [/^\\s*$/, ',
+  },
+  {
+    // The line under a caught break goes back to the gate's first words,
+    // which for sixteen of the 52 gates were progress.
+    // BLIND AGAIN IF the self-test stops reading the break line end to end.
+    n: 511, gate: SELF, name: "the line under a caught break is the gate's first words, not its verdict",
+    file: 'tools/battery.js',
+    anchor: '  const text = v.lines' + '.map((l) => l.trim()',
+    to: "  const text = (r.stdout + r.stderr).split('\\n').slice(0, 1).map((l) => l.trim()",
+  },
+  {
+    // A long complaint read from the top: scopecheck prints every unbound
+    // name before its count, so twelve of them push the count off the end.
+    // BLIND AGAIN IF the built twelve-name fixture goes.
+    n: 512, gate: SELF, name: 'a long complaint is read from its top, and a count after its details is lost',
+    file: 'tools/battery.js',
+    anchor: '    return { found: true, lines: [...said' + '.slice(Math.max(0, k - (VERDICT_MAX - after.length)), k), ...after] };',
+    to: '    return { found: true, lines: said.slice(0, VERDICT_MAX) };',
+  },
 ];
 
 const pristine = {};
@@ -7247,6 +7332,10 @@ const restore = (dir, file) => {
   writeFileSync(join(dir, file), pristine[file]);
 };
 
+// R197 — THE TWO STREAMS COME BACK APART. They are not the same thing: every
+// gate here writes its progress to stdout and its complaint to stderr, and a
+// battery that glued them together, stdout first, read the progress and
+// stopped. See `verdict` below for what that cost.
 const run = (gate, dir, port) => new Promise((resolve) => {
   execFile(gate[0], gate.slice(1), {
     cwd: dir,
@@ -7254,10 +7343,104 @@ const run = (gate, dir, port) => new Promise((resolve) => {
     maxBuffer: 64 * 1024 * 1024,
     env: { ...process.env, SW_CDP_PORT: String(port) },
   }, (err, stdout, stderr) => {
-    if (err) resolve({ ok: false, out: `${stdout ?? ''}${stderr ?? ''}` });
-    else resolve({ ok: true, out: stdout });
+    resolve({
+      ok: !err,
+      stdout: stdout ?? '',
+      stderr: stderr ?? '',
+      exit: !err ? 'exit 0' : err.signal ? `killed by ${err.signal}` : `exit ${err.code}`,
+    });
   });
 });
+
+// R197 — WHAT A RED GATE SAID, WHEREVER IT SAID IT.
+//
+// The baseline printed the first four lines of a red gate, stdout first, and
+// the keyboard gate prints four summary lines before its problems: a red one
+// read exactly like a green one with the verdict cut off. R193's baseline went
+// red that way and so did R194's, and neither could say why. It was never the
+// keyboard gate's quirk. One real break for each of the 52 gates the battery
+// aims at, run with the two streams kept apart, and the four lines missed the
+// verdict on 16 of them — five of them baseline gates (the keyboard, boot,
+// service-worker and union gates, and smoke's facility lane). Every smoke lane
+// prints progress and then dies of an uncaught assertion, whose words come
+// after Node's own rethrow frame. The `--verbose` line was wrong on the same 16.
+//
+// Measured on the same 52, a gate says what is wrong in one of two ways, and
+// every one of them does it on stderr:
+//   - an uncaught throw (13 of them): the error's own words are the verdict,
+//     and the first stack frame on disk says where. Node's location line is
+//     usually its own rethrow (`run_main:123`), so the frame is the honest one;
+//   - a complaint in words (39): stderr less Node's warnings. Whole if it fits,
+//     otherwise a window on its first line marked with the house cross — what
+//     follows the mark first (a count and its list), then what came before it
+//     (scopecheck prints the unbound name ahead of its count).
+// A gate that writes its cross to stdout and nothing to stderr is read from
+// that line on. A gate that says nothing either way is reported as having said
+// nothing, with the last lines it printed, rather than dressed up as a verdict.
+const VERDICT_MAX = 8;
+const VERDICT_MARK = /✗/;
+const VERDICT_NOISE = [/^\s*$/, /^\(node:\d+\) /, /^\(Use `node --trace-/, /^Node\.js v\d/];
+const STACK_FRAME = /^\s+at /;
+const ERROR_HEAD = /^(?:Uncaught )?(?:[A-Z][\w$]*)?(?:Error|Exception)(?: \[[\w-]+\])?: /;
+// A frame in a file on disk, as the last two parts of its path and its line:
+// `tools/smoke.js:26880`. Node's own frames (`node:internal/...`) never match.
+const FRAME_FILE = /(?:file:\/\/)?(\/[^\s()]+?):(\d+):\d+/;
+
+function verdict({ stdout = '', stderr = '' }) {
+  const err = stderr.split('\n');
+  const head = err.findIndex((l) => ERROR_HEAD.test(l));
+  const mark = err.findIndex((l) => VERDICT_MARK.test(l));
+  if (head >= 0 && (mark < 0 || head < mark)) {
+    const words = [];
+    let where = null;
+    let inStack = false;
+    for (const l of err.slice(head)) {
+      if (STACK_FRAME.test(l)) {
+        inStack = true;
+        const m = l.match(FRAME_FILE);
+        if (m) { where = `${m[1].split('/').slice(-2).join('/')}:${m[2]}`; break; }
+        continue;
+      }
+      // Past the first frame, or at the object dump or the footer, the words are over.
+      if (inStack || /^\s*\{$/.test(l) || /^Node\.js v\d/.test(l)) break;
+      if (l.trim()) words.push(l);
+    }
+    const lines = words.slice(0, where ? VERDICT_MAX - 1 : VERDICT_MAX);
+    if (where) lines.push(`  (thrown at ${where})`);
+    return { found: true, lines };
+  }
+  const said = err.filter((l) => !VERDICT_NOISE.some((re) => re.test(l)));
+  if (said.length) {
+    if (said.length <= VERDICT_MAX) return { found: true, lines: said };
+    if (mark < 0) return { found: true, lines: said.slice(-VERDICT_MAX) };
+    const k = said.findIndex((l) => VERDICT_MARK.test(l));
+    const after = said.slice(k, k + VERDICT_MAX);
+    return { found: true, lines: [...said.slice(Math.max(0, k - (VERDICT_MAX - after.length)), k), ...after] };
+  }
+  const out = stdout.split('\n');
+  const marked = out.findLastIndex((l) => VERDICT_MARK.test(l));
+  if (marked >= 0) return { found: true, lines: out.slice(marked).filter((l) => l.trim()).slice(0, VERDICT_MAX) };
+  return { found: false, lines: out.filter((l) => l.trim()).slice(-4) };
+}
+
+// The baseline's excerpt of a red gate.
+function failLines(r) {
+  const v = verdict(r);
+  const excerpt = v.lines.map((l) => `    ${l}`);
+  if (v.found) return excerpt;
+  return [`    (${r.exit}, with nothing on stderr and nothing marked ✗ — the last lines it printed:)`, ...excerpt];
+}
+
+// The line under a caught break: what the gate said, on one line, so a break
+// caught for the wrong reason (a crash in the gate, another clause) can be
+// seen without a rerun. `--verbose` prints the whole excerpt instead.
+function breakLine(r) {
+  const v = verdict(r);
+  if (!v.found) return `        → (${r.exit}, and said nothing on stderr or marked ✗)`;
+  const text = v.lines.map((l) => l.trim().replace(/^[·•-]\s*/, '').replace(/^AssertionError \[ERR_ASSERTION\]: /, ''))
+    .filter(Boolean).join(' · ');
+  return `        → ${text.length > 200 ? `${text.slice(0, 199)}…` : text}`;
+}
 
 // Hand `items` out to the workers, each of which owns one tree and one port.
 //
@@ -7332,6 +7515,77 @@ if (process.argv.includes('--anchors')) {
   process.exit(0);
 }
 
+// R197 — THE BATTERY READS WHAT A RED GATE SAID, and this is the gate that
+// says so. Two halves, a second or two between them:
+//   1. Eleven reds, seven exactly as real gates wrote them (the survey that
+//      found the problem, one real break per gate) and four built for the
+//      shapes the survey could not produce: a runtime warning ahead of the
+//      verdict, a long complaint whose count comes last, a cross on stdout
+//      only, and a gate that says nothing. Each must read as its gate meant.
+//   2. Three tiny gates run the way the baseline and the break loop run a
+//      real one — `run`, `pool` and both printers — so a printer that goes
+//      back to slicing the top of the output is caught, not just a reader.
+// BLIND AGAIN IF a gate starts complaining in a shape none of these has: the
+// fixtures are the survey's, and the survey is one break per gate.
+if (process.argv.includes('--self')) {
+  const bad = [];
+  const VERDICT_FIXTURES = [
+    {"name": "the keyboard gate (summary on stdout, problems late on stderr)", "stdout": "a11y: a week away opens with a 2-line welcome-back card, dismissed to BUTTON\na11y: an unchanged tick rewrote 0 nodes; a tap on one pen card destroyed 0 of the 4 it did not touch; the worst screen left 0 nodes behind; the Dex paints 92 KB before a scroll\na11y: 119 distinct controls measured at 380px across 82 views (boxes re-read at 420px, the top of the phone band)\na11y: 6/6 screens opened, 125 controls tabbed to and a duel fought with Tab and Enter alone\n", "stderr": "\na11y ✗  2 problems\n  · pens#pen-a11y-feral: p.fine-print \"Instability 100/100, bond 0/100, a\" reads 3.42:1 against what is behind it, under the 4.5:1 floor (rgb(168, 164, 140) on rgb(92, 74, 18))\n  · pens#pen-a11y-feral: em \"anything\" reads 3.42:1 against what is behind it, under the 4.5:1 floor (rgb(168, 164, 140) on rgb(92, 74, 18))\n", "found": true, "first": "a11y ✗  2 problems", "has": ["under the 4.5:1 floor"], "hasNot": ["a11y: a week away"]},
+    {"name": "a smoke lane (deepEqual, after Node’s rethrow frame)", "stdout": "   scopecheck: 135 modules · 72 syntax + 33 link cases · every name bound, every import answered\n   R130 notes: 40 data files, 40 notes, 0 bytes of shop talk on the wire\n", "stderr": "node:internal/modules/run_main:123\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: and so does the moveset\n+ actual - expected\n\n  [\n    'p:eagle_forelimbs',\n-   'p:eagle_hindlimbs',\n    'p:goat_head',\n-   'p:goat_tail',\n    'p:goat_hide',\n+   'p:eagle_hindlimbs',\n    'p:goat_organ',\n+   'p:goat_tail',\n    'c:orbital_headbutt'\n  ]\n\n    at file:///tmp/sw-r197-SxXwhw/tools/smoke.js:15745:12 {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: [\n    'p:eagle_forelimbs',\n    'p:goat_head',\n    'p:goat_hide',\n    'p:eagle_hindlimbs',\n    'p:goat_organ',\n    'p:goat_tail',\n    'c:orbital_headbutt'\n  ],\n  expected: [\n    'p:eagle_forelimbs',\n    'p:eagle_hindlimbs',\n    'p:goat_head',\n    'p:goat_tail',\n    'p:goat_hide',\n    'p:goat_organ',\n    'c:orbital_headbutt'\n  ],\n  operator: 'deepStrictEqual',\n  diff: 'simple'\n}\n\nNode.js v22.22.2\n", "found": true, "first": "AssertionError [ERR_ASSERTION]: and so does the moveset", "has": ["(thrown at tools/smoke.js:15745)", "+ actual - expected"], "hasNot": ["triggerUncaughtException", "generatedMessage"]},
+    {"name": "the union gate (strictEqual, object dump opening on the frame line)", "stdout": "   scopecheck: 135 modules · 72 syntax + 33 link cases · every name bound, every import answered\n   R130 notes: 40 data files, 40 notes, 0 bytes of shop talk on the wire\n", "stderr": "node:internal/modules/run_main:123\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: and the count of what was collapsed is what the page now says\n\nundefined !== 3\n\n    at file:///tmp/sw-r197-e6f1ol/tools/smoke.js:12191:12 {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: undefined,\n  expected: 3,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v22.22.2\n", "found": true, "first": "AssertionError [ERR_ASSERTION]: and the count of what was collapsed is what the page now says", "has": ["undefined !== 3", "(thrown at tools/smoke.js:12191)"], "hasNot": ["generatedMessage"]},
+    {"name": "scopecheck (the unbound name before its count)", "stdout": "scopecheck: 72 syntax cases, 33 link cases pass\nscopecheck: 4595 words of player-facing prose outside data/, cap 4625\n", "stderr": "campaign/ui.js:1428  opOdds is not bound in this file (read 2×)\n\nscopecheck ✗  1 unbound name across 135 modules (2490ms)\n", "found": true, "first": "campaign/ui.js:1428  opOdds is not bound in this file (read 2×)", "has": ["scopecheck ✗  1 unbound name"]},
+    {"name": "the save migrations (a count and a long list after it)", "stdout": "", "stderr": "saves ✗  45 problems\n  · a migrated v1 save is missing what a new game has: save.theater is missing\n  · a migrated v2 save is missing what a new game has: save.theater is missing\n  · a migrated v3 save is missing what a new game has: save.theater is missing\n  · a migrated v4 save is missing what a new game has: save.theater is missing\n  · a migrated v5 save is missing what a new game has: save.theater is missing\n  · a migrated v6 save is missing what a new game has: save.theater is missing\n  · a migrated v7 save is missing what a new game has: save.theater is missing\n  · a migrated v8 save is missing what a new game has: save.theater is missing\n  · a migrated v9 save is missing what a new game has: save.theater is missing\n  · a migrated v10 save is missing what a new game has: save.theater is missing\n  · a migrated v11 save is missing what a new game has: save.theater is missing\n  · a migrated v12 save is missing what a new game has: save.theater is missing\n  · a migrated v13 save is missing what a new game has: save.theater is missing\n", "found": true, "first": "saves ✗  45 problems", "has": ["a migrated v1 save is missing"], "count": 8},
+    {"name": "the suite (every job green on stdout, its own verdict on stderr)", "stdout": "  ✓ smoke:b     1468.0s\n  ✓ walks       1302.3s\n  ✓ smoke:a     500.3s\n", "stderr": "\nsuite ✗  every job passed, but the walk cache is empty AFTER the run\n   /tmp/sw-walk-cache holds nothing for this tree, so every 180-day walk was rebuilt\n   and the next run will rebuild them again. The cache is not being written.\n", "found": true, "first": "suite ✗  every job passed, but the walk cache is empty AFTER the run", "has": ["The cache is not being written."]},
+    {"name": "the parts generator (a plain x, not the cross)", "stdout": "", "stderr": "gen-parts x  data/parts.json is not what the generator produces\n             — either the edit belongs in tools/gen-parts.js or tools/shapes.js, or somebody hand-edited the data\n", "found": true, "first": "gen-parts x  data/parts.json is not what the generator produces", "has": ["somebody hand-edited the data"]},
+    {"name": "built: a runtime warning ahead of the verdict", "stdout": "", "stderr": "(node:4242) ExperimentalWarning: something about the runtime\n(Use `node --trace-warnings ...` to show where the warning was created)\ngrade ✗  514 — bear_head @apex: a grade changed something other than power; bear_head @prismatic: a grade changed something other than power; bear_forelimbs @apex: a grade changed something other than power\n", "found": true, "first": "grade ✗  514 — bear_head @apex: a grade changed something ot", "startsWith": true, "hasNot": ["(node:"]},
+    {"name": "built: twelve unbound names, and the count after them", "stdout": "", "stderr": "campaign/ui.js:1400  name0 is not bound in this file (read 1×)\ncampaign/ui.js:1401  name1 is not bound in this file (read 1×)\ncampaign/ui.js:1402  name2 is not bound in this file (read 1×)\ncampaign/ui.js:1403  name3 is not bound in this file (read 1×)\ncampaign/ui.js:1404  name4 is not bound in this file (read 1×)\ncampaign/ui.js:1405  name5 is not bound in this file (read 1×)\ncampaign/ui.js:1406  name6 is not bound in this file (read 1×)\ncampaign/ui.js:1407  name7 is not bound in this file (read 1×)\ncampaign/ui.js:1408  name8 is not bound in this file (read 1×)\ncampaign/ui.js:1409  name9 is not bound in this file (read 1×)\ncampaign/ui.js:1410  name10 is not bound in this file (read 1×)\ncampaign/ui.js:1411  name11 is not bound in this file (read 1×)\n\nscopecheck ✗  12 unbound names across 135 modules (2400ms)\n", "found": true, "first": "campaign/ui.js:1405  name5 is not bound in this file (read 1×)", "has": ["scopecheck ✗  12 unbound names"], "count": 8},
+    {"name": "built: the cross on stdout and nothing on stderr", "stdout": "widget: warming up\nwidget ✗  1 problem\n  · the widget is sideways\n", "stderr": "", "found": true, "first": "widget ✗  1 problem", "has": ["the widget is sideways"]},
+    {"name": "built: a gate that says nothing", "stdout": "quiet: one\nquiet: two\nquiet: three\n", "stderr": "", "found": false, "has": ["quiet: three"]},
+  ];
+  for (const f of VERDICT_FIXTURES) {
+    const v = verdict(f);
+    const got = v.lines.map((l) => l.trim());
+    if (v.found !== f.found) bad.push(`${f.name}: read as ${v.found ? 'a verdict' : 'saying nothing'} (${got[0]})`);
+    if (f.first && !(f.startsWith ? got[0]?.startsWith(f.first) : got[0] === f.first)) {
+      bad.push(`${f.name}: the excerpt opens with "${got[0]}", not "${f.first}"`);
+    }
+    for (const want of f.has ?? []) if (!got.some((l) => l.includes(want))) bad.push(`${f.name}: nothing reads "${want}"`);
+    for (const not of f.hasNot ?? []) if (got.some((l) => l.includes(not))) bad.push(`${f.name}: "${not}" is read as the verdict`);
+    if (f.count && got.length !== f.count) bad.push(`${f.name}: ${got.length} lines, not ${f.count}`);
+    if (v.lines.some((l) => STACK_FRAME.test(l))) bad.push(`${f.name}: a stack frame is read as the verdict`);
+  }
+  const LATE = ['node', '-e', `
+    for (const l of ['late: one', 'late: two', 'late: three', 'late: four']) console.log(l);
+    console.error('\\nlate ✗  1 problem');
+    console.error('  · the problem, printed after everything else');
+    process.exit(1);
+  `];
+  const QUIET = ['node', '-e', "console.log('quiet: working'); console.log('quiet: still working'); process.exit(1);"];
+  const GREEN = ['node', '-e', "console.log('green ✓'); console.error('green: a word on stderr that is not a verdict');"];
+  const [late, quiet, green] = await pool([LATE, QUIET, GREEN], (gate, dir, port) => run(gate, dir, port));
+  const excerpt = failLines(late).join('\n');
+  if (late.ok) bad.push('a gate that exits 1 came back green');
+  if (!excerpt.includes('late ✗  1 problem') || !excerpt.includes('the problem, printed after everything else')) {
+    bad.push(`the baseline's excerpt of a gate that complains late is not its complaint: ${JSON.stringify(excerpt)}`);
+  }
+  if (!breakLine(late).includes('late ✗  1 problem · the problem, printed after everything else')) {
+    bad.push(`the line under a caught break is not what the gate said: ${JSON.stringify(breakLine(late))}`);
+  }
+  if (!failLines(quiet)[0].includes('with nothing on stderr') || !failLines(quiet).join('\n').includes('quiet: still working')) {
+    bad.push(`a gate that says nothing is not reported as saying nothing: ${JSON.stringify(failLines(quiet))}`);
+  }
+  if (!breakLine(quiet).includes('said nothing')) bad.push(`a break caught in silence reads as a verdict: ${JSON.stringify(breakLine(quiet))}`);
+  if (!green.ok) bad.push(`a gate that exits 0 came back red (${green.exit})`);
+  cleanup();
+  if (bad.length) {
+    console.error(`battery ✗  self: ${bad.length} problem${bad.length === 1 ? '' : 's'} reading a red gate`);
+    for (const line of bad) console.error(`  · ${line}`);
+    process.exit(1);
+  }
+  console.log(`battery ✓  self: ${VERDICT_FIXTURES.length} reds read as their gates meant them, and 3 gates run end to end through the baseline's and the break loop's own printers`);
+  process.exit(0);
+}
+
 // R178 — THE THREE SHIP GATES JOIN THE LIST, AND THEY WERE THE ONLY THREE
 // MISSING. R100 built `offline.js`, `durable.js` and `release.js` and wired
 // each one to a break, which proves a gate goes RED on demand — and never put
@@ -7356,12 +7610,13 @@ if (process.argv.includes('--anchors')) {
 // was only ever checked in the go-red direction and a real regression sat on
 // `main` until somebody ran the gate by hand. A gate that no tier runs is a
 // gate that has never passed.
-const BASELINE = [SCOPE, HANDLERS, WORKER, COVSELF, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, WIDE, UNION, FACILITY, VAULT, TABLE, DIET, CACHEBUMP, OFFLINE, DURABLE];
+const BASELINE = [SCOPE, HANDLERS, WORKER, COVSELF, SELF, TWICE, CONTEST, RETIRED, BREAKOUT, WALK, ROADMAP, A11Y, BOOT, SMOKE_PAIR, GRADE, FERAL, RUSH, RAID, OPENING, STANCE, FOUNDING, SITTING, SENT, SQUAD, OUTLOOK, TIER, CLAWS, GENPARTS, SAVES, GENSAVES, STALE, HEIGHT, WIDE, UNION, FACILITY, VAULT, TABLE, DIET, CACHEBUMP, OFFLINE, DURABLE];
 
 const baselineLabel = (gate) => (
   gate === CACHEBUMP ? 'the worker precaches a shell that is actually there'
     : gate === OFFLINE ? 'a cached game opens on a train'
     : gate === DURABLE ? 'a 2 MB save survives localStorage being emptied'
+    : gate === SELF ? 'the battery reads what a red gate said'
     : gate === TWICE ? 'walkSurfaces twice in one process'
     : gate === CONTEST ? 'a month away with a convoy at the gate'
       : gate === RETIRED ? 'a save read against a build that retired seven of its ids'
@@ -7399,9 +7654,11 @@ const baselineLabel = (gate) => (
 // first — a gate that fails on everything "catches" every break for free.
 console.log(`baseline (pristine tree, ${JOBS} at a time):`);
 await pool(BASELINE, (gate, dir, port) => run(gate, dir, port), (r, gate) => {
-  const label = baselineLabel(gate);
-  console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${label}${r.ok ? '' : '\n' + r.out.split('\n').slice(0, 4).map((l) => '    ' + l).join('\n')}`);
-  if (!r.ok) process.exitCode = 1;
+  console.log(`  ${r.ok ? 'PASS' : 'FAIL'} ${baselineLabel(gate)}`);
+  if (!r.ok) {
+    for (const line of failLines(r)) console.log(line);
+    process.exitCode = 1;
+  }
 });
 
 if (BASELINE_ONLY) {
@@ -7431,15 +7688,15 @@ const results = await pool(picked, async (b, dir, port) => {
   writeFileSync(path, src.replace(b.anchor, b.to));
   const r = await run(b.gate, dir, port);
   restore(dir, b.file);
-  const first = r.out.split('\n').find((l) => l.trim() && !l.startsWith('scopecheck: ')) ?? '';
-  return { ...b, verdict: r.ok ? 'MISSED' : 'caught', line: first.trim() };
+  if (r.ok) return { ...b, verdict: 'MISSED', said: [] };
+  return { ...b, verdict: 'caught', said: VERBOSE ? failLines(r) : [breakLine(r)] };
 }, (res) => {
   if (res.verdict === 'BADANCH') {
     console.log(`  ${String(res.n).padStart(2)}. BADANCH (${res.hits} matches) — ${res.name}`);
     return;
   }
   console.log(`  ${String(res.n).padStart(2)}. ${res.verdict === 'caught' ? '✓ caught' : '✗ MISSED'}  ${res.name}`);
-  if (res.verdict === 'caught' && VERBOSE) console.log(`        → ${res.line.slice(0, 140)}`);
+  for (const line of res.said) console.log(line);
 });
 
 const missed = results.filter((r) => r.verdict !== 'caught');
