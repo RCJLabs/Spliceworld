@@ -79,7 +79,11 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (4h45m to 6h. R190 is the TENTH reading: 474 breaks at
+**The full battery (4h45m to 6h. R192 is the ELEVENTH reading: 479 breaks
+at 24m, 67m, 149m and 113m, which is 353 minutes — three under R190 with
+five more breaks, so the range holds. A container restart cut chunk 2 short
+partway through; it and chunk 3 were re-run whole, and only the complete
+runs are counted. R190 was the TENTH reading: 474 breaks at
 23m, 85m, 143m and 105m, which is 356 minutes — 22 over R189 with seven more
 breaks, most of it in chunk 4, where the new ones live — so the top of the
 range is now six hours. R189 was the NINTH reading: 467 breaks
