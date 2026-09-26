@@ -66,6 +66,10 @@ export function infirmaryGrants(state, content) {
   };
 }
 
+// R193: a hold is not a wound. data/notes/scars.md.
+export const HOLD = 'detained';
+export const isHold = (injury) => injury?.reason === HOLD;
+
 const UPKEEP_DEFAULTS = {
   frameBase: { A: 4, S: 3, M: 5, L: 9 },
   frameFallback: 5,

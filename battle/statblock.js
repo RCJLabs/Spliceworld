@@ -261,10 +261,20 @@ export function applySetBonus(combatant, purebredSpecies, content) {
   return combatant;
 }
 
-const INJURY_NAMES = [
-  'Bruised Ego', 'Sprained Everything', 'Temporary Kazoo Phobia',
-  'Overstretched Drama Gland', 'Bent Whiskers', 'Full-Body Boop',
-];
+// R193: every Infirmary clock is data, in one table. data/notes/scars.md.
+export function injuryClock(content, kind) {
+  return content.scarMeta.injuries[kind];
+}
+
+// `u` is the roll in [0, 1).
+export function clockHours(state, content, clock, u = 0) {
+  const [lo, hi] = clock.hours;
+  return (lo + u * (hi - lo)) * (clock.tierScaled ? infirmaryGrants(state, content).healScale : 1);
+}
+
+export function injuryName(clock, rng) {
+  return clock.names.length > 1 ? pick(rng, clock.names) : clock.names[0];
+}
 
 // Apply the outcome to the world: rewards, war record, and Law 1 —
 // KO'd chimeras leave with Infirmary timers the ranch must absorb.
@@ -295,9 +305,10 @@ export function finishBattle(state, battle, content, now) {
     // The Infirmary track shortens convalescence (R25). It buys TIME, not
     // outcomes: the scar roll is still a roll, and treating an injury is
     // still what guarantees it leaves no trace.
-    const hours = (2 + rng() * 2) * infirmaryGrants(state, content).healScale;
+    const clock = injuryClock(content, 'battle');
+    const hours = clockHours(state, content, clock, rng());
     const standing = applyInjury(chimera, {
-      name: pick(rng, INJURY_NAMES),
+      name: injuryName(clock, rng),
       until: now + Math.round(hours * 3600000),
     });
     injuries.push({ chimera: chimera.name, injury: standing });

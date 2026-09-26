@@ -26,6 +26,7 @@ import { impound } from './rehab.js';
 import { tickTaskforce } from './taskforce.js';
 import { pushNews, emitNews } from './wire.js';
 import { consolidateVault } from '../splice/vault.js';
+import { isHold } from '../splice/facility.js';
 
 export function elapsedSince(state, now) {
   const since = state.lastTickAt ?? now;
@@ -155,7 +156,7 @@ export function worldSnapshot(state, now = state?.lastTickAt ?? 0) {
   let agitated = 0;
   let settling = 0;
   for (const x of herd) {
-    if (x?.injury) injured++;
+    if (x?.injury && !isHold(x.injury)) injured++;
     scarred += x?.scars?.length ?? 0;
     if (x?.agitatedUntil > now) agitated++;
     if (x?.settleUntil > now) settling++;

@@ -8,8 +8,7 @@ import { pushNews, emitNews, newsFor } from './wire.js';
 import { recordGauntletWin, gauntletComplete } from './gauntlet.js';
 import { gradeOf } from '../splice/extract.js';
 import { admitParts } from '../splice/vault.js';
-import { infirmaryGrants } from '../splice/facility.js';
-import { applyInjury, finishBattle } from '../battle/statblock.js';
+import { applyInjury, finishBattle, injuryClock, injuryName, clockHours } from '../battle/statblock.js';
 import { attend } from '../splice/feral.js';
 import { recordRivalResult, scoutStable, dexKeyFor, labOfDexKey } from './rivals.js';
 import { tickRehab, findBay, admitBay } from './rehab.js';
@@ -481,7 +480,8 @@ export function resolveBattle(state, battle, content, now) {
       state.campaign.captives = state.campaign.captives.filter((c) => c !== captive);
       const chimera = captive.chimera;
       const rng = rngStream(state.seed, 'rescue', state.warRecord.wins);
-      applyInjury(chimera, { name: 'Dramatic Rescue Whiplash', until: now + Math.round((1 + rng()) * HOUR) });
+      const clock = injuryClock(content, 'rescue');
+      applyInjury(chimera, { name: injuryName(clock, rng), until: now + Math.round(clockHours(state, content, clock, rng()) * HOUR) });
       chimera.bond = Math.min(100, chimera.bond + 10); // "you came back for me!"
       attend(chimera, now); // R85: you went and got it
       state.chimeras.push(chimera);
@@ -665,9 +665,10 @@ export function resolveBattle(state, battle, content, now) {
       // went down, which is the right mechanic and the whole of the
       // punishment here — this branch only has to make sure the creature
       // was not ALSO taken, and to say why.
+      const clock = injuryClock(content, 'lastStand');
       applyInjury(only, {
-        name: 'Dragged Itself Home',
-        until: now + Math.round(3 * infirmaryGrants(state, content).healScale * HOUR),
+        name: injuryName(clock, rngStream(state.seed, 'last-stand', only.injuryCount ?? 0)),
+        until: now + Math.round(clockHours(state, content, clock) * HOUR),
       });
       detail.lastStand = only.name;
       emitNews(state, content, 'last_stand', { creature: only.name });

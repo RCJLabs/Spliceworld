@@ -21,7 +21,7 @@ import { analyze } from '../splice/physiology.js';
 import { step, playerActions, playerActive, TURN_LIMIT } from '../battle/engine.js';
 // R170 — counted, not bare. See tools/flown.js.
 import { createBattle } from './flown.js';
-import { movesFromTokens } from '../battle/statblock.js';
+import { movesFromTokens, injuryClock, clockHours } from '../battle/statblock.js';
 import { knownMoves } from '../battle/moves.js';
 import { rivalEncounter, rivalList, rivalStatus } from '../campaign/rivals.js';
 import { rescueEncounterFor, threatGen } from '../campaign/map.js';
@@ -471,7 +471,7 @@ import { pairingForecast, expressedTraits, incubatorSlots, BREEDING, canBreed, b
 const BREEDING_MUTATION = BREEDING.mutationChance;
 import {
   incubatorGrants, extractorGrants, scannerGrants, infirmaryGrants,
-  nextUpgrade, buyUpgrade, facilityLevel,
+  nextUpgrade, buyUpgrade, facilityLevel, isHold,
 } from '../splice/facility.js';
 
 const HOUR_MS = 3600000;
@@ -1566,10 +1566,11 @@ const WALK_RESERVE_DAYS = 14;
 //      seeds, coverage-first bought Nurse Gauze everywhere and paid ~$45 for
 //      every hour she saved over Doc, for no change in dominion on any seed.
 //      Priced properly the answer depends on the ranch: on a tier-I
-//      Infirmary a refusal costs ~$17 a clock-hour against Gauze's $10, so
-//      Doc is the cheaper vet only while he treats over ~42% of the roster;
-//      on a tier-IV one it costs ~$13, and he stays cheaper until ~78% of
-//      the roster is over his ceiling.
+//      Infirmary a refusal costs ~$18 a clock-hour against Gauze's $10, so
+//      Doc is the cheaper vet only while he treats over ~44% of the roster;
+//      on a tier-IV one it costs ~$12, and he stays cheaper until ~81% of
+//      the roster is over his ceiling (R193's clock; R190's read $17 and
+//      $13). A hold is nobody's patient (R193), so neither bill counts one.
 //      Care has no such price (a feed is a button), so a hand is still
 //      ranked on coverage.
 //   3b. R190 — A PRICED DUTY IS RE-DECIDED WHEN ITS PRICE CHANGES, which is
@@ -1591,17 +1592,39 @@ const WALK_RESERVE_DAYS = 14;
 //      What he buys is creatures: 25 conscripted without him, 6 with him.
 //      When a slot is there for him the walker hires him and sends him by
 //      rule 5 of the mission policy (walkAct).
-// R190 — THE CLOCK A REFUSAL IS PRICED ON. The call-out is per patient, so
-// its share of an hour depends on how long an injury runs, and the battle
-// engine types that: (2 + 2u) hours at the Infirmary's `healScale`
-// (battle/statblock.js). Battles are 76-78% of a campaign's injuries
-// (measured on four seeds: 1,058-1,303 of 1,357-1,710). The rest run their
-// own clocks, and two of them do NOT shrink with the tier — a rescue's
-// whiplash (1-2h, 10-13% of injuries) and a detention (9h, 7-8%) — so on a
-// tier-IV Infirmary the real mean clock is longer than this, the call-out
-// weighs less, and the bill leans toward Nurse Gauze (R193). Typed here, and
-// smoke measures the engine against it.
-export const WALK_INJURY_HOURS = 3;
+// R193 — THE CLOCK A REFUSAL IS PRICED ON is the one the Infirmary actually
+// sees at this tier. The call-out is per patient, so its share of an hour is
+// the call-out over the mean clock a patient brings in. R190 typed that as the
+// battle's 3 hours at `healScale`, the one clock anybody had stated. Now every
+// wound's clock is in one table (`injuries` in data/scars.json) with whether
+// the tier shortens it, so the mean is the table weighted by how often each
+// kind comes in. Measured over sixteen 180-day campaigns (22,596 injuries),
+// the Infirmary saw battles 83% of the time, rescue whiplash 11% and a failed
+// job's bruise 6%. The walker never fought a last stand. That puts the clock
+// at 2.81h, 1.91h, 1.36h and 0.96h on tiers I-IV, against 2.86h, 1.93h, 1.35h
+// and 0.97h measured. R190's typed clock read 3.0h and 0.90h at the two ends.
+// A hold is not in the mix: no vet treats one (R193, splice/facility.js).
+// Before that rule, holds were 41% of all injury hours and put the tier-IV
+// clock at 1.67h. The diet gate re-measures this mix on a campaign.
+export const WALK_INJURY_MIX = { battle: 0.83, rescue: 0.11, job: 0.06, lastStand: 0 };
+
+export function infirmaryClock(content, state) {
+  let hours = 0;
+  let weight = 0;
+  for (const [kind, w] of Object.entries(WALK_INJURY_MIX)) {
+    // The middle of a clock's roll is its mean: every clock is uniform.
+    if (w > 0) hours += w * clockHours(state, content, injuryClock(content, kind), 0.5);
+    weight += w;
+  }
+  return hours / weight;
+}
+
+// What the walk brought the Infirmary, by the tier it was brought to.
+function tallyWound(state, kind, n = 1) {
+  if (!n) return;
+  const row = ((state.__walkWounds ??= {})[facilityLevel(state, 'infirmary')] ??= {});
+  row[kind] = (row[kind] ?? 0) + n;
+}
 
 // What a refused clock-hour costs at the Infirmary on this ranch: the
 // call-out spread over the clock, plus the hours a vet of this `rate` would
@@ -1609,7 +1632,7 @@ export const WALK_INJURY_HOURS = 3;
 export function refusalPrice(content, state, rate = 2) {
   const t = rushTuning(content);
   const g = infirmaryGrants(state, content);
-  return (t.base / (WALK_INJURY_HOURS * g.healScale) + t.perHour * (1 - 1 / rate)) * g.treatScale;
+  return (t.base / infirmaryClock(content, state) + t.perHour * (1 - 1 / rate)) * g.treatScale;
 }
 
 // R190 — what a hire costs on THIS ranch, per clock-hour of the work, for a
@@ -1762,8 +1785,12 @@ function walkAct(state, content, now, open, opts = {}) {
     walkAutoplay(battle, content);
     const before = state.chimeras.length;
     state.battle = battle;
-    resolveBattle(state, battle, content, now);
+    const detail = resolveBattle(state, battle, content, now);
     state.battle = null;
+    // R193 — what the fight brought the Infirmary, by kind.
+    tallyWound(state, 'battle', detail.injuries.length);
+    if (detail.freed) tallyWound(state, 'rescue');
+    if (detail.lastStand) tallyWound(state, 'lastStand');
     log({ kind: context.kind, node: context.nodeId ?? null, outcome: battle.outcome, escalation: enc.escalation,
       // What the arena would have spent replaying this, and whether the
       // player would have been offered the chance not to.
@@ -1802,7 +1829,8 @@ function walkAct(state, content, now, open, opts = {}) {
     // spent a third of a campaign's rushes on animals it never fielded.
     const aTeam = new Set([...state.chimeras].sort((x, y) => quality(y) - quality(x)).slice(0, 3).map((c) => c.id));
     for (const c of state.chimeras) {
-      if (!aTeam.has(c.id) || !c.injury || c.injury.until <= now) continue;
+      // R193: a hold is not the Infirmary's to sell.
+      if (!aTeam.has(c.id) || !c.injury || c.injury.until <= now || isHold(c.injury)) continue;
       if (!canSpend(treatmentCost(c, content, now, state))) continue;
       if (treatInjury(state, c.id, content, now).ok) {
         did('treat', { who: c.id });
@@ -2164,6 +2192,10 @@ function walkAct(state, content, now, open, opts = {}) {
     // already in the result and costs nothing to record.
     const started = op && startOperation(state, op.id, best.rider?.id ?? null, content, now);
     if (started?.ok) {
+      // A crewed job that fails on a roll under half sends the crew home
+      // bruised (campaign/operations.js), so the bruise is known at launch.
+      const o = started.run.outcome;
+      if (started.run.chimeraId && !o.success && o.injuryRoll < 0.5) tallyWound(state, 'job');
       did('job', {
         op: op.id,
         crewed: !!started.run.chimeraId,
@@ -3449,6 +3481,9 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
       paid: Object.fromEntries(Object.entries(state.__walkPaid ?? {}).map(([id, v]) => [id, Math.round(v)])),
       wages: hiredOf(state).reduce((n, r) => n + wageNow(state, content, r.id), 0),
     },
+    // R193 — every wound the Infirmary was brought, by the tier it was
+    // brought to and by kind (the kinds of data/scars.json's `injuries`).
+    wounds: state.__walkWounds ?? {},
     actions: (state.__walkLog ?? []).length,
     reachedDominion: state.dominionAt != null,
     nodes: state.campaign.heldNodes.length,

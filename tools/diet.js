@@ -30,7 +30,8 @@
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadSimContent, campaignWalk } from './sim.js';
+import { loadSimContent, campaignWalk, WALK_INJURY_MIX, infirmaryClock } from './sim.js';
+import { infirmaryGrants } from '../splice/facility.js';
 import { walkedSave, primeWalkCache } from './fixtures.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -447,6 +448,51 @@ sockets across ${bodies} kept chimeras: `
     if (!n) fails.push(`R192 rule 5: no choice on seeds 2026/7 was decided by ${k === 'creature' ? 'sending a creature past a free agent' : `the ${k} clause`}`
       + ` (${JSON.stringify(branch)}) — the rule has collapsed to one answer`);
   }
+}
+
+// ---- 7. R193: the bill's clock is the one this Infirmary saw -----------
+//
+// R190's vet bill spread the Infirmary's call-out over the battle's 3 hours,
+// the one clock anybody had typed. R193 put every wound's clock in one table
+// (`injuries` in data/scars.json) and the walker weighs them by how often each
+// kind came in over sixteen campaigns (`WALK_INJURY_MIX`: battles 83%, rescue
+// whiplash 11%, a failed job's bruise 6%). Sixteen campaigns cannot be asked
+// again every run, so this asks the one it has: the walk counts every wound it
+// brings the Infirmary, by kind and by the tier it is brought to, and at every
+// tier that saw thirty or more, the clock the bill is priced on has to be
+// within 5% of the clock those wounds ran. A hold is not a wound (R193) and
+// is not counted.
+// BLIND AGAIN IF the walk stops counting a kind: its share then reads as zero
+// on both sides of the comparison. Every kind the walker's mix gives a share
+// must turn up on this campaign, which is what stops that.
+{
+  const inj = content.scarMeta?.injuries ?? {};
+  const meanAt = (kind, tier) => (inj[kind].hours[0] + inj[kind].hours[1]) / 2
+    * (inj[kind].tierScaled ? infirmaryGrants({ facility: { infirmary: tier } }, content).healScale : 1);
+  const said = [];
+  const kinds = new Set();
+  let read = 0;
+  for (const [tier, row] of Object.entries(walk.wounds ?? {})) {
+    for (const [kind, n] of Object.entries(row)) {
+      kinds.add(kind);
+      if (!(kind in WALK_INJURY_MIX)) fails.push(`seed 2026 brought the Infirmary ${n} "${kind}" wound(s) the walker's mix has no share for`);
+    }
+    const n = Object.values(row).reduce((a, b) => a + b, 0);
+    if (n < 30) continue;
+    read++;
+    const seen = Object.entries(row).reduce((a, [kind, c]) => a + c * meanAt(kind, +tier), 0) / n;
+    const priced = infirmaryClock(content, { facility: { infirmary: +tier } });
+    said.push(`tier ${tier}: ${n} wounds ran ${seen.toFixed(2)}h, the bill prices ${priced.toFixed(2)}h`);
+    if (Math.abs(priced - seen) > 0.05 * seen) {
+      fails.push(`on a tier-${tier} Infirmary seed 2026's ${n} wounds ran a mean ${seen.toFixed(2)}h and the vet bill spreads the call-out`
+        + ` over ${priced.toFixed(2)}h (${JSON.stringify(row)}) — the mix in WALK_INJURY_MIX is not the one this campaign brought in`);
+    }
+  }
+  if (read < 2) fails.push(`seed 2026 brought 30 or more wounds to only ${read} Infirmary tier(s), too few to read the bill's clock against`);
+  for (const [kind, w] of Object.entries(WALK_INJURY_MIX)) {
+    if (w > 0 && !kinds.has(kind)) fails.push(`the walker gives "${kind}" a share of ${w} and seed 2026 never brought one to the Infirmary — the walk has stopped counting it`);
+  }
+  if (REPORT) console.log(`\n  R193 wounds: ${said.join('; ')}`);
 }
 
 // ---- verdict ---------------------------------------------------------

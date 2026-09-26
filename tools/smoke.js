@@ -9431,8 +9431,15 @@ if (inShard('frames')) {
     'facility.containment.hoursPerPower': 0.0675,
     'facility.containment.hoursPerInstability': 0.0375,
     'operations.heatHalfLifeHours': 13.5,
-    'operations.injuryHours.min': 1.5,
-    'operations.injuryHours.max': 3.75,
+    // R193 — every Infirmary clock, from the one table that states them.
+    'scars.injuries.battle.min': 2,
+    'scars.injuries.battle.max': 4,
+    'scars.injuries.lastStand.min': 3,
+    'scars.injuries.lastStand.max': 3,
+    'scars.injuries.rescue.min': 1,
+    'scars.injuries.rescue.max': 2,
+    'scars.injuries.job.min': 1.5,
+    'scars.injuries.job.max': 3.75,
     'contestation.firstDelayHours': 4.5,
     'contestation.cooldownHours': 15,
     'contestation.cooldownPerDefenceHours': 5.25,
@@ -9448,8 +9455,8 @@ if (inShard('frames')) {
     'facility.containment.hoursPerPower': content.facility.containment.tuning.hoursPerPower,
     'facility.containment.hoursPerInstability': content.facility.containment.tuning.hoursPerInstability,
     'operations.heatHalfLifeHours': content.operationMeta.heatHalfLifeHours,
-    'operations.injuryHours.min': content.operationMeta.injuryHours[0],
-    'operations.injuryHours.max': content.operationMeta.injuryHours[1],
+    ...Object.fromEntries(Object.entries(content.scarMeta.injuries).flatMap(([kind, c]) => [
+      [`scars.injuries.${kind}.min`, c.hours[0]], [`scars.injuries.${kind}.max`, c.hours[1]]])),
     'contestation.firstDelayHours': content.campaignMeta.contestation.firstDelayHours,
     'contestation.cooldownHours': content.campaignMeta.contestation.cooldownHours,
     'contestation.cooldownPerDefenceHours': content.campaignMeta.contestation.cooldownPerDefenceHours,
@@ -9459,6 +9466,8 @@ if (inShard('frames')) {
   for (const [k, want] of Object.entries(CLOCKS)) {
     assert.equal(actual[k], want, `${k} drifted from the roll (${actual[k]} vs ${want})`);
   }
+  // The injury table is read whole, so a kind added to it is a new clock.
+  for (const k of Object.keys(actual)) assert.ok(k in CLOCKS, `${k} is a clock the roll has never been told about`);
   // Every job carries two clocks of its own, and they are the ones a player
   // waits on most, so they are rolled per job rather than in bulk.
   const JOB_CLOCKS = {
@@ -18309,8 +18318,15 @@ if (inShard('contest')) {
     {
       const { rushTuning } = await import('../splice/rush.js');
       const { infirmaryGrants } = await import('../splice/facility.js');
-      const { WALK_INJURY_HOURS } = await import('./sim.js');
+      const { WALK_INJURY_MIX, infirmaryClock } = await import('./sim.js');
       const vets = hireRoster(content).filter((h) => h.duty === 'infirmary');
+      // R193 — the clock a refusal is spread over, recomputed here from the
+      // table rather than read back from the walker: each wound's mean clock
+      // at its own tier scaling, weighted by the mix the walker states.
+      const inj = content.scarMeta.injuries;
+      const meanOf = (c) => (c.hours[0] + c.hours[1]) / 2;
+      const clockAt = (g) => Object.entries(WALK_INJURY_MIX).reduce((n, [k, w]) => n + w * meanOf(inj[k]) * (inj[k].tierScaled ? g.healScale : 1), 0)
+        / Object.values(WALK_INJURY_MIX).reduce((n, w) => n + w, 0);
       assert.ok(typeof hireBill === 'function' && vets.length >= 2,
         'the walker states what a vet costs on this ranch (hireBill in tools/sim.js) — R190 has not shipped');
       const top = content.facility.infirmary.levels.length;
@@ -18322,7 +18338,7 @@ if (inShard('contest')) {
           for (const h of vets) {
             const cov = insts.filter((i) => i <= (h.ceiling ?? 100)).length / insts.length;
             const rate = h.rate ?? 2;
-            const refused = (t.base / (WALK_INJURY_HOURS * g.healScale) + t.perHour * (1 - 1 / rate)) * g.treatScale;
+            const refused = (t.base / clockAt(g) + t.perHour * (1 - 1 / rate)) * g.treatScale;
             const want = cov * (h.fee ?? 0) / rate + (1 - cov) * refused;
             const got = hireBill(content, h, ward(insts, lvl));
             assert.ok(Math.abs(got - want) < 1e-9,
@@ -18341,29 +18357,155 @@ if (inShard('contest')) {
       assert.equal(hireBill(content, hireRoster(content).find((h) => h.duty === 'care'), ward([10])), null,
         'a duty whose work the game does not sell (a feed is a button) has no bill, and keeps R188\'s coverage rule');
 
-      // THE CLOCK THE CALL-OUT IS SPREAD OVER IS THE ENGINE'S. The walker types
-      // it (WALK_INJURY_HOURS) because battle/statblock.js types it; this
-      // inflicts eighty battle injuries on a tier-I ranch through the engine's
-      // own `finishBattle` and holds the mean to the walker's number. The
-      // injury stream is keyed on the creature, so every casualty is new.
+      // R193 — THE MIX NAMES EVERY WOUND THE TABLE STATES, and the clock it
+      // gives moves when the table does. A kind added to `injuries` with no
+      // share would leave the bill pricing a clock the Infirmary no longer sees.
+      assert.deepEqual(Object.keys(WALK_INJURY_MIX).sort(), Object.keys(inj).sort(),
+        'the walker states a share for every wound data/scars.json states, and for nothing else');
+      const moved = (kind, over) => ({ ...content, scarMeta: { ...content.scarMeta,
+        injuries: { ...inj, [kind]: { ...inj[kind], ...over } } } });
+      assert.ok(infirmaryClock(moved('battle', { hours: inj.battle.hours.map((h) => h * 2) }), ward([], 1)) > infirmaryClock(content, ward([], 1)),
+        'a longer battle clock in the data is a longer clock in the bill — the table is read, not typed');
+      for (const lvl of [1, top]) {
+        const g = infirmaryGrants(ward([], lvl), content);
+        assert.ok(Math.abs(infirmaryClock(content, ward([], lvl)) - clockAt(g)) < 1e-9, `the tier-${lvl} clock is the table at the mix`);
+      }
+
+      // R193 — EVERY INFIRMARY CLOCK IS READ BY THE CODE THAT INFLICTS IT. Each
+      // kind in the table is inflicted through its own engine path, on the
+      // shipped table and on one with that clock moved, and the clock has to
+      // follow the data. A kind typed back into its module passes the first
+      // half and fails the second. (R190 held the battle's alone to a number
+      // the walker typed; the other three were typed in three more modules.)
       const s = { ...newGameState(), seed: 91, funds: 0 };
       ensureRanchSeeded(s, content, t0); s.lastTickAt = t0;
       const enc = content.encounters[content.regions.greenfield.nodes[0].encounter];
-      const clocks = [];
-      for (let n = 0; n < 40; n++) {
-        const at = t0 + n * 24 * HOUR;
-        s.chimeras = ['a', 'b'].map((x) => ({
-          ...makeSimChimera(STARTER_BUILD.frame, STARTER_BUILD.partIds, 'prime', content),
-          id: `probe${n}${x}`, name: `P${n}${x}`, injuryCount: 0, settleUntil: 0, injury: null,
-        }));
-        const b = createBattle(s.chimeras.map((c) => ({ ...c })), enc, content, 7, at, { kind: 'assault' });
+      const probe = (id) => ({ ...makeSimChimera(STARTER_BUILD.frame, STARTER_BUILD.partIds, 'prime', content),
+        id, name: id, injuryCount: 0, settleUntil: 0, injury: null, instability: 10 });
+      // The battle: eighty casualties through `finishBattle`. The injury
+      // stream is keyed on the creature, so every casualty is new.
+      const battleClocks = (cc) => {
+        const clocks = [];
+        for (let n = 0; n < 40; n++) {
+          const at = t0 + n * 24 * HOUR;
+          s.chimeras = ['a', 'b'].map((x) => probe(`probe${n}${x}`));
+          const b = createBattle(s.chimeras.map((c) => ({ ...c })), enc, content, 7, at, { kind: 'assault' });
+          b.over = true; b.outcome = 'loss';
+          for (const c of b.player.team) c.hp = 0;
+          for (const i of finishBattle(s, b, cc, at).injuries) clocks.push((i.injury.until - at) / HOUR);
+        }
+        return clocks;
+      };
+      for (const [cc, scale] of [[content, 1], [moved('battle', { hours: inj.battle.hours.map((h) => h * 2) }), 2]]) {
+        const clocks = battleClocks(cc);
+        const mean = clocks.reduce((x, y) => x + y, 0) / clocks.length;
+        assert.ok(clocks.length === 80 && Math.abs(mean - meanOf(inj.battle) * scale) < 0.25 * scale,
+          `the battle engine's mean clock on a tier-I ranch is ${mean.toFixed(2)}h over ${clocks.length} casualties, and the table says ${meanOf(inj.battle) * scale}h`);
+      }
+      // The last stand: the only creature on the roster goes down, and comes
+      // home on the table's clock (finishBattle's own injury is shorter).
+      const lastStand = (cc) => {
+        const solo = { ...newGameState(), seed: 4141 };
+        solo.lastTickAt = t0;
+        solo.chimeras = [probe('only')];
+        const b = createBattle(solo.chimeras.map((c) => ({ ...c })), content.encounters.patrol_2, content, 21, t0, { kind: 'assault', nodeId: 'downtown' });
         b.over = true; b.outcome = 'loss';
         for (const c of b.player.team) c.hp = 0;
-        for (const i of finishBattle(s, b, content, at).injuries) clocks.push((i.injury.until - at) / HOUR);
+        const detail = resolveBattle(solo, b, cc, t0 + HOUR);
+        assert.ok(detail.lastStand, 'the last one comes home');
+        return (solo.chimeras[0].injury.until - (t0 + HOUR)) / HOUR;
+      };
+      assert.ok(lastStand(content) >= inj.lastStand.hours[0], 'a last stand runs at least the table\'s clock');
+      assert.equal(lastStand(moved('lastStand', { hours: [7, 7] })), 7, 'and the table\'s clock is the one it runs');
+      // A rescue: whiplash on the way home, on a clock the tier does NOT
+      // shorten unless the table says it does.
+      const rescue = (cc, lvl) => {
+        const rs = { ...newGameState(), seed: 88, facility: { ...newGameState().facility, infirmary: lvl } };
+        rs.lastTickAt = t0;
+        rs.chimeras = [probe('saver')];
+        rs.campaign.captives = [{ id: 'cap1', chimera: probe('saved'), capturedAt: t0, deadline: t0 + 12 * HOUR, captor: null }];
+        const b = createBattle(rs.chimeras.map((c) => ({ ...c })), content.encounters[content.campaignMeta.rescueEncounters[0]], content, 5, t0,
+          { kind: 'rescue', captiveId: 'cap1' });
+        b.over = true; b.outcome = 'win';
+        const detail = resolveBattle(rs, b, cc, t0 + HOUR);
+        assert.equal(detail.freed, 'saved', 'the rescue brings the captive home');
+        return (rs.chimeras.find((c) => c.id === 'saved').injury.until - (t0 + HOUR)) / HOUR;
+      };
+      const inRange = (h, [lo, hi]) => h >= lo - 1e-6 && h <= hi + 1e-6;
+      assert.ok(inRange(rescue(content, 1), inj.rescue.hours) && inRange(rescue(content, top), inj.rescue.hours),
+        `a rescue's whiplash runs ${inj.rescue.hours.join('-')}h on any tier, as the table says it is not tier-scaled`);
+      assert.ok(inRange(rescue(moved('rescue', { hours: [10, 12] }), 1), [10, 12]), 'and a moved clock moves it');
+      const gTop = infirmaryGrants(ward([], top), content);
+      assert.ok(inRange(rescue(moved('rescue', { tierScaled: true }), top), inj.rescue.hours.map((h) => h * gTop.healScale)),
+        'and marking it tier-scaled in the data is what makes the tier shorten it');
+      // A failed job: a crewed run sealed as a failure on a roll of 0.25,
+      // which is the middle of the bruise's clock.
+      const { tickOperations } = await import('../campaign/operations.js');
+      const job = (cc) => {
+        const js = { ...newGameState(), seed: 93 };
+        ensureRanchSeeded(js, content, t0); js.lastTickAt = t0;
+        js.chimeras = [probe('jobber')];
+        js.campaign.operations = [{ opId: Object.keys(content.operations)[0], chimeraId: 'jobber', startedAt: t0, until: t0 + HOUR,
+          chance: 0.5, outcome: { success: false, funds: 0, species: null, injuryRoll: 0.25 } }];
+        tickOperations(js, cc, t0 + HOUR);
+        return (js.chimeras[0].injury.until - (t0 + HOUR)) / HOUR;
+      };
+      assert.ok(Math.abs(job(content) - meanOf(inj.job)) < 1e-6, `a failed job's bruise runs the table's ${meanOf(inj.job)}h at the middle of its roll`);
+      assert.ok(Math.abs(job(moved('job', { hours: [10, 20] })) - 15) < 1e-6, 'and a moved clock moves it');
+
+      // R193 — A HOLD IS NOT A WOUND. A failed espionage job is a night in a
+      // holding pen (R180), and before this rule it was an Infirmary patient
+      // in all but name: over sixteen campaigns holds were 41% of injury
+      // hours, 94% of the hours the vets turned away, $32,800 of Nurse
+      // Gauze's bill and 105 of 423 scars. So a hold rides the clock (the
+      // creature is away) and nothing else: no vet shortens it or bills for
+      // it, the Infirmary does not sell it, it cannot set badly, and the Pens
+      // say where the creature is rather than "Infirmary: undefined".
+      {
+        const { tickMissions } = await import('../campaign/mission.js');
+        const { treatInjuries } = await import('../ranch/ranch.js');
+        const { tickScars, treatInjury } = await import('../splice/scars.js');
+        const { isHold } = await import('../splice/facility.js');
+        const { renderPensScreen } = await import('../splice/pens-ui.js');
+        const nurse = vets.find((h) => (h.ceiling ?? 100) >= 100);
+        const ms = { ...newGameState(), seed: 97, funds: 10000 };
+        ensureRanchSeeded(ms, content, t0); ms.lastTickAt = t0;
+        ms.chimeras = [probe('held'), probe('hurt')];
+        const back = t0 + 3 * HOUR;
+        ms.campaign.mission = { missionId: 'espionage', rivalId: Object.keys(content.rivals)[0], chimeraId: 'held', name: 'held',
+          hours: 3, until: back, outcome: { success: false, funds: 0, fate: 'detained', detainHours: content.missions.espionage.detainHours } };
+        tickMissions(ms, content, back);
+        const [held, hurt] = ms.chimeras;
+        assert.ok(isHold(held.injury), 'a failed espionage job leaves a hold on the clock');
+        assert.equal((held.injury.until - back) / HOUR, content.missions.espionage.detainHours, 'for the hours the mission states');
+        applyInjury(hurt, { name: inj.battle.names[0], until: back + 9 * HOUR });
+        ms.staff = { hired: [{ id: nurse.id, at: t0, done: 0, missed: 0 }] };
+        const heldUntil = held.injury.until;
+        const funds = ms.funds;
+        treatInjuries(ms, content, back + 4 * HOUR, back);
+        const rec = ms.staff.hired[0];
+        assert.equal(held.injury.until, heldUntil, `${nurse.name} does not shorten a hold`);
+        assert.ok(hurt.injury.until < back + 9 * HOUR, `but does shorten the wound beside it, so the round was worked`);
+        assert.equal(rec.missed, 0, 'and a hold is not a patient turned away either');
+        assert.ok(Math.abs((funds - ms.funds) - (nurse.fee ?? 0) * 4) < 1e-6, `and bills four hours of the wound, not eight (${funds - ms.funds})`);
+        const bail = treatInjury(ms, 'held', content, back + HOUR);
+        assert.ok(!bail.ok && bail.msg === copy(content, 'mission.no_bail', { name: 'held' }), 'or sell one — it says so');
+        // Nothing sets badly in a cell: both clocks run out at a certain scar,
+        // and only the wound takes one.
+        const scarring = { ...content, scarMeta: { ...content.scarMeta, scarChance: 1 } };
+        tickScars(ms, scarring, back + 12 * HOUR);
+        assert.equal((held.scars ?? []).length, 0, 'a hold that runs out never scars');
+        assert.equal((hurt.scars ?? []).length, 1, '(a wound that runs out on the same roll does)');
+        // And the card says where the creature is.
+        const pen = { ...newGameState(), seed: 97 };
+        ensureRanchSeeded(pen, content, t0); pen.lastTickAt = back;
+        pen.chimeras = [{ ...probe('held'), injury: { until: back + 9 * HOUR, reason: 'detained' } }];
+        pen.ui = { collapsed: { 'pen-held': false } };
+        const r = { innerHTML: '', querySelectorAll: () => [], querySelector: () => null };
+        renderPensScreen(r, { state: pen, content, now: () => back, save: () => {}, refreshTicker: () => {} });
+        assert.ok(r.innerHTML.includes(copy(content, 'mission.held', { time: '9h 0m' })), 'the Pens card says the creature is helping the police');
+        assert.ok(!/Infirmary: undefined|data-treat="held"/.test(r.innerHTML), 'with no nameless Infirmary line and no Treat button');
       }
-      const mean = clocks.reduce((x, y) => x + y, 0) / clocks.length;
-      assert.ok(clocks.length === 80 && Math.abs(mean - WALK_INJURY_HOURS) < 0.25,
-        `the battle engine's mean injury clock on a tier-I ranch is ${mean.toFixed(2)}h over ${clocks.length} casualties, and the walker prices a refusal on ${WALK_INJURY_HOURS}h`);
     }
     for (const w of walks) {
       const p = w.payroll;
@@ -24804,7 +24946,24 @@ if (inShard('wire')) {
 // rule in `campaign/rivals.js` that keeps anatomy above common off a rival's
 // roster — the leak the reach census found, which `rivals.js` has to hold
 // because it builds every generated unit on the tick that fights them.
-const KB_CAP = 335;        // CODE only, measured at 334.31
+// R193 — 335 -> 336, measured at 335.82 on a tree that read 334.94 before
+// it, and R181's argument a third time because it is the same tick. Every
+// wound is inflicted on it (a battle, a rescue, a last stand and a job's
+// bruise all land eagerly), so the one table that states their clocks has to
+// be read there: 278 bytes in `battle/statblock.js`, which is the injury's
+// one home. And the rule that a hold is not a wound has to be asked where
+// the tick treats, scars and counts the Infirmary's patients: `isHold` in
+// `splice/facility.js`, one test each in the vet's round, the scar roll, the
+// sale, the agenda's row and the digest's count.
+//
+// Paid down before it was raised: the table reader lost its own guard (a
+// missing table fails on the read beside it), the Infirmary's price stopped
+// carrying a second copy of the refusal that `treatInjury` already makes,
+// and the vat kept its one refusal line, because the vat's picker is lazy and
+// already greys out a held creature and names where it is. 1,221 bytes
+// became 898, and the comments that explained it went to data/notes/scars.md
+// (PROSE_CAP stays where it was: +9 bytes).
+const KB_CAP = 336;        // CODE only, measured at 335.82
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.

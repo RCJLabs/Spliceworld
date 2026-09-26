@@ -4,7 +4,7 @@
 // intervals).
 
 import { rngStream, pick, randInt, pickFresh } from '../util/rng.js';
-import { upkeepTuning, territoryUpkeepPerDay, facilityUpkeepPerDay } from '../splice/facility.js';
+import { upkeepTuning, territoryUpkeepPerDay, facilityUpkeepPerDay, isHold } from '../splice/facility.js';
 import { speciesOf } from '../data/catalog.js';
 import { seasonOf } from '../campaign/calendar.js';
 
@@ -482,7 +482,7 @@ export function treatInjuries(state, content, now, since) {
   const dt = now - from;
   for (const c of dt > 0 ? state.chimeras ?? [] : []) {
     const left = (c.injury?.until ?? 0) - from;
-    if (left <= 0) continue;
+    if (left <= 0 || isHold(c.injury)) continue;
     if (c.instability > vet.h.ceiling) {
       vet.rec.missed += Math.min(left, dt) / HOUR;
       continue;

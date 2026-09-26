@@ -1,7 +1,13 @@
 {
   "tuning": {
     "scarChance": 0.34,
-    "maxScars": 3
+    "maxScars": 3,
+    "injuries": {
+      "battle": { "hours": [2, 4], "tierScaled": true, "names": ["Bruised Ego", "Sprained Everything", "Temporary Kazoo Phobia", "Overstretched Drama Gland", "Bent Whiskers", "Full-Body Boop"] },
+      "lastStand": { "hours": [3, 3], "tierScaled": true, "names": ["Dragged Itself Home"] },
+      "rescue": { "hours": [1, 2], "tierScaled": false, "names": ["Dramatic Rescue Whiplash"] },
+      "job": { "hours": [1.5, 3.75], "tierScaled": true, "names": ["Undignified Exit"] }
+    }
   },
   "scars": [
     {

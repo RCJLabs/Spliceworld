@@ -185,6 +185,10 @@
     "agent_risk_poached": "If it goes wrong the lab may hire your agent away. The non-compete runs {days} days.",
     "apt_agent": "a professional, if not a chameleon",
     "agent_detained": "{creature} is helping the police with their enquiries, back in {hours} hours.",
+    "held": "Helping the police with their enquiries. Back in {time}, with a stern letter and not a scratch.",
+    "held_short": "helping the police with their enquiries",
+    "held_badge": "held",
+    "no_bail": "{name} is helping the police with their enquiries. The Infirmary does not do bail.",
     "poached": "{creature} was offered a better dental plan by {rival}, and took it.",
     "expenses": "less {amount} in expenses"
   },
