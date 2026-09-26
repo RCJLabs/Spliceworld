@@ -79,7 +79,11 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (4h45m to 6h. R190 is the TENTH reading: 474 breaks at
+**The full battery (4h45m to 6h. R192 is the ELEVENTH reading: 479 breaks
+at 24m, 67m, 149m and 113m, which is 353 minutes — three under R190 with
+five more breaks, so the range holds. A container restart cut chunk 2 short
+partway through; it and chunk 3 were re-run whole, and only the complete
+runs are counted. R190 was the TENTH reading: 474 breaks at
 23m, 85m, 143m and 105m, which is 356 minutes — 22 over R189 with seven more
 breaks, most of it in chunk 4, where the new ones live — so the top of the
 range is now six hours. R189 was the NINTH reading: 467 breaks
@@ -123,7 +127,7 @@ R116 before chunking: one to a tree edited underneath it, one to a restart
 twenty-five minutes in. Build the id list from the file, because break
 numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327, 347
 are retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
-474 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
+479 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
 gene probe, R183 added 399-401 for the job headline, R185 added 402-404 for
 the Dex tab list, R176 added 405-407 for the lazy synth, R179 added 408-412
 for the expedition, R180 added 413-422 for the mission board, R181 added
@@ -131,9 +135,9 @@ for the expedition, R180 added 413-422 for the mission board, R181 added
 added 436-445 for the Vault's way out, R184 added 446-450 for the room
 inside `main`, R186 added 451-464 for the rare, the unique and the run
 that remembers one, R187 added 465-468 for the gates that build their
-worst case, R189 added 469-476 for the agent, and R190 added 477-483 for the
-vet's bill. The count and the top id have not agreed since the
-retirements: 474 breaks, numbered to 483. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
+worst case, R189 added 469-476 for the agent, R190 added 477-483 for the
+vet's bill, and R192 added 484-488 for the agent's policy. The count and
+the top id have not agreed since the retirements: 479 breaks, numbered to 488. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
 against a tree carrying 410, because a milestone that adds breaks has to
 remember to come back here and nobody had. Trust `--anchors`, which prints
 the real total, over this sentence. Count with `--anchors`, which

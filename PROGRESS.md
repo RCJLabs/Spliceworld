@@ -1,5 +1,111 @@
 # PROGRESS
 
+## Session 216 — R192: The walk never sends an agent ✅ · R195: the surgery table waits a third as long ✅
+
+**Two things this session. At Evan's request, the Surgery Theater's table
+now waits a third as long. And the walker has a stated policy for Mister
+Wicket: it weighs him against its best infiltrator. The census that came
+with the policy says what he is worth: about 1% of his wage in money, and
+most of the creatures a ranch would otherwise lose to conscription.**
+
+### The faster table (R195, asked for directly)
+
+- **Shipped.** A splice takes 6h40m on Tier I and 3h20m on Tier II (was 20h
+  and 10h). A dismantle takes 1h and 10m (was 3h and 30m). The change is in
+  `data/facility.json`; `splice/facility.js`'s fallbacks follow the first
+  rung.
+- **Measured, 16 seeds, old table against new (medians):**
+  - dominion day 28.1 → 30.5;
+  - splices per campaign 29 → 31;
+  - creature life 113 → 120 days;
+  - hunts before dominion 19 → 21.
+  The walker was never waiting on the table. Two seeds swing hard: seed 99
+  now takes 68 days to dominion (was 35.5), and seed 7 takes 45 (was 36).
+- **Re-derived:**
+  - Seed 4242's first rival win moved from day 23 to day 65, and a lab you
+    have never beaten never breaks out. So the WALK gate's 45-day window
+    held two hunts, against a floor of 15. The gate moved to seed 2026 and
+    now checks its own premise (a rival beaten inside the window).
+  - Smoke's per-seed floor of two hunts was re-censused at a minimum of 1,
+    so it folded into the per-kind clause.
+  - The open Vault's budget rose by two species bays (43 on the shelf,
+    where R186 had 41).
+  - The worker cache was bumped.
+- **Browser, at 380px:**
+  - A real dismantle through the Pens occupies the table for 60 minutes on
+    Tier I and 10 minutes on Tier II.
+  - A second dismantle is refused.
+  - The clock survives a reload.
+  - The Pens line quotes Tier II's "10m for $900".
+  - No console errors on the day-180 save, a fresh save or the v64 fixture.
+
+### R192 — what shipped
+
+- **Hiring rule 5, restated.** A duty the file marks `sent` takes a slot
+  only after every stationed duty has a hire. On the shipped file that is
+  never (two slots, two stationed duties). A seed-7 campaign's save is
+  byte-identical to the previous commit's.
+- **Mission rule 5.** Renewal takes a creature. Where a creature's failure
+  is permanent (conscription), the agent goes whenever he is free.
+  Otherwise the better odds go. Every choice logs the chances it was made
+  on, and the walk now keeps each hire's wages.
+- **The census:** 16 campaigns of 180 days with a third slot open.
+  - He went on 524 of 3,853 jobs (72 sabotage, 452 espionage) and won 252.
+  - He earned $16,390 against $13,100 in expenses: about $206 a campaign
+    net, against about $25,000 a campaign in wages.
+  - He was poached 17 times and held 235 times.
+  - 6 creatures were conscripted, against 25 without him.
+- **Rules it was chosen over:**
+  - always the agent: held 1,263 times, 7 conscripted;
+  - odds alone: 16 conscripted;
+  - only when no creature is spare: never sent him at all.
+- **The gate.** The diet gate checks that the shipped walk hires no agent.
+  It then replays the variant on seeds 2026 and 7 and recomputes every
+  choice from the mission data: 7 decided by permanence, 135 by odds, 234
+  creatures sent past him.
+- **Breaks 484–488.** 199 and 276 were re-aimed.
+- **R194 filed:** the agent never earns his wage.
+
+### Found on the way
+
+- **The first census was invalid.** A third slot needs 24 held nodes, and
+  campaigns hold 23, so "maxSlots 3" changed nothing. The variant starts
+  with two slots instead.
+- **"Only when no creature is spare" is a rule this walker can never
+  fire.** The board's cooldown paces its capers, not its bench. So the
+  agent's supposed benefit of letting a mission run with nobody spare is
+  worth nothing here.
+- **R190's vet split thinned on the faster table.** Gauze holds the slot at
+  day 180 on 1 of the diet gate's 7 campaigns. R190's clause passes on that
+  single seed, and this is noted on R193.
+- **Break 199's comment was wrong about R187.** R187 bounded the shut Vault
+  and left the open half a reading. The comment is fixed.
+
+### Verification
+
+- `npm test`: 510s wall, 1,435 of 1,641 budgeted CPU-seconds (6 walks
+  rebuilt).
+- Battery baseline green after the table's gates were re-derived (40 of 40
+  gates). WALK breaks 44–48, 79 and 220 were caught on the new seed.
+- Full battery (an existing gate's logic changed: WALK moved seed and
+  gained a premise check). Four chunks at 24m, 67m, 149m and 113m: 353
+  minutes, the eleventh reading. All four baselines were green, 479 of 479
+  breaks were caught, and every chunk read BATTERY_EXIT 0. A container
+  restart cut chunk 2 short partway through; chunks 2 and 3 were re-run
+  whole, and only the complete runs are counted.
+- SAVE_VERSION stays 64. No save shape changed.
+
+### Known issues
+
+- R193: the vet bill's clock, and now the thin Gauze split.
+- R194: the Field Agent's price against what he buys.
+
+### Next session
+
+R193 or R194. Both are balance calls with numbers attached, and R194 is a
+design question for Evan: a cheaper agent, better-paying jobs, or a third
+slot.
+
 ## Session 215 — R190: Doc Sutures is never the walker's vet ✅
 
 **A vet now has a price. The walker weighs a vet's fee against what the

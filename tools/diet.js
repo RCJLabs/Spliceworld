@@ -381,6 +381,74 @@ sockets across ${bodies} kept chimeras: `
   }
 }
 
+// ---- 6. R192: the agent is weighed against the best infiltrator --------
+//
+// R189 shipped Mister Wicket and a walker that never hired him (its rule 5),
+// so no campaign number said what he was worth. R192 gives the walker a
+// stated policy for him — rule 5 of the mission policy in tools/sim.js — and
+// measured it over sixteen 180-day campaigns with a third payroll slot open:
+// 524 jobs (72 sabotage, 452 espionage), ~$200 a campaign net of his
+// expenses against ~$25,000 of wages, and 6 creatures conscripted where no
+// agent loses 25. On the SHIPPED file he is never hired, and that is the
+// hiring rule working rather than the walk forgetting him: a sent duty takes
+// a slot only after every stationed one has a hire, and there are two slots.
+//
+// So this runs the census's own variant — two slots to start, three at
+// most — on two full campaigns, and checks every choice the walker made
+// with the agent free against the rule, recomputed here from the mission
+// data rather than read back from the walker's log. Measured on these two:
+// 7 sends decided by the permanent risk, 135 by the odds, 234 creatures sent
+// past a free agent. Each branch must occur, so a rule that collapses into
+// "always the agent" or "never the agent" has a branch that stops appearing.
+// BLIND AGAIN IF the log stops recording the chances a choice was made on,
+// or the variant loses its third slot (then nothing is weighed at all).
+{
+  const meta = content.henchmenMeta?.duties ?? {};
+  const isSent = (id) => !!meta[content.henchmen?.[id]?.duty]?.sent;
+  const shipped = (walk.payroll?.hires ?? []).filter((e) => isSent(e.id));
+  if (shipped.length) {
+    fails.push(`seed 2026 hired ${shipped.map((e) => `${e.id} on day ${e.day}`).join(', ')} on the shipped file,`
+      + ' where two slots and two stationed duties leave no room for a sent one');
+  }
+  const variant = { ...content, henchmenMeta: { ...content.henchmenMeta, slots: 2, maxSlots: 3 } };
+  const branch = { permanent: 0, odds: 0, creature: 0 };
+  const wrong = [];
+  const said = [];
+  for (const seed of [2026, 7]) {
+    const w = campaignWalk(variant, { seed, days: 180, stopAtDominion: false });
+    // The hire order: the agent only after a hand and a vet are on the books.
+    const firstAgent = w.payroll.hires.findIndex((e) => isSent(e.id));
+    const before = new Set(w.payroll.hires.slice(0, Math.max(0, firstAgent)).map((e) => content.henchmen[e.id]?.duty));
+    const standing = Object.keys(meta).filter((d) => !meta[d].sent);
+    if (firstAgent < 0) wrong.push(`seed ${seed} never hired an agent into the third slot`);
+    else if (!standing.every((d) => before.has(d))) {
+      wrong.push(`seed ${seed} hired its agent on day ${w.payroll.hires[firstAgent].day} before every stationed duty had somebody`);
+    }
+    const ms = (w.log ?? []).filter((e) => e.kind === 'mission');
+    for (const e of ms) {
+      const m = content.missions?.[e.mission];
+      if (e.agent && !m?.agent) wrong.push(`seed ${seed} sent the agent on ${e.mission}, which takes no agent`);
+      if (!e.odds) continue;
+      const permanent = m?.risk === 'conscripted';
+      const should = e.odds.creature === null || permanent || e.odds.agent >= e.odds.creature;
+      if (should !== !!e.agent) {
+        wrong.push(`seed ${seed} day ${e.day} ${e.mission}: sent ${e.agent ? 'the agent' : 'a creature'} at ${e.odds.agent.toFixed(3)}`
+          + ` against ${e.odds.creature === null ? 'no spare creature' : e.odds.creature.toFixed(3)}${permanent ? ', a permanent risk' : ''}`);
+      } else if (e.agent) branch[permanent && e.odds.creature !== null && e.odds.agent < e.odds.creature ? 'permanent' : 'odds']++;
+      else branch.creature++;
+    }
+    const ag = ms.filter((e) => e.agent);
+    said.push(`${seed}: ${ag.length} agent / ${ms.length - ag.length} creature, agent net $${ag.reduce((n, e) => n + (e.funds ?? 0) - (e.expenses ?? 0), 0)}`
+      + ` against $${Object.entries(w.payroll.paid ?? {}).filter(([id]) => isSent(id)).reduce((n, [, v]) => n + v, 0)} of wages`);
+  }
+  if (REPORT) console.log(`\n  agent (third slot): ${said.join('; ')} · decided by permanence ${branch.permanent}, odds ${branch.odds}, creature ${branch.creature}`);
+  for (const wr of wrong.slice(0, 5)) fails.push(`R192 rule 5: ${wr}`);
+  for (const [k, n] of Object.entries(branch)) {
+    if (!n) fails.push(`R192 rule 5: no choice on seeds 2026/7 was decided by ${k === 'creature' ? 'sending a creature past a free agent' : `the ${k} clause`}`
+      + ` (${JSON.stringify(branch)}) — the rule has collapsed to one answer`);
+  }
+}
+
 // ---- verdict ---------------------------------------------------------
 if (fails.length) {
   console.error(`\ndiet ✗  ${fails.length} gap${fails.length === 1 ? '' : 's'}:`);

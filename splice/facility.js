@@ -148,14 +148,14 @@ export function theaterGrants(state, content, frameId = null) {
     // R91 — the Theater builds the creatures, so the Theater houses them,
     // and its one table decides how often it can change its mind.
     stable: g.stable ?? 12,
-    tableHours: g.tableHours ?? 20,
+    tableHours: g.tableHours ?? 20 / 3,
     // R135 — taking a creature apart is not building one. One table, two
-    // prices: a splice stays 20h/10h (R91's note on the shared clock is
-    // load-bearing) and a dismantle is 3h/30m, which is the complaint this
+    // prices: a splice took 20h/10h (R91's note on the shared clock is
+    // load-bearing) and a dismantle 3h/30m, which is the complaint this
     // milestone was reported against. Measured: 74.8 days of median chimera
     // life, against 48.5 before — a cheap undo lets a failure be cleared
     // without the rebuild being cheap too. Fallback is the UNbought rung.
-    dismantleHours: g.dismantleHours ?? 3,
+    dismantleHours: g.dismantleHours ?? 1,
   };
 }
 

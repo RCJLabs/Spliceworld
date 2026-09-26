@@ -1175,7 +1175,7 @@ import {
 } from '../campaign/expedition.js';
 import { findsFor, expeditionOdds, startExpedition } from '../campaign/outfit.js';
 import { activeMission, missionCandidates } from '../campaign/mission.js';
-import { missionsFor, missionHours, missionTargets, missionAptitude, startMission, missionCommitted } from '../campaign/caper.js';
+import { missionsFor, missionHours, missionTargets, missionAptitude, startMission, missionCommitted, missionAgents, missionOdds } from '../campaign/caper.js';
 import { hireRoster, slotsOf, hiredOf, hire, letGo, wageNow } from '../campaign/staff.js';
 import { guideStates } from '../ranch/onboarding.js';
 
@@ -1578,12 +1578,19 @@ const WALK_RESERVE_DAYS = 14;
 //      under Doc's ceiling) flips the cheaper bill whenever one creature
 //      crosses it, and a walker that followed it swapped vets thirty-two
 //      times in one campaign. Nobody re-hires a vet over one patient.
-//   5. R189 — NOT A HIRE WHOSE JOB IS TO BE SENT. A duty the file marks
-//      `sent` (Fieldwork) holds no standing clock: its hire earns the wage
-//      only on missions somebody sends them on, and this walker's mission
-//      policy sends creatures (R180). Hiring one it never sends would be a
-//      wage for nothing and a slot taken from the hand or the vet. Teaching
-//      the walk to weigh an agent against its own infiltrator is R192.
+//   5. R192 — A HIRE WHO IS SENT COMES AFTER EVERY HIRE WHO IS STATIONED.
+//      A duty the file marks `sent` (Fieldwork) holds no standing clock: its
+//      hire earns the wage only on the missions it is sent on. It takes a
+//      slot in duty order like any other (rule 1), and only once every
+//      standing duty already has somebody, so it never takes the slot a
+//      hand or a vet was waiting to afford. On the shipped file that is
+//      never — two slots, two standing duties — and R192 measured why that
+//      is the right answer rather than an accident of the order: over
+//      sixteen campaigns with a third slot open, Mister Wicket's jobs
+//      returned ~$200 a campaign net of expenses against ~$25,000 of wages.
+//      What he buys is creatures: 25 conscripted without him, 6 with him.
+//      When a slot is there for him the walker hires him and sends him by
+//      rule 5 of the mission policy (walkAct).
 // R190 — THE CLOCK A REFUSAL IS PRICED ON. The call-out is per patient, so
 // its share of an hour depends on how long an injury runs, and the battle
 // engine types that: (2 + 2u) hours at the Infirmary's `healScale`
@@ -1620,11 +1627,16 @@ function walkHire(state, content, now, did, introduced) {
   const day = Math.floor(now / WALK_DAY);
   if (state.__walkHireDay === day) return;
   state.__walkHireDay = day;
+  // R192 — what each hire has cost, at the day's rate (the engine bills it
+  // inside upkeep and keeps no ledger), so the census can set a wage against
+  // what the hire's work returned.
+  for (const r of hiredOf(state)) (state.__walkPaid ??= {})[r.id] = (state.__walkPaid[r.id] ?? 0) + wageNow(state, content, r.id);
 
   const roster = hireRoster(content);
-  const duties = Object.entries(content.henchmenMeta?.duties ?? {})
-    .filter(([, d]) => !d.sent)
+  const meta = content.henchmenMeta?.duties ?? {};
+  const duties = Object.entries(meta)
     .sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0)).map(([id]) => id);
+  const staffed = (duty) => hiredOf(state).some((r) => content.henchmen?.[r.id]?.duty === duty);
   const herd = state.ranch.stock.length;
   const pens = state.chimeras ?? [];
   const coverage = (h) => (h.duty === 'care'
@@ -1648,6 +1660,8 @@ function walkHire(state, content, now, did, introduced) {
   });
 
   for (const duty of duties) {
+    // Rule 5: a sent duty waits until every stationed one has a hire.
+    if (meta[duty]?.sent && duties.some((d) => !meta[d]?.sent && !staffed(d))) continue;
     const want = pick(duty);
     const held = hiredOf(state).find((r) => content.henchmen?.[r.id]?.duty === duty);
     if (!want) continue;
@@ -2264,6 +2278,23 @@ function walkAct(state, content, now, open, opts = {}) {
     //      hours and 8.8 at eighteen, so the long run buys 5% more income
     //      for six times the commitment. A player takes the short one and
     //      keeps the animal available for the thing that turns up tomorrow.
+    //   5. R192 — WHO GOES, WHEN THERE IS AN AGENT ON THE BOOKS. The mission
+    //      is chosen first, exactly as above; then:
+    //        - a mission with no `agent` block (renewal) takes a creature;
+    //        - where a creature's failure is PERMANENT — the mission's risk
+    //          is conscription — and the agent's is not (held a day, or
+    //          hired away for a week), the agent goes whenever he is free.
+    //          A caught creature fights for the rival from then on;
+    //        - otherwise the better odds go: the agent when his chance is at
+    //          least the best spare creature's, or when no creature is spare.
+    //      Measured over sixteen campaigns with a third slot open, against
+    //      "always the agent" and "odds alone": this sends him on 524 jobs
+    //      (72 sabotage, 452 espionage), holds conscriptions to 6 (always:
+    //      7, odds alone: 16, no agent: 25), and gets him held for
+    //      questioning 235 times (always: 1,263). "Only when no creature is
+    //      spare" sent him NEVER: the board's cooldown paces this walker's
+    //      capers, not its bench. The chances it chose on are logged with
+    //      every mission, so the gate checks each choice at its own moment.
     const busyCap = new Set([
       ...activeOps(state).map((r) => r.chimeraId).filter(Boolean),
       ...missionCommitted(state),
@@ -2283,8 +2314,10 @@ function walkAct(state, content, now, open, opts = {}) {
     // convoy is due, and you certainly do not feed it to a city block.
     const spareCap = Math.max(0, (state.chimeras ?? []).length - fullTeam() - 1);
     let pick = null;
-    if (!activeMission(state) && spareCap > 0 && benchCap.length) {
-      const who = benchCap[0].c;
+    const agentFree = missionAgents(state, content, now)[0] ?? null;
+    const canCreature = spareCap > 0 && benchCap.length > 0;
+    if (!activeMission(state) && (canCreature || agentFree)) {
+      const who = benchCap[0]?.c ?? null;
       // The lab that is beating you hardest, and whether a setback would
       // still come off anything. `wall` is its wins over you minus yours
       // over it; `undone` is false once the setbacks already banked cancel
@@ -2309,24 +2342,38 @@ function walkAct(state, content, now, open, opts = {}) {
       // Rule 3: a mission that spends the specimen needs a spare body, and
       // one that only risks it does not.
       const thin = !canSpend(0);
-      const mission = (thin && spareCap >= 2 && spender) ? spender
+      const mission = (thin && spareCap >= 2 && spender && canCreature) ? spender
         : (wall && wall.wall > 0 && wall.undone && weakener) ? weakener
         : quietest;
       // The setback play goes at the lab that is beating you; everything
       // else goes at the one the ladder put in front of you.
       const rival = (mission === weakener && wall) ? wall.rival : targets[0]?.rival;
       const hours = mission ? Math.min(...missionHours(mission)) : 0;
-      if (mission && rival && hours > 0) pick = { mission, rival, hours, who };
+      // Rule 5, on the chances the board itself would quote.
+      const odds = mission && agentFree && mission.agent ? {
+        agent: missionOdds(content, mission, hours, null, agentFree.h).chance,
+        creature: canCreature ? missionOdds(content, mission, hours, who).chance : null,
+      } : null;
+      const permanent = mission?.risk === 'conscripted';
+      const sendAgent = !!odds && (odds.creature === null || permanent || odds.agent >= odds.creature);
+      if (mission && rival && hours > 0 && (sendAgent || canCreature)) {
+        pick = { mission, rival, hours, who: sendAgent ? null : who, agent: sendAgent ? agentFree : null, odds, permanent };
+      }
     }
-    const ran = pick && startMission(state, content, now, pick.mission.id, pick.rival.id, pick.who.id, pick.hours);
+    const ran = pick && startMission(state, content, now, pick.mission.id, pick.rival.id, pick.who?.id ?? null, pick.hours, pick.agent?.rec.id ?? null);
     if (ran?.ok) {
       did('mission', {
         mission: pick.mission.id,
         rival: pick.rival.id,
         hours: pick.hours,
-        apt: Number(missionAptitude(content, pick.who).score.toFixed(3)),
+        apt: Number((pick.agent ? pick.agent.h.aptitude : missionAptitude(content, pick.who).score).toFixed(3)),
         won: ran.run.outcome.success,
         fate: ran.run.outcome.fate,
+        // R192 — who went, what the choice was made on, and what it paid.
+        agent: pick.agent?.rec.id ?? null,
+        ...(pick.odds ? { odds: pick.odds, permanent: pick.permanent } : {}),
+        funds: ran.run.outcome.funds,
+        expenses: ran.run.outcome.expenses ?? 0,
       });
     }
   }
@@ -3397,6 +3444,9 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
       openDay: at.payroll ?? null,
       hires: (state.__walkLog ?? []).filter((e) => e.kind === 'hire'),
       hired: hiredOf(state).map((r) => ({ id: r.id, duty: content.henchmen?.[r.id]?.duty, done: r.done, missed: r.missed })),
+      // R192 — every hire's wages at the day's rate, by id, whether or not
+      // they are still on the books.
+      paid: Object.fromEntries(Object.entries(state.__walkPaid ?? {}).map(([id, v]) => [id, Math.round(v)])),
       wages: hiredOf(state).reduce((n, r) => n + wageNow(state, content, r.id), 0),
     },
     actions: (state.__walkLog ?? []).length,
