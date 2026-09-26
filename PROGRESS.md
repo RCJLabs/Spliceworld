@@ -1,5 +1,96 @@
 # PROGRESS
 
+## Session 219 — R197: the battery reads what a red gate said ✅
+
+**A red gate is now reported by what it said, not by its first four lines.
+The baseline prints a red gate's verdict, and every caught break prints one
+line of what its gate said. On its first run that line found a break caught
+by a crash (filed as R199).**
+
+### Measured first
+
+- **One real break for each of the 52 gates the battery aims at**, run in
+  scratch trees with stdout and stderr kept apart (about 45 minutes on four
+  lanes).
+- **The four-line excerpt missed the verdict on 16 of the 52.** Five are
+  baseline gates: the keyboard gate, the boot gate, the service worker, the
+  union gate and smoke's facility lane. So the entry's premise was too
+  narrow: it was never the keyboard gate's quirk. Every smoke lane prints
+  progress and then dies of an uncaught assertion, whose words come after
+  Node's own rethrow frame (`run_main:123`).
+- **The `--verbose` line under a caught break was wrong on the same 16.**
+- **No gate was silent.** 13 fail by an uncaught throw and 39 complain in
+  words, and all 52 do it on stderr.
+
+### What shipped
+
+- **The reader** (`verdict` in `tools/battery.js`):
+  - an uncaught throw: the error's words, and the first stack frame on disk
+    as where (`thrown at tools/smoke.js:15745`);
+  - otherwise stderr, less Node's warnings: whole if it fits in eight lines,
+    otherwise a window on its first ✗ line, what follows first and then what
+    came before (scopecheck prints the unbound name ahead of its count);
+  - otherwise the last ✗ line on stdout;
+  - a gate that says nothing is reported as saying nothing, with the last
+    lines it printed.
+  It reads all 52 surveyed reds. `run` returns the two streams apart.
+- **Where it shows.** A red baseline gate prints its verdict. Every caught
+  break prints one line of it by default; `--verbose` prints all of it.
+- **Scoring did not change.** A red gate is a caught break whatever it
+  printed, so no gate's logic moved and the full battery was not owed.
+- **The gate: `node tools/battery.js --self`**, in the baseline (a third of
+  a second). Eleven reds read as their gates meant them (seven exactly as
+  real gates wrote them, four built), and three tiny gates run end to end
+  through `run`, `pool` and both printers. Breaks 505-512.
+- **R199 filed** (below).
+
+### Found on the way
+
+- **Break 59 is caught by a crash.** It turns the Dex tab into a `<div>`,
+  and the keyboard gate's own setup clicks that tab by selector and dies of
+  a TypeError at `tools/cdp.js:90`. The keyboard check the break is named
+  for never runs. Nobody could see that before, because the line under a
+  caught break showed its gate's first words. How many other breaks are
+  caught by a crash is unknown; the next full battery will list them.
+- **The keyboard gate's intermittent red under load (R193, R194) is still
+  unexplained.** It passed in this session's baseline. The next one will
+  print what it found.
+
+### Verification
+
+No existing gate's logic changed, so this is the per-milestone tier.
+
+- `battery.js --anchors`: 503 of 503 match.
+- `battery.js --only 505-512,180,59,294`: `BATTERY_EXIT 0` in 16m28s. The
+  baseline was green, including the new self-test run inside a battery
+  worker, and all 11 breaks were caught. Each caught break printed its
+  gate's verdict:
+  - the eight new breaks, each naming the fixture it broke;
+  - keyboard breaks 180 and 294, their `a11y ✗` problems;
+  - break 59, the crash above.
+- `npm test`, alone: 292.5s wall, 1,044 of 1,425 budgeted CPU-seconds, on a
+  warm cache.
+- Browser at 380px: every screen is 380 wide on a fresh save, the v64
+  fixture and the v60 fixture migrated to v64. Each survives a reload, and
+  there are no console errors. (Nothing in the game changed; this is the
+  Definition of Done's floor.)
+- SAVE_VERSION stays 64.
+
+### Known issues
+
+- R196: the vet bill prices Doc's refusals on the roster, not the patients.
+- R198: diet section 6's odds branch rests on one choice.
+- R199: break 59 is caught by the keyboard gate crashing, and the rest of
+  the 503 have not been read yet.
+
+### Next session
+
+R199 or R196. R199 is small (make the keyboard gate report an unreachable
+tab instead of crashing), and it pairs naturally with the next full battery,
+which is also what R198 owes: one run would confirm R198's new seeds and
+list every break caught by a crash. R196 is a design call for Evan (what
+Nurse Gauze is for).
+
 ## Session 218 — R194: the Field Agent never earns his wage ✅
 
 **Mister Wicket now earns his wage. The walker sends him on the job length
