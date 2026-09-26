@@ -4465,11 +4465,11 @@ const BREAKS = [
     // it again before ticking itself: re-aimed at R189, the head after it.
     // R189 likewise, before its own tick: re-aimed at R190. R190 likewise:
     // re-aimed at R192, the head of the queue it leaves. R192 likewise:
-    // re-aimed at R193.
+    // re-aimed at R193. R193 likewise: re-aimed at R194.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: '- **R193 — The vet bill spreads the call-out over the battle clock alone.**',
-    to: '- **R193 — The vet bill spreads the call-out over the battle clock alone.** ✅',
+    anchor: '- **R194 — The Field Agent never earns his wage.**',
+    to: '- **R194 — The Field Agent never earns his wage.** ✅',
   },
   {
     // The other direction: the count beside the list stops matching the list.
