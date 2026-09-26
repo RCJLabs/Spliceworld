@@ -1,5 +1,114 @@
 # PROGRESS
 
+## Session 218 — R194: the Field Agent never earns his wage ✅
+
+**Mister Wicket now earns his wage. The walker sends him on the job length
+that pays him best, and his wage is one the board can pay: 0.30 a head,
+down from a hand's 3. On sixteen campaigns with a slot open for him, his
+jobs net 2.15 times his wages, and he keeps 9 creatures from conscription.
+Evan asked for this milestone without the full battery. No existing gate's
+logic changed, so none was owed.**
+
+### Measured first
+
+- **At R192's price and rule:** 1,072 jobs, $4,009 net of his fee against
+  $400,488 of wages (1%). The walker sent him on the shortest length. His
+  $25 fee is per job, and three hours of espionage is expected to pay
+  $25.49 at his 0.45 aptitude.
+- **The same census on the longest length:** $88,603 net against $409,179
+  (22%). Better, but no length can pay a hand's wage. The board runs one
+  job at a time and rests eleven hours after each. Taking every espionage
+  job at 18 hours, it pays him ~$117 a day, and 3 a head is ~$150 a day at
+  the ~52 heads a ranch runs while he is on the books.
+- **The third slot is not the lever.** At the old price it only spreads the
+  loss, and it would change the shipped day-180 walk.
+
+### What shipped
+
+- **Rule 6 of the walker's mission policy** (`agentHours` in
+  `tools/sim.js`). He goes on the length that pays him most per hour of
+  the board, net of his fee. On the shipped data that is 18 hours of
+  espionage and 24 of sabotage. A creature keeps rule 4's shortest job,
+  because its hours also defend the ranch. The walk logs his day rate with
+  each job.
+- **His wage: 3 a head → 0.30** (`data/henchmen.json`). It is the highest
+  step of 0.05 that the median campaign earns back: 0.30 covers it on 9 of
+  16, 0.35 on 7. It stays per head, as smoke holds for every hire.
+- **The census at 0.30** (sixteen 180-day campaigns, third slot open):
+  - 516 jobs, $87,418 net against $40,664 of wages, about $2,540 a
+    campaign;
+  - 4 creatures conscripted where the same campaigns without him lose 13;
+  - the mission board pays $181,343 where it paid $113,153;
+  - dominion, raids held and late defences moved within noise.
+- **Diet section 8.** On the two third-slot campaigns section 6 already
+  walks, every job he goes on must be rule 6's length, recomputed from the
+  data. Its expected pay must beat his wage over the hours it holds the
+  board. The thinnest job clears it 13.3 times over. The campaign total is
+  printed, not pinned, because it turns on chaos.
+- **Breaks 501-504.** Break 276 was re-aimed at R196's title.
+- **R198 filed** (below).
+
+### Found on the way
+
+- **Section 6's odds branch now rests on one choice.** It needs each
+  branch of rule 5 to occur on seeds 2026 and 7. The new wage moved seed
+  2026 into a campaign that builds a better spy than him, so the branch
+  counts went 7 / 135 / 234 → 11 / 1 / 415. It passes, on a single choice.
+  Filed as R198 rather than changing that gate's seeds, which would have
+  owed the full battery.
+- **He is two hires in one.** Seven campaigns in sixteen send him on fewer
+  than ten jobs, because their best spare creature beats his odds. There
+  he is insurance against conscription on the sabotage jobs. The other
+  nine make money. The two seeds the diet gate replays are both quiet
+  ones: $3,480 net against $5,035 of wages.
+- **The pooled end treasury is 1.8% lower with him.** That is chaos at
+  that size; the mission board's own ledger is $27,000 up after his wages.
+- **R193's browser check of the War Room never opened it.** Its script
+  clicked a screen called `warroom`, and the War screen is `battle`, so
+  the "names the hold" line was read off the Pens. Re-checked properly
+  this session: a rival's briefing lists the held creature as "Helping the
+  police with their enquiries. Back in 9h 0m", with no errors.
+
+### Verification
+
+Evan asked for this one without the full battery. No existing gate's logic
+changed (section 8 is new, and section 6 only hands its walks on), so the
+per-milestone tier is the whole bill.
+
+- `battery.js --anchors`: 495 of 495 match (break 276 re-aimed first).
+- `battery.js --only 501,502,503,504`: 4 of 4 caught. Its baseline went red
+  on the keyboard gate. The excerpt showed four summary lines and measured
+  115 controls across 81 views, where the green runs measure 119 across 82:
+  one view never rendered under four lanes. That is R193's intermittent red
+  again (R197). The gate passed alone (3m15s), and `--baseline` alone came
+  back green, `EXIT 0`, in 12m49s.
+- `npm test`, alone: 456s wall, 1,272 of 1,641 budgeted CPU-seconds, on a
+  cold cache that rebuilt six walks.
+- Browser at 380px, day-180 save:
+  - the hire board prices Wicket at $17/day (the hand at $168);
+  - letting the hand go and hiring him works;
+  - the War Room's Jobs tab sends him on 18 hours of espionage, with a $25
+    fee sealed into the run;
+  - the run survives a reload and the tab still names him;
+  - page width stays 380.
+  No console errors on it, a fresh save, the v64 fixture or the v60 fixture
+  migrated to v64.
+- SAVE_VERSION stays 64. `tools/release.js --fix` bumped the worker's cache
+  for `data/henchmen.json`.
+
+### Known issues
+
+- R196: the vet bill prices Doc's refusals on the roster, not the patients.
+- R197: the battery's excerpt of a red gate hides the keyboard gate's
+  verdict. It happened again this session, so it is worth doing soon.
+- R198: section 6's odds branch rests on one choice (above).
+
+### Next session
+
+R197 first: it is small, it has now cost two sessions an unreadable red,
+and it makes the next battery trustworthy. Then R196, which is a design
+call for Evan (what Nurse Gauze is for), or R198.
+
 ## Session 217 — R193: the vet bill spreads the call-out over the battle clock alone ✅
 
 **Every clock the Infirmary sees is now one table in data, and the vet bill

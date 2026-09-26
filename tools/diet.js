@@ -382,6 +382,9 @@ sockets across ${bodies} kept chimeras: `
   }
 }
 
+// Section 6 walks the third-slot variant; section 8 reads the same walks.
+const agentWalks = [];
+
 // ---- 6. R192: the agent is weighed against the best infiltrator --------
 //
 // R189 shipped Mister Wicket and a walker that never hired him (its rule 5),
@@ -417,6 +420,7 @@ sockets across ${bodies} kept chimeras: `
   const said = [];
   for (const seed of [2026, 7]) {
     const w = campaignWalk(variant, { seed, days: 180, stopAtDominion: false });
+    agentWalks.push({ seed, w });
     // The hire order: the agent only after a hand and a vet are on the books.
     const firstAgent = w.payroll.hires.findIndex((e) => isSent(e.id));
     const before = new Set(w.payroll.hires.slice(0, Math.max(0, firstAgent)).map((e) => content.henchmen[e.id]?.duty));
@@ -493,6 +497,67 @@ sockets across ${bodies} kept chimeras: `
     if (w > 0 && !kinds.has(kind)) fails.push(`the walker gives "${kind}" a share of ${w} and seed 2026 never brought one to the Infirmary — the walk has stopped counting it`);
   }
   if (REPORT) console.log(`\n  R193 wounds: ${said.join('; ')}`);
+}
+
+// ---- 8. R194: the agent earns his wage ---------------------------------
+//
+// R192's census paid Mister Wicket about $25,000 a campaign for jobs that
+// netted about $250 of it back. The walker sent him on the shortest length,
+// where his $25 of sandwiches eat an espionage job's whole expected pay, and
+// his wage was a hand's. R194 re-derived both: rule 6 of the mission policy
+// in tools/sim.js sends him on the length that pays most per hour of the
+// board, and his wage in data/henchmen.json is one the census's median
+// campaign earns back (the argument is in data/notes/henchmen.md). This
+// reads the two campaigns section 6 walked, and for every job he went on:
+//   - it was the length rule 6 picks, recomputed here from the mission data
+//     and his fee rather than read off the walker;
+//   - its expected pay, net of that fee, beat his wage over the hours it
+//     held the board (the job plus the board's rest), at the day rate he
+//     was drawing when he went.
+// Whether a whole campaign earns him back also turns on how often a creature
+// beats his odds, which is chaos on two seeds, so that total is printed and
+// not pinned: sixteen campaigns are the evidence, in ROADMAP R194.
+// BLIND AGAIN IF the walk stops logging his day rate (refused below, rather
+// than compared against undefined), or section 6 stops walking the variant.
+{
+  const t = content.missionMeta ?? {};
+  const netOf = (m, h, hrs) => {
+    const p = Math.max(t.minChance, Math.min(t.maxChance, t.baseChance + h.aptitude * t.perAptitude + hrs * t.perHour));
+    return (p + (1 - p) * (m.consolation ?? 0)) * Math.round(m.fundsPerHour * hrs) - (h.fee ?? 0);
+  };
+  const meta = content.henchmenMeta?.duties ?? {};
+  let jobs = 0;
+  let net = 0;
+  let wages = 0;
+  let thin = Infinity;
+  const wrong = [];
+  for (const { seed, w } of agentWalks) {
+    for (const e of (w.log ?? []).filter((x) => x.kind === 'mission' && x.agent)) {
+      jobs++;
+      net += (e.funds ?? 0) - (e.expenses ?? 0);
+      const m = content.missions[e.mission];
+      const h = content.henchmen[e.agent];
+      const board = (hrs) => hrs + (m.cooldownHours ?? t.cooldownHours);
+      const want = m.hourOptions.reduce((a, b) => (netOf(m, h, b) / board(b) > netOf(m, h, a) / board(a) ? b : a));
+      const at = `seed ${seed} day ${e.day} ${e.mission}`;
+      if (e.hours !== want) wrong.push(`${at}: sent ${e.agent} for ${e.hours}h, where ${want}h pays him most per hour of the board`);
+      if (!Number.isFinite(e.wage) || e.wage <= 0) { wrong.push(`${at}: the walk logged no day rate for ${e.agent} (${e.wage})`); continue; }
+      const cover = netOf(m, h, e.hours) / (board(e.hours) * e.wage / 24);
+      thin = Math.min(thin, cover);
+      if (cover <= 1) {
+        wrong.push(`${at}: ${e.hours}h pays ${e.agent} $${netOf(m, h, e.hours).toFixed(0)} net of his fee over ${board(e.hours)}h of the board,`
+          + ` and his wage over those hours is $${(board(e.hours) * e.wage / 24).toFixed(0)}`);
+      }
+    }
+    wages += Object.entries(w.payroll.paid ?? {})
+      .filter(([id]) => meta[content.henchmen?.[id]?.duty]?.sent).reduce((n, [, v]) => n + v, 0);
+  }
+  for (const wr of wrong.slice(0, 5)) fails.push(`R194: ${wr}`);
+  if (!jobs) fails.push('R194: the third-slot campaigns on seeds 2026/7 sent the agent on no job, so nothing says what his wage buys');
+  if (REPORT) {
+    console.log(`\n  R194 agent: ${jobs} jobs, each paying at least ${thin.toFixed(1)}x his wage over its hours of the board;`
+      + ` $${Math.round(net)} net of his fee against $${Math.round(wages)} of wages on these two campaigns`);
+  }
 }
 
 // ---- verdict ---------------------------------------------------------

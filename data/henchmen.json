@@ -87,7 +87,7 @@
       "name": "Mister Wicket",
       "title": "Field Agent",
       "duty": "field",
-      "wage": 3,
+      "wage": 0.3,
       "aptitude": 0.45,
       "fee": 25,
       "quirk": "Goes in so your creatures stay home. Not as slippery as a chameleon with nothing on, and bills every job for sandwiches.",

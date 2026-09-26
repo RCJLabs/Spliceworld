@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**3 entries queued.** R194, R196, R197.
+**3 entries queued.** R196, R197, R198.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -7056,7 +7056,7 @@ triangle working, and each region genuinely asks a different question)*.
     refuses almost nobody who is hurt. **R197 filed:** the battery's excerpt
     of a red gate cut off the only line that said why.
 
-- **R194 — The Field Agent never earns his wage.** Found by R192. With a
+- **R194 — The Field Agent never earns his wage.** ✅ Found by R192. With a
   slot open for him, Mister Wicket's jobs pay about $206 a campaign net of
   his $25 expenses, against about $25,000 a campaign in wages: about 1%.
   Espionage, which is 86% of what he is sent on, pays $39 on success and
@@ -7070,6 +7070,60 @@ triangle working, and each region genuinely asks a different question)*.
   re-derived so that a ranch that hires him buys something the census can
   see, or the entry argues from the numbers why a hire that saves one
   creature a campaign for $25,000 belongs on the roster.*
+
+  **Shipped: his price and his job length, re-derived from what the board
+  can pay him.** The argument is in `data/notes/henchmen.md` under
+  `tuning.duties.field`.
+  * **The length** (rule 6 of the walker's mission policy, `agentHours` in
+    `tools/sim.js`). Rule 4 sends a creature on the shortest job to keep
+    the animal home for the ranch's defence, and the walker applied it to
+    him too. His $25 fee is per job, so three hours of espionage (expected
+    $25.49 at his 0.45) paid him nothing. He now goes on the length that
+    pays most per hour of the board, net of the fee: the job plus the
+    board's eleven-hour rest. On the shipped data that is 18 hours of
+    espionage ($141.60 net over 29 hours) and 24 of sabotage. On that rule
+    alone, at the old wage, he returned 22% of it, where the short jobs
+    returned 1%.
+  * **The wage** (`data/henchmen.json`): 3 a head → 0.30. A hand's 3 a head
+    is ~$150 a day at the ~52 heads a ranch runs while he is on the books.
+    Even taking every espionage job at 18 hours, the board pays him ~$117.
+    So the wage is the highest step of 0.05 a head that the median campaign
+    earns back: at 0.30 he covers it on 9 of 16 campaigns, at 0.35 on 7. It
+    stays per head, the rule smoke holds for every hire. At 0.30 that
+    scaling moves his bill by $13 a day across a campaign.
+  * **The census.** Sixteen 180-day campaigns with a third slot open, the
+    same shape as R192's. With the agent:
+    - 516 jobs (434 espionage at 18h, 82 sabotage at 24h);
+    - $87,418 net of his fee against $40,664 of wages, 2.15x (about $2,540
+      a campaign, where R192 paid about $25,000);
+    - held for questioning 193 times, poached 13;
+    - **4 creatures conscripted where the same campaigns without him lose
+      13**;
+    - the mission board paid $181,343 where it paid $113,153.
+    Dominion (median 28.2 days against 27.9), raids held (352 of 752
+    against 358 of 753) and late defences (1,416 of 1,680 against 1,432 of
+    1,688) moved within noise. The pooled end treasury is 1.8% lower, chaos
+    at that size.
+    Seven campaigns send him on fewer than ten jobs, because their best
+    spare creature beats his odds. On those he mostly takes the sabotage
+    jobs, where a creature's failure is permanent.
+  * **The slot count was not the lever.** On the shipped two slots the
+    walker still hires a hand and a vet first (hiring rule 5), so the
+    day-180 walk does not change and no existing gate's logic moved. A third
+    slot would put him on every ranch. That is a pacing decision, and at
+    the old price it would only have spread the loss.
+  * **The gate** (diet section 8). It reads the two third-slot campaigns
+    section 6 already walks. Every job he goes on must be rule 6's length,
+    recomputed from the mission data and his fee. Its expected pay, net of
+    the fee, must beat his wage over the hours it holds the board, at the
+    day rate the walk logged when he went. On seeds 2026 and 7 the
+    thinnest job clears it 13.3 times over. Whether a whole campaign earns
+    him back also depends on how often a creature beats his odds, which on
+    two seeds is chaos, so that total is printed, not pinned. On these two
+    it is $3,480 net against $5,035 of wages: both are among the seven
+    quiet campaigns.
+  * Breaks 501-504. **R198 filed:** section 6's "decided by the odds"
+    branch now occurs once on seeds 2026 and 7 (it was 135).
 
 - **R195 — The surgery table waits a third as long.** ✅ Asked for directly
   in session 216: "lower the surgery table wait times by 2/3rds. Takes too
@@ -7129,6 +7183,19 @@ triangle working, and each region genuinely asks a different question)*.
   carries its verdict (the problem lines, wherever the gate prints them),
   and a break that makes the keyboard gate fail late shows its problem in
   the battery's own output.*
+
+- **R198 — The agent's odds branch rests on one choice.** Found by R194.
+  Diet section 6 replays the third-slot variant on seeds 2026 and 7 and
+  requires each branch of rule 5 to occur: sent for permanence, sent on the
+  odds, a creature sent past him. R192 measured 7 / 135 / 234. After R194's
+  wage change moved both campaigns, it reads 11 / 1 / 415. Seed 7 already
+  sent him rarely, and seed 2026 now does too: its walk builds a spare
+  creature that beats his 0.45. That is chaos, not a rule changing. The clause still passes, on a single
+  choice. The next balance change that nudges seed 2026 turns section 6 red
+  with no defect in rule 5. *Done when: section 6 reads its branches on
+  campaigns where each one occurs with a margin (more seeds, or seeds
+  chosen by what the census measured), or the entry argues from a
+  re-measurement why one choice is enough.*
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same

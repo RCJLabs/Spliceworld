@@ -4468,8 +4468,8 @@ const BREAKS = [
     // re-aimed at R193. R193 likewise: re-aimed at R194.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: '- **R194 — The Field Agent never earns his wage.**',
-    to: '- **R194 — The Field Agent never earns his wage.** ✅',
+    anchor: "- **R196 — The vet bill prices Doc's refusals on the roster, not on the\n  patients.**",
+    to: "- **R196 — The vet bill prices Doc's refusals on the roster, not on the\n  patients.** ✅",
   },
   {
     // The other direction: the count beside the list stops matching the list.
@@ -7196,6 +7196,48 @@ const BREAKS = [
     file: 'tools/sim.js',
     anchor: 'export const WALK_INJURY_MIX = { battle: 0.83, rescue: 0.11, job: 0.06, lastStand: 0 };',
     to: 'export const WALK_INJURY_MIX = { battle: 0.83, rescue: 0.11, job: 0.06 };',
+  },
+  {
+    // R194 — THE AGENT'S WAGE IS WHAT HIS WORK EARNS. A hand's 3 a head is
+    // ~$150 a day at dominion, and an 18-hour espionage job nets him $142 over
+    // the 29 hours it holds the board: the price R192 measured at 1% returned.
+    // BLIND AGAIN IF the gate compares each job with a day rate it assumes
+    // rather than the one the walk logged when he went.
+    n: 501, gate: DIET, name: "the agent is paid a hand's wage for a board that cannot earn it",
+    file: 'data/henchmen.json',
+    anchor: '      "duty": "field",\n      "wage": 0.3,',
+    to: '      "duty": "field",\n      "wage": 3,',
+  },
+  {
+    // R194 — RULE 6 IS THE AGENT'S OWN LENGTH. Without it he goes on the
+    // creature's shortest job, where $25 of sandwiches eat an espionage job's
+    // whole expected pay ($25.49 at three hours).
+    // BLIND AGAIN IF the gate reads the length rule 6 wants off the walker
+    // instead of recomputing it from the mission data and his fee.
+    n: 502, gate: DIET, name: "the agent goes on the creature's shortest job, and his sandwiches eat the pay",
+    file: 'tools/sim.js',
+    anchor: '        pick = { mission, rival, hours: sendAgent ? agentHours(content, mission, agentFree.h) : hours,',
+    to: '        pick = { mission, rival, hours,',
+  },
+  {
+    // R194 — AND IT PICKS THE BEST LENGTH, NOT ANY LENGTH. The comparison
+    // turned round sends him on the length that pays him least per hour of
+    // the board, which on the shipped data is the shortest again.
+    // BLIND AGAIN IF the gate only checks that he went on some legal length.
+    n: 503, gate: DIET, name: 'rule 6 sends the agent on the length that pays him least',
+    file: 'tools/sim.js',
+    anchor: '  return missionHours(mission).reduce((a, b) => (net(b) / (b + rest) > net(a) / (a + rest) ? b : a));',
+    to: '  return missionHours(mission).reduce((a, b) => (net(b) / (b + rest) < net(a) / (a + rest) ? b : a));',
+  },
+  {
+    // R194 — THE DAY RATE IS LOGGED WITH THE JOB. Without it the per-job
+    // comparison is against undefined, which is false either way round, so
+    // the gate refuses a job that carries none rather than passing it.
+    // BLIND AGAIN IF that refusal is dropped.
+    n: 504, gate: DIET, name: "the walk stops logging the agent's day rate, and every job passes against nothing",
+    file: 'tools/sim.js',
+    anchor: '        ...(pick.agent ? { wage: wageNow(state, content, pick.agent.rec.id) } : {}),\n',
+    to: '',
   },
 ];
 
