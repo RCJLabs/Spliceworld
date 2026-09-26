@@ -21,6 +21,7 @@ import { isSettled } from '../splice/chimera.js';
 import { fmtDuration } from '../ranch/ui.js';
 // R112 — the philosophy prompt's words, out of data/copy.json (R110's rule).
 import { copy, fmtMoney, fill } from '../util/text.js';
+import { isHold } from '../splice/facility.js';
 import { subtabBar, bindSubtabs } from '../ui/tabs.js';
 import { activeRaid, raidRemainingMs, levyOf, raidEncounter } from './taskforce.js';
 import { fieldNote, bindFieldNote, collapsibleCard, bindFolds, isOpen, esc } from '../ui/cards.js';
@@ -1436,7 +1437,8 @@ function bindJobs(root, ctx, redraw) {
         options.push({
           id: ch.id,
           label: `${pct(odds.chance)} — ${ch.name}`,
-          sub: injured ? 'in the Infirmary' : why || 'brings nothing in particular to this one',
+          sub: injured ? (isHold(ch.injury) ? copy(content, 'mission.held_short') : 'in the Infirmary')
+            : why || 'brings nothing in particular to this one',
           disabled: injured,
         });
       }
@@ -1582,7 +1584,9 @@ function renderBriefing(root, ctx) {
 
   const roster = state.chimeras.map((ch) => {
     const injured = isInjured(ch, t);
-    const note = injured
+    const note = injured && isHold(ch.injury)
+      ? copy(content, 'mission.held', { time: fmtDuration(ch.injury.until - t) })
+      : injured
       ? `Infirmary: ${ch.injury.name} — ${fmtDuration(ch.injury.until - t)} left`
       : isSettled(ch, t)
         ? `ready · obedience ${obediencePercent(ch, t)}%`

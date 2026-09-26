@@ -56,7 +56,8 @@ import { guideForScreen } from '../ranch/onboarding.js';
 import { renderIcon } from '../ui/icons.js';
 import { announce } from '../ui/live.js';
 import * as sfx from '../audio/sfx.js';
-import { fmtMoney } from '../util/text.js';
+import { fmtMoney, copy } from '../util/text.js';
+import { isHold } from './facility.js';
 
 let lastMsg = '';
 let vatPick = { a: null, b: null };
@@ -122,7 +123,7 @@ function bindVat(root, ctx, redraw) {
       .map((c) => {
         const why = !isSettled(c, t) ? 'still settling'
           : isExhausted(c, t) ? `recovering — ${fmtDuration(c.exhaustedUntil - t)}`
-            : isInjured(c, t) ? 'in the Infirmary'
+            : isInjured(c, t) ? (isHold(c.injury) ? copy(content, 'mission.held_short') : 'in the Infirmary')
               : `${frameOf(content, c.frame).name} · ${Object.keys(c.tokens).length} parts · instability ${c.instability}`;
         return {
           id: c.id,
@@ -327,7 +328,7 @@ export function renderPensScreen(root, ctx) {
       const badge = feral.agitated
         ? `<span class="pen-feral-badge">⚠ ${fmtDuration(feral.remainingMs)}</span>`
         : hurt
-          ? `<span class="pen-alert">⚕ ${fmtDuration(ch.injury.until - t)}</span>`
+          ? `<span class="pen-alert">${isHold(ch.injury) ? copy(content, 'mission.held_badge') : '⚕'} ${fmtDuration(ch.injury.until - t)}</span>`
           : !settled
             ? `<span class="pen-alert">⏳ ${fmtDuration(ch.settleUntil - t)}</span>`
             : trainReady
@@ -474,7 +475,9 @@ export function renderPensScreen(root, ctx) {
                 : `Settling… ${fmtDuration(settleRemainingMs(ch, t))} remaining. No sudden noises.`
             }</p>
             ${settled ? '' : rushButton(rushQuote(state, 'settle', ch.id, content, t))}
-            ${isInjured(ch, t)
+            ${isInjured(ch, t) && isHold(ch.injury)
+              ? `<p class="settle">${copy(content, 'mission.held', { time: fmtDuration(ch.injury.until - t) })}</p>`
+              : isInjured(ch, t)
               ? `<p class="settle">${renderIcon('bandage')} Infirmary: ${ch.injury.name} — ${fmtDuration(ch.injury.until - t)} of dramatic convalescing left.</p>
                  <p class="fine-print scar-warn">Left to itself it may set badly and stay that way. Treating it costs money and guarantees it will not.</p>
                  <button type="button" class="care-train" data-treat="${ch.id}">${renderIcon('bandage')} Treat (${fmtMoney(treatmentCost(ch, content, t, state))})</button>`

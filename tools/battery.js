@@ -2848,8 +2848,10 @@ const BREAKS = [
     to: '  operationList, freeCrew, startOperation, abortOperation,',
   },
   {
-    n: 2, gate: SCOPE, name: 'A1, replayed: infirmaryGrants unbound behind an ??= that never runs',
-    file: 'campaign/campaign.js',
+    // R193 re-aimed: campaign.js stopped importing it when the last stand's
+    // clock moved into the table, and `clockHours` is where it is read now.
+    n: 2, gate: SCOPE, name: 'A1, replayed: infirmaryGrants unbound behind a branch a rescue never takes',
+    file: 'battle/statblock.js',
     anchor: "import { infirmaryGrants } from '../splice/facility.js';\n",
     to: '',
   },
@@ -4463,11 +4465,11 @@ const BREAKS = [
     // it again before ticking itself: re-aimed at R189, the head after it.
     // R189 likewise, before its own tick: re-aimed at R190. R190 likewise:
     // re-aimed at R192, the head of the queue it leaves. R192 likewise:
-    // re-aimed at R193.
+    // re-aimed at R193. R193 likewise: re-aimed at R194.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: '- **R193 — The vet bill spreads the call-out over the battle clock alone.**',
-    to: '- **R193 — The vet bill spreads the call-out over the battle clock alone.** ✅',
+    anchor: '- **R194 — The Field Agent never earns his wage.**',
+    to: '- **R194 — The Field Agent never earns his wage.** ✅',
   },
   {
     // The other direction: the count beside the list stops matching the list.
@@ -6950,8 +6952,8 @@ const BREAKS = [
     // price the literal and the file agree on every ward.
     n: 478, gate: SHARD_B, name: "the walker types the Infirmary's hourly rate, so repricing it moves no bill",
     file: 'tools/sim.js',
-    anchor: '  return (t.base / (WALK_INJURY_HOURS * g.healScale) + t.perHour * (1 - 1 / rate)) * g.treatScale;',
-    to: '  return (t.base / (WALK_INJURY_HOURS * g.healScale) + 18 * (1 - 1 / rate)) * g.treatScale;',
+    anchor: '  return (t.base / infirmaryClock(content, state) + t.perHour * (1 - 1 / rate)) * g.treatScale;',
+    to: '  return (t.base / infirmaryClock(content, state) + 18 * (1 - 1 / rate)) * g.treatScale;',
   },
   {
     // R190 — THE DEFECT ITSELF: the walker ranks vets by how many patients
@@ -6978,7 +6980,7 @@ const BREAKS = [
     // call-out in it, and the "dearer call-out" clause is dropped.
     n: 480, gate: SHARD_B, name: "a refusal is priced on the Infirmary's hours alone, so its call-out is free",
     file: 'tools/sim.js',
-    anchor: '  return (t.base / (WALK_INJURY_HOURS * g.healScale) + t.perHour * (1 - 1 / rate)) * g.treatScale;',
+    anchor: '  return (t.base / infirmaryClock(content, state) + t.perHour * (1 - 1 / rate)) * g.treatScale;',
     to: '  return (t.perHour * (1 - 1 / rate)) * g.treatScale;',
   },
   {
@@ -6989,8 +6991,8 @@ const BREAKS = [
     // discount is 1 and the break changes nothing.
     n: 481, gate: SHARD_B, name: "the bill charges a late refusal the first tier's price, whatever Infirmary the ranch has built",
     file: 'tools/sim.js',
-    anchor: '  return (t.base / (WALK_INJURY_HOURS * g.healScale) + t.perHour * (1 - 1 / rate)) * g.treatScale;',
-    to: '  return (t.base / (WALK_INJURY_HOURS * g.healScale) + t.perHour * (1 - 1 / rate));',
+    anchor: '  return (t.base / infirmaryClock(content, state) + t.perHour * (1 - 1 / rate)) * g.treatScale;',
+    to: '  return (t.base / infirmaryClock(content, state) + t.perHour * (1 - 1 / rate));',
   },
   {
     // R190 — RULE 3b: A VET IS RE-CHOSEN WHEN THE PRICE MOVES. Without it
@@ -7007,16 +7009,17 @@ const BREAKS = [
     to: '    : bill(held) > bill(want));',
   },
   {
-    // R190 — THE CLOCK THE CALL-OUT IS SPREAD OVER IS THE ENGINE'S. The walker
-    // types the battle engine's mean injury clock, so the gate inflicts
-    // eighty injuries through `finishBattle` and holds the two together.
-    // BLIND AGAIN IF the probe reuses a creature id (the injury stream is
-    // keyed on the creature, so every roll would be the same one) or the
-    // tolerance widens past the gap between 2 and 3 hours.
-    n: 483, gate: SHARD_B, name: "the walker's injury clock drifts from the battle engine's, and the call-out is spread over the wrong hours",
+    // R190 — THE CLOCK THE CALL-OUT IS SPREAD OVER, re-aimed by R193 at the
+    // defect R193 fixed: the bill's clock typed back to the battle's three
+    // hours at the tier's `healScale`, which is R190's walker exactly. Smoke
+    // recomputes the clock from the table and moves the battle's row.
+    // BLIND AGAIN IF the smoke clause compares the clock only on a tier where
+    // the typed number happens to equal the table's (tier III reads 1.35
+    // either way).
+    n: 483, gate: SHARD_B, name: "the bill's clock is typed back to the battle's three hours, and no other wound moves it",
     file: 'tools/sim.js',
-    anchor: 'export const WALK_INJURY_HOURS = 3;',
-    to: 'export const WALK_INJURY_HOURS = 2;',
+    anchor: '    if (w > 0) hours += w * clockHours(state, content, injuryClock(content, kind), 0.5);',
+    to: '    if (w > 0) hours += w * 3 * infirmaryGrants(state, content).healScale;',
   },
   {
     // R192 — A SENT DUTY WAITS FOR THE STATIONED ONES. Inverted, the agent
@@ -7071,6 +7074,128 @@ const BREAKS = [
     file: 'tools/sim.js',
     anchor: '        ...(pick.odds ? { odds: pick.odds, permanent: pick.permanent } : {}),',
     to: '',
+  },
+  {
+    // R193 — EVERY INFIRMARY CLOCK IS READ BY THE CODE THAT INFLICTS IT. The
+    // battle's clock typed back into the engine: the shipped table and the
+    // literal agree, so only the half of the clause that doubles the table
+    // and watches eighty casualties follow it can tell.
+    // BLIND AGAIN IF the "doubled" half of the battle clause is dropped.
+    n: 489, gate: SHARD_B, name: "the battle's injury clock is typed back into the engine, so the table's row is decoration",
+    file: 'battle/statblock.js',
+    anchor: '    const hours = clockHours(state, content, clock, rng());',
+    to: '    const hours = (2 + rng() * 2) * infirmaryGrants(state, content).healScale;',
+  },
+  {
+    // R193 — a rescue's whiplash typed back, as it was before this milestone.
+    // BLIND AGAIN IF the rescue clause stops moving the table's rescue row.
+    n: 490, gate: SHARD_B, name: "a rescue's whiplash is typed back into the campaign, and the table cannot move it",
+    file: 'campaign/campaign.js',
+    anchor: 'until: now + Math.round(clockHours(state, content, clock, rng()) * HOUR) });',
+    to: 'until: now + Math.round((1 + rng()) * HOUR) });',
+  },
+  {
+    // R193 — the last stand's three hours typed back. A last stand never
+    // happens in a walk (the walker never fights down to one creature), so
+    // the fixture is the only place this clock is ever inflicted.
+    // BLIND AGAIN IF the moved table's last stand is shorter than a battle's
+    // longest clock, since `applyInjury` keeps the longer of the two.
+    n: 491, gate: SHARD_B, name: "the last stand's clock is typed back, and the table's row reaches nobody",
+    file: 'campaign/campaign.js',
+    anchor: '        until: now + Math.round(clockHours(state, content, clock) * HOUR),',
+    to: '        until: now + Math.round(3 * HOUR),',
+  },
+  {
+    // R193 — a failed job's bruise typed back (without the tier, which is how
+    // it would come back: the literal was the tier-I clock).
+    // BLIND AGAIN IF the job clause stops sealing its roll at 0.25.
+    n: 492, gate: SHARD_B, name: "a failed job's bruise is typed back into the job board, and the table cannot move it",
+    file: 'campaign/operations.js',
+    anchor: '        until: endedAt + Math.round(clockHours(state, content, clock, injuryRoll * 2) * HOUR),',
+    to: '        until: endedAt + Math.round((1.5 + injuryRoll * 4.5) * HOUR),',
+  },
+  {
+    // R193 — `tierScaled` IS READ. Every wound shortening with the tier is the
+    // obvious simplification and it is wrong for one of four: a rescue's
+    // whiplash has never shrunk with the Infirmary.
+    // BLIND AGAIN IF the rescue clause only runs on a tier-I ranch, where
+    // `healScale` is 1 and the flag changes nothing.
+    n: 493, gate: SHARD_B, name: "every wound shrinks with the Infirmary's tier, whatever the table says about a rescue",
+    file: 'battle/statblock.js',
+    anchor: '  return (lo + u * (hi - lo)) * (clock.tierScaled ? infirmaryGrants(state, content).healScale : 1);',
+    to: '  return (lo + u * (hi - lo)) * infirmaryGrants(state, content).healScale;',
+  },
+  {
+    // R193 — A HOLD IS NOT A WOUND: the vet's round. Before the rule, 94% of
+    // the hours the vets turned away were holds and Nurse Gauze billed
+    // $32,800 over sixteen campaigns for halving police custody.
+    // BLIND AGAIN IF the hold clause's vet has a ceiling below the held
+    // creature's instability (a refusal leaves the clock alone too) — which
+    // is why it hires the vet with no ceiling and checks `missed` as well.
+    n: 494, gate: SHARD_B, name: 'a vet treats a night in a holding pen, and bills for it',
+    file: 'ranch/ranch.js',
+    anchor: '    if (left <= 0 || isHold(c.injury)) continue;',
+    to: '    if (left <= 0) continue;',
+  },
+  {
+    // R193 — the scar roll: a quarter of all scars were holds that set badly.
+    // BLIND AGAIN IF the clause's scar chance is not forced to certainty, so
+    // a miss could be the roll rather than the rule.
+    n: 495, gate: SHARD_B, name: 'a night in a holding pen sets badly into a permanent scar',
+    file: 'splice/scars.js',
+    anchor: '    if (isHold(injury)) continue;\n',
+    to: '',
+  },
+  {
+    // R193 — the sale: the Infirmary bought 46 creatures out of police custody
+    // over sixteen campaigns.
+    // BLIND AGAIN IF the walker's and the agenda's own skips are all that is
+    // checked, since both stop a hold reaching the Infirmary before this does.
+    n: 496, gate: SHARD_B, name: 'the Infirmary sells a creature its way out of police custody',
+    file: 'splice/scars.js',
+    anchor: "  if (isHold(chimera.injury)) return { ok: false, msg: copy(content, 'mission.no_bail', { name: chimera.name }) };\n",
+    to: '',
+  },
+  {
+    // R193 — the screen: a held creature's card read "Infirmary: undefined —
+    // 9h 0m of dramatic convalescing left", with a Treat button.
+    // BLIND AGAIN IF the clause renders the card shut (a shut card has no
+    // body, so neither line is there to find).
+    n: 497, gate: SHARD_B, name: 'the Pens call a held creature an Infirmary patient with no name',
+    file: 'splice/pens-ui.js',
+    anchor: '            ${isInjured(ch, t) && isHold(ch.injury)',
+    to: '            ${false && isHold(ch.injury)',
+  },
+  {
+    // R193 — THE MIX IS MEASURED, AND ONLY A CAMPAIGN CAN SAY SO. Smoke
+    // recomputes the clock from the same shares, so a mix that drifts from
+    // what the walk brings in passes there: this is the diet gate's.
+    // BLIND AGAIN IF the diet gate reads fewer than two tiers (seed 2026 has
+    // to bring thirty wounds to each tier it reads).
+    n: 498, gate: DIET, name: "the walker's injury mix drifts from what its own campaign brings the Infirmary",
+    file: 'tools/sim.js',
+    anchor: 'export const WALK_INJURY_MIX = { battle: 0.83, rescue: 0.11, job: 0.06, lastStand: 0 };',
+    to: 'export const WALK_INJURY_MIX = { battle: 0.5, rescue: 0.44, job: 0.06, lastStand: 0 };',
+  },
+  {
+    // R193 — the walk stops counting a kind, and the comparison quietly reads
+    // the rest.
+    // BLIND AGAIN IF the "never brought one" clause is dropped: the clocks
+    // alone move by only a few percent without the rescues.
+    n: 499, gate: DIET, name: 'the walk stops counting rescues, and the bill is checked against the wounds that are left',
+    file: 'tools/sim.js',
+    anchor: "    if (detail.freed) tallyWound(state, 'rescue');\n",
+    to: '',
+  },
+  {
+    // R193 — a kind in the table the mix gives no share, which is how the
+    // next wound would arrive: a row in data/scars.json and nothing here.
+    // BLIND AGAIN IF the smoke clause compares the mix to itself rather than
+    // to the table's keys.
+    n: 500, gate: SHARD_B, name: 'the injury table grows a kind the walker never weighs',
+    file: 'tools/sim.js',
+    anchor: 'export const WALK_INJURY_MIX = { battle: 0.83, rescue: 0.11, job: 0.06, lastStand: 0 };',
+    to: 'export const WALK_INJURY_MIX = { battle: 0.83, rescue: 0.11, job: 0.06 };',
   },
 ];
 

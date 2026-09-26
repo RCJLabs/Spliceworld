@@ -1,5 +1,130 @@
 # PROGRESS
 
+## Session 217 — R193: the vet bill spreads the call-out over the battle clock alone ✅
+
+**Every clock the Infirmary sees is now one table in data, and the vet bill
+spreads the call-out over the clock that table gives at each tier. The
+decision the entry asked for is made: a night in a holding pen is not a
+wound. No vet treats one, the Infirmary does not sell one, and it cannot
+scar.**
+
+### Measured first
+
+- **The census.** Sixteen campaigns of 180 days, with every infliction
+  instrumented: 22,596 injuries. Battles were 76% (a mean 1.15h, because
+  most of a campaign is spent at tier IV), rescue whiplash 10% (1.49h), a
+  failed job's bruise 5% (1.09h) and holds 8.5% (9h). No campaign fought a
+  last stand.
+- **The premise held only because of the holds.** Without them, the mean
+  clock per tier was 2.86h, 1.93h, 1.35h and 0.97h, and R190's typed
+  3h × `healScale` read 3.0h, 1.98h, 1.35h and 0.90h. With the holds, the
+  tier-IV clock was 1.67h.
+- **Holds were most of the story:**
+  - 41% of all injury hours;
+  - 94% of the hours the vets turned away;
+  - $32,800 of Nurse Gauze's $75,533 bill;
+  - 46 Infirmary buy-outs;
+  - 105 of 423 scars.
+- **A display bug.** A held creature's Pens card read "Infirmary:
+  undefined — 9h 0m of dramatic convalescing left", with a Treat button.
+
+### What shipped
+
+- **One table.** `injuries` in `data/scars.json` holds the battle's, a last
+  stand's, a rescue's and a failed job's clock, with hours, `tierScaled`
+  and names. The code that inflicts each reads its row. The job's clock
+  moved out of `data/operations.json`. The move changed nothing:
+  180-day walks on seeds 2026 and 99 hashed the same before and after.
+- **A hold is not a wound.** It rides the injury clock (the creature is
+  away), and nothing else rides with it:
+  - no vet treats or bills it;
+  - the Infirmary refuses it ("does not do bail");
+  - it cannot scar;
+  - the agenda and the Welcome-back digest do not count it;
+  - the Pens and the War Room say "Helping the police with their
+    enquiries".
+  The test is `isHold` in `splice/facility.js`. No save changed.
+- **The bill's clock.** It is the table weighted by the census mix
+  (battles 83%, whiplash 11%, jobs 6%): 2.81h, 1.91h, 1.36h and 0.96h. A
+  refused clock-hour costs $17.89 at tier I and $12.27 at tier IV.
+- **The census after.** Median dominion day 29.5 (was 30.5), and seed 99
+  reaches it on day 50.9 (was 68.1). Doc holds the Infirmary at day 180 on
+  15 of 16 campaigns, Gauze on 1. Gauze is the first hire on 12 of the 16.
+- **Gates:**
+  - smoke moves each of the four clocks in data and watches the engine
+    follow, and holds a hold to its four rules;
+  - diet section 7 re-measures the mix on seed 2026 (within 5% at every
+    tier read);
+  - the A10 clock roll carries the four rows.
+- **Breaks 489-500.** 2, 276, 478, 480, 481 and 483 were re-aimed.
+- **R196 filed:** the bill prices Doc's refusals on the roster, not on the
+  patients.
+
+### Found on the way
+
+- **Doc refuses almost nobody who is hurt.** The bill assumes he covers the
+  31% of the roster under his ceiling. He actually treated 94% of the wound
+  hours he saw, because the walker fights with its stable creatures and the
+  unstable ones were its spies. Priced on patients, Doc is the cheaper vet
+  on every campaign he was hired on. So Gauze is anybody's hire only
+  because the bill overprices him. That is R196, and it is a design
+  question as much as a pricing one.
+- **The eager budget.** `main` sat at 334.94 KB against a 335 KB cap. The
+  table reader and the hold rule have to be on the tick, so the cap moved
+  from 335 to 336 KB, with its argument written beside it. I paid down
+  first: 1,221 bytes became 898.
+- **The eager comments went over too** (by 1.4 KB). They became pointers,
+  and the argument went to `data/notes/scars.md`. The comment budget rose
+  by 9 bytes net.
+- **The vat's refusal still says "is in the Infirmary"** for a held
+  creature. It cannot be reached: the vat's picker greys the creature out
+  and says where it is. Changing it would have cost eager bytes for a line
+  no player reaches.
+- **The keyboard gate's one red could not be read.** `tools/battery.js`
+  prints a failing gate's first four lines, and `tools/a11y.js` prints four
+  summary lines before its problems. So the red read like a green with the
+  verdict missing. It never reproduced. Filed as R197.
+- **Two scratch slips, both caught:**
+  - Importing `tools/diet.js` to syntax-check it ran the whole gate. It was
+    killed.
+  - `battery.js --help` started a full battery. It was killed with its
+    orphaned browsers. The tree was clean both times.
+
+### Verification
+
+- `npm test`: 320s wall, 1,146 of 1,425 budgeted CPU-seconds on a warm
+  cache. The first run after the engine change took 664s cold, and was red
+  only on the copy ledger, which then came down three words.
+- Full battery (existing gates changed): 491 breaks in four chunks at 22m,
+  85m, 141m and 136m, which is 384 minutes, the twelfth reading. Every
+  break was caught. Chunks 1-3 read `BATTERY_EXIT 0`.
+  - Chunk 4's baseline went red once on the keyboard gate. The gate passed
+    in the other three baselines and twice run alone.
+  - The battery's excerpt cut off whatever it had found (R197).
+  - The seven breaks that gate judges were re-run behind a green baseline:
+    7 of 7 caught, `BATTERY_EXIT 0`, 18m.
+- Browser at 380px:
+  - A held creature beside a wounded one: the police line and a "held 9h
+    0m" badge with no Treat button, and "Infirmary: Bruised Ego" with one.
+  - The War Room names the hold.
+  - The hold survives a reload. After ten hours away it clears, and the
+    digest counts only the wound.
+  - No console errors on the day-180 save, a fresh save, the v64 fixture or
+    the v60 fixture migrated to v64.
+- SAVE_VERSION stays 64.
+
+### Known issues
+
+- R194: the Field Agent's price against what he buys.
+- R196: the vet bill's coverage (above).
+- R197: the battery's excerpt of a red gate hides the keyboard gate's verdict.
+
+### Next session
+
+R194 or R196. Both are design calls for Evan. R196 decides what Nurse Gauze
+is for, now that the bill's error is the only thing that hires her. R197 is
+small tooling and can go first on a short evening.
+
 ## Session 216 — R192: The walk never sends an agent ✅ · R195: the surgery table waits a third as long ✅
 
 **Two things this session. At Evan's request, the Surgery Theater's table

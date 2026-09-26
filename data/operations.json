@@ -7,10 +7,6 @@
     "statPer": 60,
     "minChance": 0.15,
     "maxChance": 0.95,
-    "injuryHours": [
-      1.5,
-      3.75
-    ],
     "unsettledPenalty": 0.15,
     "heatPerNotoriety": 3,
     "heatPenalty": 0.35,

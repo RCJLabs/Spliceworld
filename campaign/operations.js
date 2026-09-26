@@ -13,8 +13,7 @@ import { newsFor } from './wire.js';
 import { analyze } from '../splice/physiology.js';
 import { isSettled } from '../splice/chimera.js';
 import { createAnimal } from '../ranch/ranch.js';
-import { infirmaryGrants } from '../splice/facility.js';
-import { applyInjury } from '../battle/statblock.js';
+import { applyInjury, injuryClock, injuryName, clockHours } from '../battle/statblock.js';
 import { expeditionCrew } from './expedition.js';
 
 const HOUR = 3600000;
@@ -32,7 +31,6 @@ const DEFAULTS = {
   statPer: 60,
   minChance: 0.15,
   maxChance: 0.95,
-  injuryHours: [1.5, 3.75],
   unsettledPenalty: 0.15,
   heatPerJob: 5,
   heatPerNotoriety: 3,
@@ -538,13 +536,13 @@ function resolveOperation(state, content, now, run) {
     // player cannot be punished for trying to stop losing.
     const chimera = state.chimeras.find((c) => c.id === run.chimeraId);
     if (chimera && injuryRoll < 0.5) {
-      const hours = t.injuryHours[0] + injuryRoll * 2 * (t.injuryHours[1] - t.injuryHours[0]);
+      const clock = injuryClock(content, 'job');
       // From when they limped home, and never shortening a longer one:
       // through `applyInjury`, a bruise picked up on Tuesday cannot heal a
       // battle wound the player is still paying the Infirmary for.
       applyInjury(chimera, {
-        name: 'Undignified Exit',
-        until: endedAt + Math.round(hours * infirmaryGrants(state, content).healScale * HOUR),
+        name: injuryName(clock, rngStream(state.seed, `job-injury:${chimera.id}`, chimera.injuryCount ?? 0)),
+        until: endedAt + Math.round(clockHours(state, content, clock, injuryRoll * 2) * HOUR),
       });
       result.injured = chimera.name;
     }

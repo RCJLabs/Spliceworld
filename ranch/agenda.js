@@ -32,7 +32,7 @@
 //   campaign — you push on the world: a job, an assault, a rival.
 import { careStatus, catalogFor, isNewToDex, penUpgradeCost, ageStage } from './ranch.js';
 import { canBreed } from './breeding.js';
-import { nextUpgrade, tracks, stableRoom } from '../splice/facility.js';
+import { nextUpgrade, tracks, stableRoom, isHold } from '../splice/facility.js';
 import { TRAINING } from '../splice/chimera.js';
 import { treatmentCost } from '../splice/scars.js';
 import { activeVat, vatPlan } from '../splice/chaos.js';
@@ -418,11 +418,11 @@ export const AGENDA = [
   {
     id: 'treat', kind: 'spend', screen: 'pens', label: 'Buy someone out of the Infirmary',
     chip: (state, content, now) => {
-      const hurt = state.chimeras.filter((c) => isInjured(c, now));
+      const hurt = state.chimeras.filter((c) => isInjured(c, now) && !isHold(c.injury));
       return hurt.length ? `${hurt.length} hurt` : null;
     },
     hint: (state, content, now) => {
-      const hurt = state.chimeras.filter((c) => isInjured(c, now));
+      const hurt = state.chimeras.filter((c) => isInjured(c, now) && !isHold(c.injury));
       const affordable = hurt.filter((c) => state.funds >= treatmentCost(c, content, now, state));
       const cheapest = affordable.length
         ? Math.min(...affordable.map((c) => treatmentCost(c, content, now, state))) : 0;
@@ -430,7 +430,7 @@ export const AGENDA = [
         cheapest ? ` from ${fmtMoney(cheapest)}` : ''}. Cheaper the closer they are to walking out on their own.`;
     },
     ready: (state, content, now) => state.chimeras.some((c) =>
-      isInjured(c, now) && state.funds >= treatmentCost(c, content, now, state)),
+      isInjured(c, now) && !isHold(c.injury) && state.funds >= treatmentCost(c, content, now, state)),
   },
   {
     id: 'train', kind: 'spend', screen: 'pens', label: 'Train a chimera',

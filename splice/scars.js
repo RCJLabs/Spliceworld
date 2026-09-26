@@ -14,10 +14,10 @@
 // mistake. The Infirmary sells certainty, not power.
 
 import { rngStream, pick } from '../util/rng.js';
-import { infirmaryGrants } from './facility.js';
+import { infirmaryGrants, isHold } from './facility.js';
 import { attend } from './feral.js';
 import { rushPrice } from './rush.js';
-import { fmtMoney } from '../util/text.js';
+import { fmtMoney, copy } from '../util/text.js';
 
 const HOUR = 3600000;
 
@@ -114,6 +114,7 @@ export function treatInjury(state, chimeraId, content, now) {
   const chimera = state.chimeras.find((c) => c.id === chimeraId);
   if (!chimera) return { ok: false, msg: 'No such chimera.' };
   if (!chimera.injury) return { ok: false, msg: 'Nothing to treat. They are simply like that.' };
+  if (isHold(chimera.injury)) return { ok: false, msg: copy(content, 'mission.no_bail', { name: chimera.name }) };
   if (now >= chimera.injury.until) {
     return { ok: false, msg: 'Too late — that one has already healed, one way or the other.' };
   }
@@ -143,6 +144,7 @@ export function tickScars(state, content, now) {
     if (!chimera.injury || now < chimera.injury.until) continue;
     const injury = chimera.injury;
     chimera.injury = null;
+    if (isHold(injury)) continue;
     chimera.scars ??= [];
     if (!pool.length || chimera.scars.length >= t.maxScars) continue;
 

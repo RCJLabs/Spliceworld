@@ -19,7 +19,7 @@
 import { ageStage } from './ranch.js';
 import { baseSpecies } from './breeding.js';
 import { regionList, regionOpen } from '../campaign/map.js';
-import { nextUpgrade, tracks } from '../splice/facility.js';
+import { nextUpgrade, tracks, isHold } from '../splice/facility.js';
 import { rivalStatus } from '../campaign/rivals.js';
 import { expressedTraits } from './breeding.js';
 import { analyze } from '../splice/physiology.js';
@@ -222,7 +222,7 @@ export const GUIDE_HELPERS = {
   anyTrackUpgraded: (state) => Object.values(state.facility ?? {}).some((lvl) => lvl > 1),
   chimeraTempered: (state) => state.chimeras.some((c) => c.temperament),
   bondedChimera: (state) => state.chimeras.some((c) => (c.bond ?? 0) >= 50),
-  chimeraInjured: (state) => state.chimeras.some((c) => c.injury),
+  chimeraInjured: (state) => state.chimeras.some((c) => c.injury && !isHold(c.injury)),
   injuryTreated: (state) => state.chimeras.some((c) => (c.injuriesTreated ?? 0) > 0),
   chimeraScarred: (state) => state.chimeras.some((c) => (c.scars ?? []).length),
   vatEligible: (state, content, now) =>
