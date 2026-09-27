@@ -7306,6 +7306,18 @@ triangle working, and each region genuinely asks a different question)*.
   problem rather than crashing, break 59 is caught by that problem, and the
   next full battery's caught-by-a-crash lines are counted and each one is
   either fixed or argued.*
+  R196's full battery was the first to print every caught break's line,
+  and seventeen of them show an error. Eleven are a gate reporting a throw
+  in its own words, which is what the handler, retired-content, stale-save
+  and untrusted-save gates are for (10, 22, 23, 24, 27, 31, 32, 33, 138, 344,
+  389). Six are a gate dying of an uncaught throw. Two of those are the
+  defect itself, whose names are a crash (26, 322). Four are the shape this
+  entry is about. 59 as above. 179 and 297 are caught because the break's
+  own replacement cannot run: 179 reads `level` before it is declared, and
+  297 imports `isSettled` from a module that does not export it, so the boot
+  gate dies on a link error before it weighs anything. Break 6 dies of a
+  SyntaxError on load (`esm/utils:346`), cause not yet read. 179 and 297
+  are breaks to re-aim, not gates to fix.
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same

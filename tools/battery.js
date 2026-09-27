@@ -4475,11 +4475,14 @@ const BREAKS = [
     // it again before ticking itself: re-aimed at R189, the head after it.
     // R189 likewise, before its own tick: re-aimed at R190. R190 likewise:
     // re-aimed at R192, the head of the queue it leaves. R192 likewise:
-    // re-aimed at R193. R193 likewise: re-aimed at R194.
+    // re-aimed at R193. R193 likewise: re-aimed at R194. R194 likewise:
+    // re-aimed at R196. R196 did not: it ran `--anchors` before ticking
+    // itself, so the warning had nothing to see yet, and its full battery
+    // read 276 MISSED. Re-aimed at R198. Run `--anchors` AFTER the tick.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: "- **R196 — The vet bill prices Doc's refusals on the roster, not on the\n  patients.**",
-    to: "- **R196 — The vet bill prices Doc's refusals on the roster, not on the\n  patients.** ✅",
+    anchor: "- **R198 — The agent's odds branch rests on one choice.**",
+    to: "- **R198 — The agent's odds branch rests on one choice.** ✅",
   },
   {
     // The other direction: the count beside the list stops matching the list.
