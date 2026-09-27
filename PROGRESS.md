@@ -1,5 +1,89 @@
 # PROGRESS
 
+## Session 221 — R198: the agent's rule is read on six campaigns ✅
+
+**Diet section 6 checks rule 5 of the mission policy, which decides who goes
+on a caper when an agent is on the books. It now reads six campaigns instead
+of two, because the census showed the odds branch is a coin toss for any one
+seed. On this tree the odds branch is carried by four of the six campaigns
+(205 choices) where it was carried by one choice. The walks are cached, so a
+warm run is cheaper than before.**
+
+### Measured first
+
+- **The third-slot variant, on sixteen campaigns, on four trees** (R192,
+  R193, R194, R196).
+- **The odds branch is bimodal.** A campaign sends the agent on the odds
+  dozens of times or never. It depends on whether its walk has bred a spare
+  infiltrator that beats his 0.45.
+- **A seed's side flips between trees.** Only 1337 of the sixteen stayed on
+  one side all four times; 2026 flipped with R194. So picking seeds by how
+  they came out would be picking the next false red.
+- **Per tree**, the odds branch occurred on 8 to 13 campaigns of 16 and
+  permanence on 12 to 14. Shorter walks lose it: by day 90, 4 to 10 of 16.
+- **Over every subset of the sixteen, on all four trees**, the odds branch
+  was missing from 11.7% of two-seed sets, 1.2% of four-seed sets and 0.1%
+  of six. Asking it of two campaigns in six would have failed 1.7%.
+
+### What shipped
+
+- **Section 6 reads six campaigns**: 2026, 7, 99, 4242, 42 and 900, the
+  first six of the census's list, taken in order.
+  - On all four trees the odds branch occurs on 2 to 5 of them and
+    permanence on 4 or 5.
+  - This tree: permanence 19 on 5 of 6, odds 205 on 4, creature 763 on 6.
+  - `--report` prints each campaign's three counts. The floor stays "each
+    branch occurs"; the margin is how many campaigns carry it.
+- **`walkedAgentCampaign`** (tools/fixtures.js) caches the variant's mission
+  log and payroll, keyed like `walkedSave`, and the variant lives there.
+  - Warm: diet 24s where it was ~70s.
+  - Cold: the walks job measured 467s against an empty cache (twenty walks).
+  - The suite now costs `walks` at that cold number, so a cold run starts it
+    first rather than after the smoke lanes.
+- **Section 8** reads the same six: 224 agent jobs where it read 12, each
+  paying at least 6.9x his wage over its hours of the board.
+- **Breaks 520-521.** 520 drops the odds clause. On the old two seeds it was
+  one choice from going unseen. 521 takes away the variant's third slot.
+- **Break 276 re-aimed at R199 before R198's tick**, and `--anchors` run
+  after it, as R196 learned to.
+
+### Found on the way
+
+- **The queue went to one entry for the first time**, and the roadmap gate
+  only read "**N entries queued.**". It now reads "entry" too, and break 277
+  anchors past the plural. `--anchors` caught it the moment R198 was ticked.
+
+### Verification
+
+- `battery.js --anchors`: 512 of 512 match, run after R198's tick.
+- **`battery.js --only` on every diet and roadmap break (35): `BATTERY_EXIT
+  0` in 51m38s, 35 of 35 caught**, each by the clause it aims at. 520 is
+  caught on seed 99 (a creature sent at 0.467 against the agent's 0.448),
+  521 by "never hired an agent into the third slot", and 276/277 by the
+  roadmap gate's new singular handling.
+- **Why not the full battery.** CLAUDE.md asks for it when a milestone
+  changes an existing gate's logic. The gates whose logic changed are diet
+  (section 6's seeds) and roadmap (the queue's plural), and those 35 are
+  every break aimed at either. `tools/fixtures.js` only gained an export,
+  and `tools/suite.js` only an ordering weight, so every other gate reads
+  exactly what R196's full battery verified (509 of 510, and
+  276 re-run).
+- `npm test`, alone: 264.2s wall, 990 of 1,425 budgeted CPU-seconds, warm
+  (20 walks cached; R196's tree read 274.9s with 14).
+- The walks job cold, against an empty cache: 467s (diet 331, reach 136).
+- Browser at 380px: every screen is 380 wide on a fresh save, the v64
+  fixture and the v60 fixture migrated to v64. Each survives a reload, and
+  there are no console errors. (Nothing the player sees changed.)
+- SAVE_VERSION stays 64.
+
+### Known issues
+
+- R199: break 59 (and 179, 297, and 6) are caught by a crash, not their check.
+
+### Next session
+
+R199, the last entry in the queue.
+
 ## Session 220 — R196: the vet bill reads the patients, and Nurse Gauze costs $8 ✅
 
 **The walker now prices a vet on the wounds the Infirmary actually saw in
