@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**0 entries queued.**
+**1 entry queued.** R201.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -7475,6 +7475,21 @@ triangle working, and each region genuinely asks a different question)*.
       every width, three runs of three.
     - At rest the hole went the other way: a placeholder measured as a
       screen is short and fits everything, so it would have passed.
+
+- **R201 — The height gate takes a screen still loading for a painted one.**
+  Found by R200, which fixed the same hole in the wide gate. The height
+  gate's `READY` is `!el.hidden && el.children.length > 0 && el.scrollHeight
+  > 0`, and main.js's "Warming up the lab…" card, painted while a lazy
+  screen's module is fetched, is all three. Measured on R200's tree, in a
+  scratch copy with 250ms of latency on every fetch: `height ✗  39 problems`.
+  All 39 are the gate's own reachability checks (32 worst-case Vaults that
+  "never reached every bay", seven Dex budgets whose tab bar "offered
+  nothing"), so it goes red rather than blind. It has not gone red in a real
+  baseline yet; the wide gate did. The keyboard gate's waits are
+  unmeasured. *Done when: the height gate refuses the placeholder the way
+  the wide gate does, read from `lazy()` and proved every run; the 250ms
+  probe reads green on it; and the keyboard gate is probed the same way and
+  fixed or argued.*
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same
