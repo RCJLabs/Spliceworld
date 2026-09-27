@@ -7393,6 +7393,68 @@ triangle working, and each region genuinely asks a different question)*.
     gate says §9.0 does not queue it. Break 277 already covers the other
     direction (a listed entry that has shipped).
 
+- **R200 — The battery counts a break caught whatever caught it.** ✅ Found
+  closing R199. A break is caught when its gate exits non-zero, and nothing
+  asks why. R199 read the seventeen error lines in R196's full battery by
+  hand and found four breaks caught by a crash rather than by the check each
+  is named for. Nothing stops the next one: a break that goes stale into a
+  crash reads caught forever. The battery already had the start of the
+  answer and never used it. R76 and R82 gave four breaks an `expect` field
+  (6, 7 and 15 `'corpus'`, 43 `'contract'`), meant as the part of the gate
+  that should fire, and no line of code has ever read it (`git log -S
+  "b.expect"` is empty). One of the four could not have matched anything:
+  `'contract'` is a word in a comment, and break 43's gate says "a specimen
+  bagged in a lost fight was left on the board".
+  Measured on R196's logs, a rule the battery could apply itself: of 509
+  caught breaks, six have a verdict that is a JavaScript engine error
+  (TypeError, ReferenceError, SyntaxError, RangeError). They are exactly
+  R199's four (6, 59, 179, 297) and its two crashes by name (26, 322). The
+  eleven gates that report a throw in their own words start with their own
+  words, and none of them is among the six. *Done when: a caught break whose
+  gate died of an engine error is its own verdict, not caught, and fails the
+  run unless the break names that crash as its defect; a break's `expect` is
+  read, and a caught break whose gate's verdict does not contain it fails the
+  run; a break field the battery does not read is refused; each rule is
+  proved in `--self` and by a break; and a full battery on the finished tree
+  reads every break it flags as fixed or argued.*
+
+  **Shipped: a break is judged on how it was caught, and `expect` is read.**
+  * **Two rules, in `judge`** (`tools/battery.js`).
+    - A caught break whose gate died of an engine error reads `✗ CRASHED`,
+      with a line naming the error and the two ways out: re-aim the break, or
+      name the crash in its `expect` if the crash is the defect. The rule
+      reads the verdict's first line, and only when the verdict is an
+      uncaught throw, so a gate reporting a throw in its own words ("ranch
+      threw: ...") is not one.
+    - `expect` is words the gate's whole verdict must contain, not only the
+      line printed under the break. A caught break whose gate never said
+      them reads `✗ ELSEWHERE`.
+    - Both fail BATTERY_EXIT, and the summary counts them apart from MISSED.
+  * **Nine breaks carry an `expect`.**
+    - 6, 7 and 15 keep `'corpus'`.
+    - 43's `'contract'` could never have matched. It is now `'left on the
+      board'`, its clause's own words.
+    - 59, 179 and 297 name the checks R199 re-aimed them at, so a drift back
+      into a crash, or onto another clause, is seen.
+    - 26 and 322 name their crash (`reading 'capturable'`, `reading
+      'species'`). That is how a break whose defect is a crash gets past the
+      first rule.
+  * **A field the battery does not read is refused.** `expect` sat unread
+    from R76 because an object literal takes any key. A break carries `n`,
+    `gate`, `name`, `file`, `anchor`, `to` and `expect`, and `--anchors` and
+    `--self` refuse any other key, and an empty `expect`.
+  * **The gate** (`--self`, in the baseline).
+    - Seventeen verdicts judged: the four engine errors as Node prints them
+      (break 59's rethrown TypeError, 297's link error, 179's name read
+      before it is declared, a runaway recursion), R196's own words from the
+      retired, handler, smoke, tokenizer and breakout gates, and `expect`
+      met, missed, and met past the eighth line.
+    - A fourth tiny gate dies of a real TypeError through `run` and `pool`.
+    - Every break's fields are checked against what is read.
+    - Breaks 523-526 take away the crash rule, `expect`, the field check,
+      and `expect` read from the whole verdict. 509 and 512 are re-aimed at
+      `verdict`'s new return.
+
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same
   defect wearing four costumes: a rule whose threshold was set beside one

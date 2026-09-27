@@ -2781,6 +2781,7 @@ const BREAKS = [
     file: 'ui/facility-card.js',
     anchor: '  const name = solo ? solo.name : \'Facility\';',
     to: '  const name = solo ? (levelData(content, solo.id, facilityLevel(state, solo.id))?.name ?? solo.name) : \'Facility\';',
+    expect: 'titled after the machine, not its tier',
   },
   {
     // R97 — the Dex stops keying generated specimens by lab. A rival mints a
@@ -3029,6 +3030,10 @@ const BREAKS = [
     file: 'battle/engine.js',
     anchor: '  return combatantFromUnit(unitFor(content, ref) ?? ABSENT_UNIT, scale);',
     to: '  return combatantFromUnit(unitFor(content, ref), scale);',
+    // R200 — the crash IS the defect: the fallback this takes away exists so
+    // a retired unit never reaches the engine as nothing. Named, so the
+    // battery counts it caught and counts any other crash as a crash.
+    expect: "reading 'capturable'",
   },
   {
     n: 27, gate: RETIRED, name: 'the Pens name the chassis bare again',
@@ -3310,6 +3315,7 @@ const BREAKS = [
     file: 'battle/statblock.js',
     anchor: "import { isSettled } from '../splice/chimera.js';",
     to: "import { isSettled } from '../splice/chimera.js';\nimport '../splice/theater.js';",
+    expect: 'is imported before the first paint and runs nothing during it',
   },
   // R94 — the ladder is a ratchet. Both breaks aim at the defect that was
   // actually shipped for six milestones, not one imagined for the occasion:
@@ -3512,6 +3518,8 @@ const BREAKS = [
     file: 'splice/card.js',
     anchor: "      return no(content, 'badPart', { partId, socket });",
     to: '      partId;',
+    // R200 — the crash is the defect by name, so it is named.
+    expect: "reading 'species'",
   },
   {
     // THE EXHIBITION PAYS. One number, and the friendly becomes a farm: a
@@ -4578,7 +4586,10 @@ const BREAKS = [
     file: 'campaign/breakout.js',
     anchor: "  if (!loose || (outcome !== 'win' && !captured)) return { cleared: false, creature: null, lab: null };",
     to: "  if (!loose || outcome !== 'win') return { cleared: false, creature: null, lab: null };",
-    expect: 'contract',
+    // R200 — this said 'contract', the word in the comment over the check,
+    // which the gate never prints. Nothing read it until R200, so nothing
+    // noticed it could never have matched.
+    expect: 'left on the board',
   },
   {
     // R81's own near-miss, as a break: nine exports moved out of the engine
@@ -4815,6 +4826,8 @@ const BREAKS = [
     file: 'index.html',
     anchor: '    <button type="button" data-screen="dex">Dex</button>',
     to: '    <div data-screen="dex" role="button">Dex</div>',
+    // R199 took it off a crash in the gate's tab clicks; R200 holds it there.
+    expect: 'cannot be reached by Tab from the top of the document',
   },
   {
     n: 60, gate: A11Y, name: 'the subtab strip crowds its buttons back together',
@@ -7329,8 +7342,8 @@ const BREAKS = [
     // BLIND AGAIN IF the silent fixture and the silent gate both go.
     n: 509, gate: SELF, name: 'a gate that says nothing is read as having said something',
     file: 'tools/battery.js',
-    anchor: '  return { found: ' + 'false, lines: out.filter((l) => l.trim()).slice(-4) };',
-    to: '  return { found: true, lines: out.filter((l) => l.trim()).slice(-4) };',
+    anchor: '  return { found: ' + 'false, lines: out.filter((l) => l.trim()).slice(-4), all: [] };',
+    to: '  return { found: true, lines: out.filter((l) => l.trim()).slice(-4), all: [] };',
   },
   {
     // Node's warnings read as the verdict: an ExperimentalWarning printed
@@ -7356,8 +7369,8 @@ const BREAKS = [
     // BLIND AGAIN IF the built twelve-name fixture goes.
     n: 512, gate: SELF, name: 'a long complaint is read from its top, and a count after its details is lost',
     file: 'tools/battery.js',
-    anchor: '    return { found: true, lines: [...said' + '.slice(Math.max(0, k - (VERDICT_MAX - after.length)), k), ...after] };',
-    to: '    return { found: true, lines: said.slice(0, VERDICT_MAX) };',
+    anchor: '    return { found: true, lines: [...said' + '.slice(Math.max(0, k - (VERDICT_MAX - after.length)), k), ...after], all: said };',
+    to: '    return { found: true, lines: said.slice(0, VERDICT_MAX), all: said };',
   },
   {
     // R196 — THE BILL PRICES DOC'S REFUSALS ON THE ROSTER AGAIN. 65% of the
@@ -7477,6 +7490,48 @@ const BREAKS = [
     anchor: 'const applyBreak = (src, b) => src.replace(b.anchor, ' + '() => b.to);',
     to: 'const applyBreak = (src, b) => src.replace(b.anchor, b.to);',
   },
+  // R200 — HOW A BREAK WAS CAUGHT. R199 found four breaks caught by a crash
+  // by reading R196's lines by hand; the battery judges them itself now, and
+  // these take each half of the judging away.
+  {
+    // A gate that dies of a TypeError catches its break again. Break 59 read
+    // caught that way for as long as it existed, and the keyboard check it
+    // is named for never ran.
+    // BLIND AGAIN IF `--self` stops judging a crash, or leaves the baseline.
+    n: 523, gate: SELF, name: 'a gate that dies of a TypeError is counted as catching its break',
+    file: 'tools/battery.js',
+    anchor: 'const ENGINE_' + 'ERROR = /^(?:Uncaught )?',
+    to: 'const ENGINE_ERROR = /^(?!)(?:Uncaught )?',
+  },
+  {
+    // `expect` read by nothing, as it was from R76 to R200: break 6's
+    // SyntaxError reads as a crash rather than as the corpus it names, and
+    // break 43 caught on the wrong clause reads caught.
+    // BLIND AGAIN IF no fixture expects words its gate did not say.
+    n: 524, gate: SELF, name: "a break's expect goes back to being read by nothing",
+    file: 'tools/battery.js',
+    anchor: '  if (b.exp' + 'ect) {\n    if (v.all',
+    to: '  if (false && b.expect) {\n    if (v.all',
+  },
+  {
+    // The field check waves everything through, so `expects:` for `expect:`
+    // is a check nobody runs and nobody is told about.
+    // BLIND AGAIN IF the misspelt-field fixture goes.
+    n: 525, gate: SELF, name: 'a break carries a field the battery never reads, the way expect did',
+    file: 'tools/battery.js',
+    anchor: '  const bad = Object.' + 'keys(b).filter((k) => !BREAK_FIELDS.has(k))',
+    to: '  const bad = [].filter((k) => !BREAK_FIELDS.has(k))',
+  },
+  {
+    // An `expect` looked for in the line printed under the break, which is
+    // eight lines of a complaint at most: a gate that names the problem as
+    // its ninth reads ELSEWHERE.
+    // BLIND AGAIN IF the long-complaint fixture's expected words move up.
+    n: 526, gate: SELF, name: "an expect is looked for only in the lines printed under the break",
+    file: 'tools/battery.js',
+    anchor: '    if (v.a' + "ll.join('\\n').includes(b.expect)) return { verdict: 'caught' };",
+    to: "    if (v.lines.join('\\n').includes(b.expect)) return { verdict: 'caught' };",
+  },
 ];
 
 const pristine = {};
@@ -7568,20 +7623,23 @@ function verdict({ stdout = '', stderr = '' }) {
     }
     const lines = words.slice(0, where ? VERDICT_MAX - 1 : VERDICT_MAX);
     if (where) lines.push(`  (thrown at ${where})`);
-    return { found: true, lines };
+    return { found: true, lines, all: words, thrown: true };
   }
   const said = err.filter((l) => !VERDICT_NOISE.some((re) => re.test(l)));
   if (said.length) {
-    if (said.length <= VERDICT_MAX) return { found: true, lines: said };
-    if (mark < 0) return { found: true, lines: said.slice(-VERDICT_MAX) };
+    if (said.length <= VERDICT_MAX) return { found: true, lines: said, all: said };
+    if (mark < 0) return { found: true, lines: said.slice(-VERDICT_MAX), all: said };
     const k = said.findIndex((l) => VERDICT_MARK.test(l));
     const after = said.slice(k, k + VERDICT_MAX);
-    return { found: true, lines: [...said.slice(Math.max(0, k - (VERDICT_MAX - after.length)), k), ...after] };
+    return { found: true, lines: [...said.slice(Math.max(0, k - (VERDICT_MAX - after.length)), k), ...after], all: said };
   }
   const out = stdout.split('\n');
   const marked = out.findLastIndex((l) => VERDICT_MARK.test(l));
-  if (marked >= 0) return { found: true, lines: out.slice(marked).filter((l) => l.trim()).slice(0, VERDICT_MAX) };
-  return { found: false, lines: out.filter((l) => l.trim()).slice(-4) };
+  if (marked >= 0) {
+    const from = out.slice(marked).filter((l) => l.trim());
+    return { found: true, lines: from.slice(0, VERDICT_MAX), all: from };
+  }
+  return { found: false, lines: out.filter((l) => l.trim()).slice(-4), all: [] };
 }
 
 // The baseline's excerpt of a red gate.
@@ -7601,6 +7659,51 @@ function breakLine(r) {
   const text = v.lines.map((l) => l.trim().replace(/^[·•-]\s*/, '').replace(/^AssertionError \[ERR_ASSERTION\]: /, ''))
     .filter(Boolean).join(' · ');
   return `        → ${text.length > 200 ? `${text.slice(0, 199)}…` : text}`;
+}
+
+// R200 — HOW A BREAK WAS CAUGHT, NOT ONLY THAT IT WAS. A gate that exits
+// non-zero caught its break, whatever made it exit, and R199 read the
+// seventeen error lines in R196's full battery by hand to find four breaks
+// caught by a crash instead of by the check each is named for. The battery
+// reads them itself now, on two rules:
+//   - A gate that died of a JavaScript engine error (a TypeError, a
+//     ReferenceError, a SyntaxError, a RangeError) never ran its check. On
+//     R196's 509 caught breaks this picks out exactly six: R199's four (6,
+//     59, 179, 297) and the two whose defect is a crash by name (26, 322).
+//     A gate reporting a throw in its own words ("ranch threw: ...") starts
+//     with its own words, and none of the eleven that do is among the six.
+//     CRASHED.
+//   - `expect`, which R76 and R82 wrote on four breaks and nothing read
+//     until now: words the gate's verdict must contain, all of it and not
+//     the line printed under the break. A break caught by some other
+//     complaint is ELSEWHERE. A break whose defect IS a crash says so here,
+//     by naming the crash, and that is the only way past the first rule.
+// Either one fails the run: a break caught for the wrong reason proves
+// nothing about the gate it is named for.
+const ENGINE_ERROR = /^(?:Uncaught )?(?:Error: )?((?:Type|Reference|Syntax|Range)Error)(?: \[[\w-]+\])?: /;
+function judge(r, b) {
+  const v = verdict(r);
+  if (b.expect) {
+    if (v.all.join('\n').includes(b.expect)) return { verdict: 'caught' };
+    return { verdict: 'ELSEWHERE', why: `red, but the gate never said "${b.expect}", which is the check this break is for` };
+  }
+  const crash = v.thrown && v.lines[0].trim().match(ENGINE_ERROR);
+  if (crash) {
+    return { verdict: 'CRASHED', why: `the gate died of a ${crash[1]} before its check could run: re-aim the break, or name the crash in its \`expect\` if the crash is the defect` };
+  }
+  return { verdict: 'caught' };
+}
+
+// R200 — A FIELD NOTHING READS. `expect` was written, reviewed and carried
+// from R76 to R200 by a battery that never looked at it, because an object
+// literal takes any key it is given. A break carries the fields this file
+// reads, and `--anchors` and `--self` refuse any other: a field somebody
+// means to be read is a field somebody has to wire up here.
+const BREAK_FIELDS = new Set(['n', 'gate', 'name', 'file', 'anchor', 'to', 'expect']);
+function unreadFields(b) {
+  const bad = Object.keys(b).filter((k) => !BREAK_FIELDS.has(k)).map((k) => `\`${k}\` is a field the battery does not read`);
+  if ('expect' in b && (typeof b.expect !== 'string' || !b.expect)) bad.push('`expect` is not words the gate could say');
+  return bad;
 }
 
 // Hand `items` out to the workers, each of which owns one tree and one port.
@@ -7665,6 +7768,7 @@ if (process.argv.includes('--anchors')) {
     else if (b.to.startsWith(b.anchor) && b.to.length > b.anchor.length && src.includes(b.to)) {
       stale.push(`${b.n}: ${b.file} already says what this break appends — its target has moved — ${b.name}`);
     }
+    for (const why of unreadFields(b)) stale.push(`${b.n}: ${why} — ${b.name}`);
   }
   cleanup();
   if (stale.length) {
@@ -7686,6 +7790,10 @@ if (process.argv.includes('--anchors')) {
 //   2. Three tiny gates run the way the baseline and the break loop run a
 //      real one — `run`, `pool` and both printers — so a printer that goes
 //      back to slicing the top of the output is caught, not just a reader.
+// R199 added a third, a break written as it is typed. R200 added a fourth:
+// seventeen verdicts judged on how a break was caught (four crash shapes,
+// R196's own words, `expect` met and missed), a fourth tiny gate that dies of
+// a real TypeError, and every break's fields checked against what is read.
 // BLIND AGAIN IF a gate starts complaining in a shape none of these has: the
 // fixtures are the survey's, and the survey is one break per gate.
 if (process.argv.includes('--self')) {
@@ -7723,7 +7831,8 @@ if (process.argv.includes('--self')) {
   `];
   const QUIET = ['node', '-e', "console.log('quiet: working'); console.log('quiet: still working'); process.exit(1);"];
   const GREEN = ['node', '-e', "console.log('green ✓'); console.error('green: a word on stderr that is not a verdict');"];
-  const [late, quiet, green] = await pool([LATE, QUIET, GREEN], (gate, dir, port) => run(gate, dir, port));
+  const CRASH = ['node', '-e', 'const tab = null; tab.click();'];
+  const [late, quiet, green, crash] = await pool([LATE, QUIET, GREEN, CRASH], (gate, dir, port) => run(gate, dir, port));
   const excerpt = failLines(late).join('\n');
   if (late.ok) bad.push('a gate that exits 1 came back green');
   if (!excerpt.includes('late ✗  1 problem') || !excerpt.includes('the problem, printed after everything else')) {
@@ -7740,13 +7849,68 @@ if (process.argv.includes('--self')) {
   // R199 — and a break reaches its file as it is typed, `$` and all.
   const typed = applyBreak("a c === 'x' b", { anchor: "c === 'x'", to: "c === '$' && d" });
   if (typed !== "a c === '$' && d b") bad.push(`a break's replacement is expanded as a template, not written: ${JSON.stringify(typed)}`);
+  // R200 — and a caught break is judged on how it was caught. The crashes are
+  // the shapes Node prints for each (captured, paths shortened), the words
+  // are R196's own verdicts, and a real crash goes through `run` and `pool`.
+  const NODE_FOOT = '\nNode.js v22.22.2\n';
+  const SMOKE_LANE = VERDICT_FIXTURES[1].stderr;
+  const COMPLAINT_13 = `saves ✗  14 problems\n${Array.from({ length: 13 }, (_, i) => `  · a migrated v${i + 1} save is missing what a new game has: save.theater is missing\n`).join('')}  · the one problem this break is for\n`;
+  const JUDGE_FIXTURES = [
+    { name: "break 59's shape (the page's TypeError, rethrown by the gate's helper)", want: 'CRASHED',
+      stderr: `file:///tmp/sw-r200-a1/tools/cdp.js:90\n    if (bad) throw new Error(bad.exception?.description ?? bad.text);\n                   ^\n\nError: TypeError: Cannot read properties of null (reading 'click')\n    at <anonymous>:1:61\n    at Object.evaluate (file:///tmp/sw-r200-a1/tools/cdp.js:90:20)\n    at async file:///tmp/sw-r200-a1/tools/a11y.js:1712:5\n${NODE_FOOT}` },
+    { name: "break 297's shape (a link error on load)", want: 'CRASHED',
+      stderr: `file:///tmp/sw-r200-a1/battle/statblock.js:4\nimport { isSettled } from '../splice/theater.js';\n         ^\nSyntaxError: The requested module '../splice/theater.js' does not provide an export named 'isSettled'\n    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)\n${NODE_FOOT}` },
+    { name: "break 179's shape (a name read before it is declared)", want: 'CRASHED',
+      stderr: `file:///tmp/sw-r200-a1/ui/facility-card.js:94\n  const name = solo ? (level?.name ?? solo.name) : 'Facility';\n                       ^\n\nReferenceError: Cannot access 'level' before initialization\n    at facilityCard (file:///tmp/sw-r200-a1/ui/facility-card.js:94:24)\n${NODE_FOOT}` },
+    { name: 'a runaway recursion', want: 'CRASHED',
+      stderr: `file:///tmp/sw-r200-a1/campaign/map.js:31\n  return reach(node);\n  ^\n\nRangeError: Maximum call stack size exceeded\n    at reach (file:///tmp/sw-r200-a1/campaign/map.js:31:3)\n${NODE_FOOT}` },
+    { name: "break 6 before R199 (a SyntaxError where its expect wanted the corpus)", want: 'ELSEWHERE', b: { expect: 'corpus' },
+      stderr: `file:///tmp/sw-r200-a1/tools/scopecheck.js:212\n      if (c === ' b && d\n                ^^^^^^^^^\n\nSyntaxError: Invalid or unexpected token\n    at compileSourceTextModule (node:internal/modules/esm/utils:346:18)\n${NODE_FOOT}` },
+    { name: 'break 26 (a crash that is the defect, and says so)', want: 'caught', b: { expect: "reading 'capturable'" },
+      stderr: `file:///tmp/sw-r200-a1/battle/engine.js:309\n    capturable: unit.capturable,\n                     ^\n\nTypeError: Cannot read properties of null (reading 'capturable')\n    at combatantFromUnit (file:///tmp/sw-r200-a1/battle/engine.js:309:22)\n${NODE_FOOT}` },
+    { name: 'break 26 without its expect', want: 'CRASHED',
+      stderr: `TypeError: Cannot read properties of null (reading 'capturable')\n    at combatantFromUnit (file:///tmp/sw-r200-a1/battle/engine.js:309:22)\n${NODE_FOOT}` },
+    { name: 'the retired gate (a throw reported in its own words)', want: 'caught',
+      stderr: "retired ✗  ranch threw: Cannot read properties of undefined (reading 'upkeepPerDay')\n" },
+    { name: 'the handler gate (a ReferenceError it caught and reported)', want: 'caught',
+      stderr: 'handlers ✗  battle:bays: button[data-salvage] [click] threw ReferenceError: salvageUnitTypo is not defined\nhandlers ✗  1 problem (56362ms)\n' },
+    { name: 'a smoke lane (an assertion is a check)', want: 'caught', stderr: SMOKE_LANE },
+    { name: 'a smoke lane, expected', want: 'caught', b: { expect: 'and so does the moveset' }, stderr: SMOKE_LANE },
+    { name: 'a smoke lane, red on another assertion', want: 'ELSEWHERE', b: { expect: 'the moveset is kept' }, stderr: SMOKE_LANE },
+    { name: 'the tokenizer, expected', want: 'caught', b: { expect: 'corpus' },
+      stderr: 'scopecheck: the tokenizer fails its own corpus (3):\n  · template interpolation IS a read: expected [ghost] got []\n' },
+    { name: 'break 43, on its clause', want: 'caught', b: { expect: 'left on the board' },
+      stderr: 'breakout ✗  a specimen bagged in a lost fight was left on the board\n' },
+    { name: "break 43, on the clause before it", want: 'ELSEWHERE', b: { expect: 'left on the board' },
+      stderr: 'breakout ✗  a plain loss closed the entry\n' },
+    { name: 'an expect past the lines printed under the break', want: 'caught', b: { expect: 'the one problem this break is for' }, stderr: COMPLAINT_13 },
+    { name: 'a gate that says nothing, and an expect', want: 'ELSEWHERE', b: { expect: 'the widget is sideways' }, stdout: 'quiet: one\n', stderr: '' },
+  ];
+  for (const f of JUDGE_FIXTURES) {
+    const got = judge({ stdout: f.stdout ?? '', stderr: f.stderr }, f.b ?? {}).verdict;
+    if (got !== f.want) bad.push(`${f.name}: judged ${got}, not ${f.want}`);
+  }
+  for (const [r, b, want, what] of [
+    [crash, {}, 'CRASHED', 'a gate that dies of a TypeError'],
+    [crash, { expect: "reading 'click'" }, 'caught', 'a gate that dies of the TypeError its break names'],
+    [late, {}, 'caught', 'a gate that complains late'],
+    [late, { expect: 'printed after everything else' }, 'caught', 'a gate that complains late, expected'],
+  ]) {
+    const got = judge(r, b).verdict;
+    if (got !== want) bad.push(`${what}, run through the pool, is judged ${got}, not ${want}`);
+  }
+  const FIELDS = { n: 0, gate: GREEN, name: 'a break', file: 'x.js', anchor: 'a', to: 'b' };
+  if (unreadFields(FIELDS).length) bad.push(`a break with the six fields is refused: ${unreadFields(FIELDS).join('; ')}`);
+  if (!unreadFields({ ...FIELDS, expects: 'corpus' }).some((w) => w.includes('`expects`'))) bad.push('a field the battery does not read (`expects`) is let through');
+  if (!unreadFields({ ...FIELDS, expect: '' }).length) bad.push('an empty `expect` is let through, and every verdict contains it');
+  for (const b of BREAKS) for (const why of unreadFields(b)) bad.push(`break ${b.n}: ${why}`);
   cleanup();
   if (bad.length) {
     console.error(`battery ✗  self: ${bad.length} problem${bad.length === 1 ? '' : 's'} reading a red gate`);
     for (const line of bad) console.error(`  · ${line}`);
     process.exit(1);
   }
-  console.log(`battery ✓  self: ${VERDICT_FIXTURES.length} reds read as their gates meant them, 3 gates run end to end through the baseline's and the break loop's own printers, and a break is written as it is typed`);
+  console.log(`battery ✓  self: ${VERDICT_FIXTURES.length} reds read as their gates meant them, 4 gates run end to end through the baseline's and the break loop's own printers, a break is written as it is typed, ${JUDGE_FIXTURES.length + 4} verdicts judged on how the break was caught, and all ${BREAKS.length} breaks carry only fields the battery reads`);
   process.exit(0);
 }
 
@@ -7853,18 +8017,23 @@ const results = await pool(picked, async (b, dir, port) => {
   const r = await run(b.gate, dir, port);
   restore(dir, b.file);
   if (r.ok) return { ...b, verdict: 'MISSED', said: [] };
-  return { ...b, verdict: 'caught', said: VERBOSE ? failLines(r) : [breakLine(r)] };
+  const { verdict: how, why } = judge(r, b);
+  const said = VERBOSE ? failLines(r) : [breakLine(r)];
+  return { ...b, verdict: how, said: why ? [...said, `        ✗ ${why}`] : said };
 }, (res) => {
   if (res.verdict === 'BADANCH') {
     console.log(`  ${String(res.n).padStart(2)}. BADANCH (${res.hits} matches) — ${res.name}`);
     return;
   }
-  console.log(`  ${String(res.n).padStart(2)}. ${res.verdict === 'caught' ? '✓ caught' : '✗ MISSED'}  ${res.name}`);
+  console.log(`  ${String(res.n).padStart(2)}. ${res.verdict === 'caught' ? '✓ caught' : `✗ ${res.verdict}`}  ${res.name}`);
   for (const line of res.said) console.log(line);
 });
 
 const missed = results.filter((r) => r.verdict !== 'caught');
-console.log(`\n${results.length} breaks · ${results.length - missed.length} caught · ${missed.length} missed`);
+const count = (v) => missed.filter((m) => m.verdict === v).length;
+const astray = [['CRASHED', 'caught by a crash'], ['ELSEWHERE', 'caught by another check']]
+  .filter(([v]) => count(v)).map(([v, words]) => ` · ${count(v)} ${words}`).join('');
+console.log(`\n${results.length} breaks · ${results.length - missed.length} caught · ${missed.length - count('CRASHED') - count('ELSEWHERE')} missed${astray}`);
 for (const m of missed) console.log(`  ${m.verdict} ${m.n}: ${m.name}`);
 cleanup();
 if (missed.length) process.exitCode = 1;
