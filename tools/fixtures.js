@@ -291,3 +291,40 @@ export function walkedSave({ days = 180, seed = 2026, fresh = false } = {}) {
   } catch { /* a cache that cannot be written is still a correct answer */ }
   return save;
 }
+
+// R198 — THE AGENT'S CAMPAIGNS, CACHED LIKE EVERY OTHER 180-DAY WALK.
+//
+// Diet sections 6 and 8 judge rule 5 of the mission policy (who goes on a
+// caper when an agent is on the books) on R192's census variant: two payroll
+// slots to start and three at most, so the agent gets the slot the shipped
+// two never leave him. Section 6 needs each of the rule's branches to come up,
+// and one of them comes up on about half of all campaigns: whether a walk
+// breeds a spare infiltrator that beats the agent's odds is chaos, and a
+// seed's answer flips between balance changes (R198's census, four trees).
+// So the section reads six campaigns, and at six uncached walks a run that
+// would be half the suite's wall clock. Stored here instead: the mission log
+// and the payroll, which is all either section reads, keyed like `walkedSave`
+// by seed, days and the hash of every file the walk can reach. A cold run
+// pays the walks once; `walkCacheState` counts these files, so the suite's
+// rebuild allowance sees them.
+export const agentVariant = (content) => ({ ...content, henchmenMeta: { ...content.henchmenMeta, slots: 2, maxSlots: 3 } });
+
+export function walkedAgentCampaign({ seed = 2026, days = 180 } = {}) {
+  const cache = join(tmpdir(), 'sw-walk-cache');
+  const file = join(cache, `agent-${seed}-${days}-${sourceStamp()}.json`);
+  if (existsSync(file)) {
+    try { return JSON.parse(readFileSync(file, 'utf8')); } catch { /* rebuild it */ }
+  }
+  const w = campaignWalk(agentVariant(loadSimContent()), { seed, days, stopAtDominion: false });
+  const kept = {
+    seed,
+    payroll: { hires: w.payroll?.hires ?? [], paid: w.payroll?.paid ?? {} },
+    log: (w.log ?? []).filter((e) => e.kind === 'mission'),
+  };
+  try {
+    mkdirSync(cache, { recursive: true });
+    writeCache(file, JSON.stringify(kept));
+    appendFileSync(join(cache, '.computed'), `agent-${seed}-${days}\n`);
+  } catch { /* a cache that cannot be written is still a correct answer */ }
+  return kept;
+}
