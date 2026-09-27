@@ -37,6 +37,7 @@
 //
 //   node tools/wide.js            # exit 1 if a rule fails
 //   node tools/wide.js --report   # and print the table above
+import { readFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -60,6 +61,24 @@ const WIDTHS = [PHONE, 900, LAPTOP, 1920];
 // own first probe broke by typing `splice` for a screen called `theater` and
 // measuring five of six without saying so.
 const SCREENS = ['ranch', 'pens', 'battle', 'theater', 'dex', 'vault'];
+
+// R200 — WHAT A SCREEN SAYS WHILE IT IS STILL ON ITS WAY. Five of the six
+// screens lazy-load, and `lazy()` in main.js paints one card into the screen
+// while the module is fetched. It is not empty, it is not hidden, and it does
+// not change — so the wait below read it as a screen that had painted and
+// gone quiet, and on a box slow enough to take 180ms over a fetch it measured
+// the card instead of the screen. R200's own baseline went red that way: "the
+// arena at 380px has no stage or no creatures to measure", on a tree that
+// passes alone every time. With 250ms of latency on every fetch it went red
+// on demand, and the arena it measured read "Warming up the lab…".
+// Read from main.js rather than typed here, so a reworded card is still the
+// card; if it cannot be found, nothing below can refuse it, and that is red.
+const WARMING = readFileSync(new URL('../main.js', import.meta.url), 'utf8')
+  .match(/function lazy\([\s\S]*?root\.innerHTML = '([^']+)';/)?.[1];
+if (!WARMING) {
+  console.error('wide ✗  main.js no longer paints a placeholder this gate can find in `lazy()`, so no wait here can tell a loading screen from a painted one');
+  process.exit(1);
+}
 
 const save = walkedSave({ days: 180 });
 const PINNED_NOW = save.lastTickAt;
@@ -140,6 +159,7 @@ try {
       const sig = await evaluate(`(() => {
         const el = document.querySelector('${sel}');
         if (!el || el.hidden) return '';
+        if (el.innerHTML === ${JSON.stringify(WARMING)}) return '';
         const r = el.getBoundingClientRect();
         return el.children.length + ':' + Math.round(r.width) + ':' + Math.round(el.scrollHeight);
       })()`);
@@ -170,6 +190,19 @@ try {
   await sleep(700);
   if (await settle(BOOTED, { deadline: 1500 })) {
     fails.push('the readiness check passes on a shell no script has run in, so a tab can be clicked before it is bound');
+  }
+  // R200 — and a screen still fetching its module is refused the same way,
+  // every run: a probe holding nothing but main.js's own placeholder must
+  // never read as a screen that has painted. The page's scripts are still
+  // off, so nothing can repaint the probe while the wait looks at it.
+  await evaluate(`(() => {
+    const probe = document.createElement('div');
+    probe.id = 'r200-warming';
+    probe.innerHTML = ${JSON.stringify(WARMING)};
+    document.body.append(probe);
+  })()`);
+  if (await settle('#r200-warming', { deadline: 1000 })) {
+    fails.push(`the wait settles on a screen still loading its module (${JSON.stringify(WARMING)}), so a lazy screen can be measured before it exists`);
   }
   await send('Emulation.setScriptExecutionDisabled', { value: false });
 

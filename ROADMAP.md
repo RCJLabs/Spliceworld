@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**0 entries queued.**
+**1 entry queued.** R201.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -7392,6 +7392,110 @@ triangle working, and each region genuinely asks a different question)*.
     nothing left to tick. It takes the tick off R199 instead, and the roadmap
     gate says §9.0 does not queue it. Break 277 already covers the other
     direction (a listed entry that has shipped).
+
+- **R200 — The battery counts a break caught whatever caught it.** ✅ Found
+  closing R199. A break is caught when its gate exits non-zero, and nothing
+  asks why. R199 read the seventeen error lines in R196's full battery by
+  hand and found four breaks caught by a crash rather than by the check each
+  is named for. Nothing stops the next one: a break that goes stale into a
+  crash reads caught forever. The battery already had the start of the
+  answer and never used it. R76 and R82 gave four breaks an `expect` field
+  (6, 7 and 15 `'corpus'`, 43 `'contract'`), meant as the part of the gate
+  that should fire, and no line of code has ever read it (`git log -S
+  "b.expect"` is empty). One of the four could not have matched anything:
+  `'contract'` is a word in a comment, and break 43's gate says "a specimen
+  bagged in a lost fight was left on the board".
+  Measured on R196's logs, a rule the battery could apply itself: of 509
+  caught breaks, six have a verdict that is a JavaScript engine error
+  (TypeError, ReferenceError, SyntaxError, RangeError). They are exactly
+  R199's four (6, 59, 179, 297) and its two crashes by name (26, 322). The
+  eleven gates that report a throw in their own words start with their own
+  words, and none of them is among the six. *Done when: a caught break whose
+  gate died of an engine error is its own verdict, not caught, and fails the
+  run unless the break names that crash as its defect; a break's `expect` is
+  read, and a caught break whose gate's verdict does not contain it fails the
+  run; a break field the battery does not read is refused; each rule is
+  proved in `--self` and by a break; and a full battery on the finished tree
+  reads every break it flags as fixed or argued.*
+
+  **Shipped: a break is judged on how it was caught, and `expect` is read.**
+  * **Two rules, in `judge`** (`tools/battery.js`).
+    - A caught break whose gate died of an engine error reads `✗ CRASHED`,
+      with a line naming the error and the two ways out: re-aim the break, or
+      name the crash in its `expect` if the crash is the defect. The rule
+      reads the verdict's first line, and only when the verdict is an
+      uncaught throw, so a gate reporting a throw in its own words ("ranch
+      threw: ...") is not one.
+    - `expect` is words the gate's whole verdict must contain, not only the
+      line printed under the break. A caught break whose gate never said
+      them reads `✗ ELSEWHERE`.
+    - Both fail BATTERY_EXIT, and the summary counts them apart from MISSED.
+  * **Nine breaks carry an `expect`.**
+    - 6, 7 and 15 keep `'corpus'`.
+    - 43's `'contract'` could never have matched. It is now `'left on the
+      board'`, its clause's own words.
+    - 59, 179 and 297 name the checks R199 re-aimed them at, so a drift back
+      into a crash, or onto another clause, is seen.
+    - 26 and 322 name their crash (`reading 'capturable'`, `reading
+      'species'`). That is how a break whose defect is a crash gets past the
+      first rule.
+  * **A field the battery does not read is refused.** `expect` sat unread
+    from R76 because an object literal takes any key. A break carries `n`,
+    `gate`, `name`, `file`, `anchor`, `to` and `expect`, and `--anchors` and
+    `--self` refuse any other key, and an empty `expect`.
+  * **The gate** (`--self`, in the baseline).
+    - Seventeen verdicts judged: the four engine errors as Node prints them
+      (break 59's rethrown TypeError, 297's link error, 179's name read
+      before it is declared, a runaway recursion), R196's own words from the
+      retired, handler, smoke, tokenizer and breakout gates, and `expect`
+      met, missed, and met past the eighth line.
+    - A fourth tiny gate dies of a real TypeError through `run` and `pool`.
+    - Every break's fields are checked against what is read.
+    - Breaks 523-526 take away the crash rule, `expect`, the field check,
+      and `expect` read from the whole verdict. 509 and 512 are re-aimed at
+      `verdict`'s new return.
+  * **Found on the way: the wide gate measured a screen still loading.**
+    R200's first baseline went red on `tools/wide.js`: "the arena at 380px
+    has no stage or no creatures to measure". The tree passes that gate
+    alone every time. Five screens lazy-load, and while the module is
+    fetched `lazy()` in main.js paints one card, "Warming up the lab…". The
+    gate's wait takes a visible, non-empty screen that stops changing for
+    three polls (180ms) as painted, and that card is all three. With 250ms
+    of latency on every fetch the gate went red on demand, and what it had
+    measured at 380px was the card. Folded in at Evan's call, because a fix
+    filed on its own changes a gate's logic and owes a full battery of its
+    own.
+    - The wait refuses main.js's placeholder, read from `lazy()` rather than
+      typed, so a reworded card is still the card; the gate fails loudly if
+      it cannot find it.
+    - Every run, with the page's scripts off, a probe holding only that card
+      must not read as painted. Break 527 takes the refusal away, and the
+      probe names it.
+    - Under the same 250ms of latency the fixed gate measured the arena at
+      every width, three runs of three.
+    - At rest the hole went the other way: a placeholder measured as a
+      screen is short and fits everything, so it would have passed.
+  * **The full battery on the finished tree**: 518 breaks in four chunks
+    (23m, 82m, 143m, 117m; 365 minutes), four baselines green. Every break
+    is caught, and none reads CRASHED or ELSEWHERE. The only two caught by
+    an engine error are 26 and 322, and both name it in `expect`. The seven
+    other breaks with an `expect` (6, 7, 15, 43, 59, 179, 297) each read the
+    check they name.
+
+- **R201 — The height gate takes a screen still loading for a painted one.**
+  Found by R200, which fixed the same hole in the wide gate. The height
+  gate's `READY` is `!el.hidden && el.children.length > 0 && el.scrollHeight
+  > 0`, and main.js's "Warming up the lab…" card, painted while a lazy
+  screen's module is fetched, is all three. Measured on R200's tree, in a
+  scratch copy with 250ms of latency on every fetch: `height ✗  39 problems`.
+  All 39 are the gate's own reachability checks (32 worst-case Vaults that
+  "never reached every bay", seven Dex budgets whose tab bar "offered
+  nothing"), so it goes red rather than blind. It has not gone red in a real
+  baseline yet; the wide gate did. The keyboard gate's waits are
+  unmeasured. *Done when: the height gate refuses the placeholder the way
+  the wide gate does, read from `lazy()` and proved every run; the 250ms
+  probe reads green on it; and the keyboard gate is probed the same way and
+  fixed or argued.*
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same
