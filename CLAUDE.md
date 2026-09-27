@@ -79,7 +79,12 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (4h45m to 6h30m. R196 is the THIRTEENTH reading: 510
+**The full battery (4h45m to 6h30m. R200 is the FOURTEENTH reading: 518
+breaks at 23m, 82m, 143m and 117m, which is 365 minutes — 22 over R196 with
+eight more breaks, so the range holds. It is also the first run that judged
+HOW each break was caught: 518 caught, none CRASHED or ELSEWHERE, and the
+only two caught by an engine error (26, 322) name it. Chunk 4 ran first,
+because it held the new breaks. R196 is the THIRTEENTH reading: 510
 breaks at 21m, 80m, 130m and 112m, which is 343 minutes — 41 under R193 with
 nineteen more breaks, so the range holds. Chunk 3 read 276 MISSED: an
 append-style break aimed at the entry R196 itself had ticked, because

@@ -1,5 +1,109 @@
 # PROGRESS
 
+## Session 223 — R200: the battery judges how a break was caught ✅
+
+**A break used to be caught whenever its gate went red, whatever turned it
+red. The battery now reads how. A gate that died of a JavaScript engine
+error reads `✗ CRASHED`. A break whose `expect` its gate never said reads
+`✗ ELSEWHERE`. Both fail the run. `expect` had been on four breaks since R76
+and R82, and nothing read it until now. Filed and built in one session at
+Evan's go-ahead, after R199 left the unread field as a known issue.**
+
+### Measured first
+
+- **R196's full-battery logs, 509 caught breaks.** Six have a verdict that
+  is an engine error (TypeError, ReferenceError, SyntaxError, RangeError):
+  6, 59, 179, 297 (R199's four) and 26, 322 (the two crashes by name).
+  - The eleven gates that report a throw in their own words ("ranch threw:
+    ...", "threw ReferenceError: ...") start with their own words, and none
+    is among the six.
+  - A narrower rule (the throw's location is the break's own file) missed
+    59, which died in `tools/cdp.js`, and flagged ten smoke assertions whose
+    break is in `tools/smoke.js`. So the rule reads the error's class.
+- **`expect`.** `git log -S "b.expect"` is empty: nothing ever read it.
+  - `'corpus'` is in the tokenizer's verdict ("the tokenizer fails its own
+    corpus").
+  - `'contract'` is only a word in the comment over break 43's check. The
+    gate says "a specimen bagged in a lost fight was left on the board".
+- **Break fields.** Every break carries `n`, `gate`, `name`, `file`,
+  `anchor` and `to`, and four carried `expect`. Nothing else.
+
+### What shipped
+
+- **`judge`** (`tools/battery.js`).
+  - An uncaught throw whose first line is an engine error: `CRASHED`, with
+    a line naming the error and the way out (re-aim the break, or name the
+    crash in `expect` if the crash is the defect).
+  - `expect` is looked for in the gate's whole verdict, not the 200
+    characters printed under the break: `ELSEWHERE` when it is absent.
+  - Both fail BATTERY_EXIT. The summary counts them apart from MISSED.
+- **Nine breaks carry an `expect`.**
+  - 6, 7, 15: `'corpus'`.
+  - 43: `'left on the board'`, in place of `'contract'`.
+  - 59, 179, 297: the checks R199 re-aimed them at.
+  - 26, 322: their crash (`reading 'capturable'`, `reading 'species'`).
+- **Unread fields are refused.** `--anchors` and `--self` refuse a break
+  key the battery does not read, and an empty `expect`.
+- **`--self`**: seventeen verdicts judged, a real TypeError through `run`
+  and `pool`, and every break's fields. Breaks 523-526; 509 and 512
+  re-aimed at `verdict`'s new return.
+
+### Found on the way
+
+- **The wide gate measured a screen still loading.** R200's first baseline
+  went red on `tools/wide.js`: "the arena at 380px has no stage or no
+  creatures to measure". The tree passed that gate alone 3 of 3, and 4 of 4
+  beside six CPU burners.
+  - Cause: while a lazy screen's module is fetched, `lazy()` in main.js
+    paints one "Warming up the lab…" card. The gate's wait took a visible,
+    non-empty screen that stayed unchanged for 180ms as painted, and that
+    card is all three.
+  - Proved: with 250ms of latency on every fetch (a scratch copy of the
+    tree), the gate went red on demand, and what it measured at 380px was
+    the card.
+  - Fixed inside R200 at Evan's call, since a separate fix would owe its own
+    full battery. The wait refuses main.js's placeholder, read from
+    `lazy()`. A probe checks the refusal every run with scripts off, and
+    break 527 takes the refusal away. Under the same latency the fixed gate
+    read green 3 of 3.
+- **The height gate has the same hole, filed as R201.** Its `READY` accepts
+  the placeholder. Under the same 250ms probe it reads 39 problems, all its
+  own "never reached" checks, so it goes red rather than blind. It has not
+  gone red in a real baseline.
+
+### Verification
+
+- `--anchors` (after the tick): 518 anchors match, every break's fields
+  read. `--self`: green.
+- `--only` on the fifteen breaks R200 added or re-aimed (behind a
+  baseline): 15 of 15 caught, each by the check it names. That run's
+  baseline read the wide-gate red above: BATTERY_EXIT 1, which is how it was
+  found.
+- `npm test` alone: green, 299s wall, 1,152 CPU-s of 1,425, walk cache warm.
+- **Full battery** (the gate-logic trigger and the ~5-milestone rot check,
+  both due): 518 breaks in four chunks, chunk 4 first (117m), then 1 (23m),
+  2 (82m), 3 (143m): 365 minutes, the fourteenth reading. Four baselines
+  green (41 of 41 each). 518 caught, 0 MISSED, 0 CRASHED, 0 ELSEWHERE,
+  BATTERY_EXIT 0 in every chunk. The only engine-error catches are 26 and
+  322, which name their crash.
+- Definition of Done: no game code, data or save schema changed (tools and
+  docs only). The browser gates for 380px, console errors, stale saves and
+  the untrusted save are green in all four baselines.
+
+### Known issues
+
+- R201: the height gate accepts main.js's lazy placeholder as a painted
+  screen (above). The keyboard gate's waits have not been probed.
+- `expect` is on nine breaks of 518. The crash rule covers the rest for one
+  kind of wrong catch. A break caught by another clause of its own gate is
+  seen only where it declares an `expect`.
+
+### Next session
+
+R201, the one entry queued: the height gate refuses the lazy placeholder
+the way the wide gate now does. The full battery ran this session (its
+fourteenth reading), so the next rot check is due around R205.
+
 ## Session 222 — R199: the keyboard gate reports an unreachable tab ✅
 
 **Break 59 is caught by the keyboard walk it is named for, not by the gate

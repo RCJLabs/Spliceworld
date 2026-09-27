@@ -7475,6 +7475,12 @@ triangle working, and each region genuinely asks a different question)*.
       every width, three runs of three.
     - At rest the hole went the other way: a placeholder measured as a
       screen is short and fits everything, so it would have passed.
+  * **The full battery on the finished tree**: 518 breaks in four chunks
+    (23m, 82m, 143m, 117m; 365 minutes), four baselines green. Every break
+    is caught, and none reads CRASHED or ELSEWHERE. The only two caught by
+    an engine error are 26 and 322, and both name it in `expect`. The seven
+    other breaks with an `expect` (6, 7, 15, 43, 59, 179, 297) each read the
+    check they name.
 
 - **R201 — The height gate takes a screen still loading for a painted one.**
   Found by R200, which fixed the same hole in the wide gate. The height
