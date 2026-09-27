@@ -7544,6 +7544,39 @@ const BREAKS = [
     to: '',
     expect: 'still loading its module',
   },
+  // R201 — THE SAME CARD, IN THE OTHER TWO BROWSER GATES. Each takes its
+  // gate's refusal of main.js's "Warming up the lab…" card away, and the
+  // gate's every-run probe (a div holding only that card) has to notice.
+  {
+    // With the lazy modules 800ms slow the height gate read 39 problems off
+    // loading cards: worst-case Vaults and Dex tabs it "never reached".
+    // BLIND AGAIN IF the probe stops running, or runs before READY exists.
+    n: 528, gate: HEIGHT, name: "the height gate's READY takes a screen still loading for a painted one",
+    file: 'tools/height.js',
+    anchor: '  const READY = `!el.hidden && el.children.length > 0 && el.scrollHeight > 0 && el.innerHTML !== ${JSON.stringify(WARMING)}`;',
+    to: '  const READY = `!el.hidden && el.children.length > 0 && el.scrollHeight > 0`;',
+    expect: 'READY settles on a screen still loading its module',
+  },
+  {
+    // The keyboard gate measured the War Room's card and called its tab bar
+    // and the dominion banner never drawn.
+    // BLIND AGAIN IF the probe stops going through `painted`.
+    n: 529, gate: A11Y, name: 'the keyboard gate opens a tab and measures the card the screen shows while it loads',
+    file: 'tools/a11y.js',
+    anchor: '          return !!el && !el.hidden && el.children.length > 0 && el.innerHTML !== ${JSON.stringify(WARMING)};',
+    to: '          return !!el && !el.hidden && el.children.length > 0;',
+    expect: 'reads as painted, so a pass can measure a lazy screen before it exists',
+  },
+  {
+    // The one reader loses the card: every gate that refuses it now refuses
+    // nothing, and has to say so rather than wait as it did before R200.
+    // BLIND AGAIN IF a gate treats a missing card as nothing to refuse.
+    n: 530, gate: WIDE, name: "the browser gates' reader stops finding main.js's loading card, and every wait refuses nothing",
+    file: 'tools/cdp.js',
+    anchor: "  try { src = readFileSync(join(root, 'main.js'), 'utf8'); } catch { return null; }",
+    to: '  return null;',
+    expect: 'no longer paints a placeholder this gate can find',
+  },
 ];
 
 const pristine = {};

@@ -37,12 +37,11 @@
 //
 //   node tools/wide.js            # exit 1 if a rule fails
 //   node tools/wide.js --report   # and print the table above
-import { readFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { sleep, serve, findChrome, connect } from './cdp.js';
+import { sleep, serve, findChrome, connect, warmingCard } from './cdp.js';
 import { walkedSave } from './fixtures.js';
 import { loadSimContent } from './sim.js';
 import { createBattle } from '../battle/engine.js';
@@ -71,10 +70,11 @@ const SCREENS = ['ranch', 'pens', 'battle', 'theater', 'dex', 'vault'];
 // arena at 380px has no stage or no creatures to measure", on a tree that
 // passes alone every time. With 250ms of latency on every fetch it went red
 // on demand, and the arena it measured read "Warming up the lab…".
-// Read from main.js rather than typed here, so a reworded card is still the
-// card; if it cannot be found, nothing below can refuse it, and that is red.
-const WARMING = readFileSync(new URL('../main.js', import.meta.url), 'utf8')
-  .match(/function lazy\([\s\S]*?root\.innerHTML = '([^']+)';/)?.[1];
+// Read from main.js rather than typed here (R201 moved the reader to
+// `warmingCard` in cdp.js, which the height and keyboard gates share), so a
+// reworded card is still the card; if it cannot be found, nothing below can
+// refuse it, and that is red.
+const WARMING = warmingCard();
 if (!WARMING) {
   console.error('wide ✗  main.js no longer paints a placeholder this gate can find in `lazy()`, so no wait here can tell a loading screen from a painted one');
   process.exit(1);
