@@ -1,5 +1,91 @@
 # PROGRESS
 
+## Session 222 — R199: the keyboard gate reports an unreachable tab ✅
+
+**Break 59 is caught by the keyboard walk it is named for, not by the gate
+crashing. Of the seventeen caught breaks that showed an error in R196's full
+battery, four were not caught by their own check. Three are fixed (59, 179,
+297). The fourth, break 6, turned out to be the battery's own bug: it wrote
+`$'` into the file as a template. The other thirteen are argued. The queue is
+empty.**
+
+### Measured first
+
+- **Break 59, by hand.** Two separate faults kept it from its check:
+  - The gate clicked tabs with a bare `querySelector(...).click()` in
+    nineteen places, and the first one to meet the missing button threw at
+    `tools/cdp.js:90`.
+  - Even without the crash, the keyboard walk took its screens from
+    `#tabs button`, so the screen whose button was gone was never on its
+    list and never asked about.
+- **Break 6, by hand**: caught cleanly by the tokenizer's corpus. The
+  battery's SyntaxError was `src.replace(b.anchor, b.to)` expanding the `$'`
+  in its replacement into the rest of the line. No other break's replacement
+  carried a `$` pattern.
+- **179 and 297** ran replacement code that cannot run: `level` read before
+  it is declared, and `isSettled` imported from a module that no longer
+  exports it.
+
+### What shipped
+
+- **`tools/a11y.js`.**
+  - Every tab click goes through `tabTo`, which clicks the button if there is
+    one and says whether it did. Passes skip a screen they cannot open, and
+    the end of the run names what was skipped.
+  - The screens come from the page (`.screen[id^="screen-"]`).
+  - Break 59 now reads: `the "dex" tab cannot be reached by Tab from the top
+    of the document`, then the Dex's own keyboard checks, then the skip note.
+- **`tools/battery.js`.**
+  - Breaks are written through `applyBreak` (a function replacement, never
+    expanded).
+  - `--self` checks a `$` survives; break 522 reverts it.
+  - 179 names the owned level the way the next line does (smoke's title
+    assertion catches it).
+  - 297 brings `theater.js` back with a side-effect import. The boot gate's
+    budget of uncalled functions catches it, and the module rule with it.
+  - 276 is turned round: with the queue empty there is nothing to tick, so
+    it takes R199's tick away, and it no longer needs re-aiming each
+    milestone. 277 covers the other direction.
+- **The thirteen argued** (ROADMAP R199): eleven gates that report a throw in
+  their own words because that is their job (10, 22, 23, 24, 27, 31, 32, 33,
+  138, 344, 389), and two defects that are a crash by name (26, 322).
+
+### Verification
+
+Evan asked to skip the full battery. The gates whose logic changed are the
+keyboard gate, the battery's own `--self` and the roadmap gate, and the run
+below is every break aimed at those three, plus the three re-aimed ones.
+
+- `battery.js --anchors`: 513 of 513 match, run after R199's tick.
+- **`battery.js --only` on 56 breaks: `BATTERY_EXIT 0` in 45m36s, 56 of 56
+  caught.** That is all 35 keyboard-gate breaks, the 9 self-test breaks, the
+  9 roadmap breaks, and 6, 179 and 297. None of the 56 is caught by a crash
+  any more. The four that were:
+  - 59: `the "dex" tab cannot be reached by Tab from the top of the document`;
+  - 6: `the tokenizer fails its own corpus (3)`;
+  - 179: smoke's `the card is titled after the machine, not its tier`;
+  - 297: `boot ✗ 3 problems`, the uncalled-function budget among them.
+- The keyboard gate alone on the clean tree: green in 3m28s.
+- `npm test`, alone: 313.8s wall, 1,207 of 1,425 budgeted CPU-seconds, warm.
+  Nothing the suite runs changed, so the rise from R198's 990 is the host.
+- Browser at 380px: every screen is 380 wide on a fresh save, the v64
+  fixture and the v60 fixture migrated to v64. Each survives a reload, and
+  there are no console errors. (Nothing the player sees changed.)
+- SAVE_VERSION stays 64.
+
+### Known issues
+
+- The queue is empty. The next session starts by deciding what to file.
+- Four breaks carry an `expect` field (6, 7, 15 and 43) that nothing in the
+  battery reads. It looks like the start of "was this break caught by the
+  check it names?", which R199 answered by hand.
+
+### Next session
+
+The queue is empty: an audit or a rot check is the natural next step. The
+full battery was last run at R196 (sessions 220-222 since); the ~5-milestone
+rot check comes due around R201.
+
 ## Session 221 — R198: the agent's rule is read on six campaigns ✅
 
 **Diet section 6 checks rule 5 of the mission policy, which decides who goes

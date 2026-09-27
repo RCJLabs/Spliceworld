@@ -2772,10 +2772,15 @@ const BREAKS = [
     // Splice screen reads "Tier I — Card Table & Optimism" and has no reason
     // to think that row is the Surgery Theater's upgrade; the machine is
     // what they came looking for, so the machine is the heading.
+    // R199 — the replacement read `level` a line before it is declared, so
+    // the card threw a ReferenceError and smoke died of it: caught, but not
+    // by the title assertion this is named for. It now names the level the
+    // way the next line does, and smoke's "titled after the machine, not its
+    // tier" is what goes red.
     n: 179, gate: FACILITY, name: 'the card is titled after the level it owns instead of the machine it sells',
     file: 'ui/facility-card.js',
     anchor: '  const name = solo ? solo.name : \'Facility\';',
-    to: '  const name = solo ? (level ?? solo.name) : \'Facility\';',
+    to: '  const name = solo ? (levelData(content, solo.id, facilityLevel(state, solo.id))?.name ?? solo.name) : \'Facility\';',
   },
   {
     // R97 — the Dex stops keying generated specimens by lab. A rival mints a
@@ -2887,6 +2892,10 @@ const BREAKS = [
     to: 'export function sparVerdictRenamed(state, content, now) {',
   },
   {
+    // R199 — the `'$'` in this replacement was read by `String.replace` as
+    // `$'` (the rest of the line), so until `applyBreak` the file the gate ran
+    // was garbage and the break read caught on a SyntaxError. Written as
+    // typed, it is caught by the tokenizer's own corpus.
     n: 6, gate: SCOPE, name: 'the tokenizer stops seeing template interpolations',
     file: 'tools/scopecheck.js',
     anchor: "        if (c === '$' && src[i + 1] === '{') {",
@@ -3290,10 +3299,17 @@ const BREAKS = [
     // boot calls come with it. R121's module rule stays GREEN through this,
     // because theater.js does run a function: that is the blind spot, and
     // this is the break that proves the byte budget covers it.
+    // R199 — AND IT HAD STOPPED DOING THAT. theater.js no longer has
+    // `isSettled` to give, so pointing the import back failed to link and
+    // boot died of a SyntaxError before it weighed anything. The break now
+    // brings theater.js back with a side-effect import. That trips three boot
+    // rules at once, R121's module rule among them (boot calls nothing in it
+    // now), and the one this break exists to prove is the third: 181.6 KB of
+    // uncalled functions in the first paint, over 170, theater.js 13.0 of it.
     n: 297, gate: BOOT, name: 'a 19 KB module comes back into the first paint to supply one 73-byte predicate',
     file: 'battle/statblock.js',
     anchor: "import { isSettled } from '../splice/chimera.js';",
-    to: "import { isSettled } from '../splice/theater.js';",
+    to: "import { isSettled } from '../splice/chimera.js';\nimport '../splice/theater.js';",
   },
   // R94 — the ladder is a ratchet. Both breaks aim at the defect that was
   // actually shipped for six milestones, not one imagined for the occasion:
@@ -4480,10 +4496,18 @@ const BREAKS = [
     // itself, so the warning had nothing to see yet, and its full battery
     // read 276 MISSED. Re-aimed at R198. Run `--anchors` AFTER the tick.
     // R198 re-aimed it at R199, the last entry in the queue, before its tick.
-    n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
+    //
+    // R199 EMPTIED THE QUEUE, so there is nothing left to tick. The break now
+    // runs the rule the other way: it takes the tick off R199, the entry that
+    // shipped last, and the roadmap gate says §9.0 does not queue it. That
+    // is the half of the rule no other break exercised (277 covers the other
+    // half: a listed entry that has shipped), and it aims at a tick that
+    // stays, so no milestone has to re-aim it again.
+    // BLIND AGAIN IF R199's title line is rewritten.
+    n: 276, gate: ROADMAP, name: 'an entry loses its tick and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: "- **R199 — Break 59 is caught by the keyboard gate crashing, not by its\n  keyboard check.**",
-    to: "- **R199 — Break 59 is caught by the keyboard gate crashing, not by its\n  keyboard check.** ✅",
+    anchor: "- **R199 — Break 59 is caught by the keyboard gate crashing, not by its\n  keyboard check.** ✅",
+    to: "- **R199 — Break 59 is caught by the keyboard gate crashing, not by its\n  keyboard check.**",
   },
   {
     // The other direction: the count beside the list stops matching the list.
@@ -4783,6 +4807,10 @@ const BREAKS = [
     to: "  document.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });",
   },
   {
+    // R199 — until R199 the gate died at `tools/cdp.js:90` clicking the tab
+    // this removes, and its keyboard walk never ran. It reads its screens off
+    // the page now and clicks through `tabTo`, so §6a says it: 'the "dex" tab
+    // cannot be reached by Tab from the top of the document'.
     n: 59, gate: A11Y, name: 'a nav tab stops being a button, so the keyboard cannot reach that screen',
     file: 'index.html',
     anchor: '    <button type="button" data-screen="dex">Dex</button>',
@@ -7437,6 +7465,18 @@ const BREAKS = [
     anchor: 'export const agentVariant = (content) => ({ ...content, henchmenMeta: { ...content.henchmenMeta, slots: 2, maxSlots: 3 } });',
     to: 'export const agentVariant = (content) => ({ ...content, henchmenMeta: { ...content.henchmenMeta, slots: 2, maxSlots: 2 } });',
   },
+  {
+    // R199 — A BREAK IS WRITTEN AS IT IS TYPED. A string replacement expands
+    // `$'`, and break 6 had one: its gate ran garbage for as long as the
+    // battery had used `String.replace` with a string. The self-test writes a
+    // replacement with `'$'` in it and reads it back.
+    // BLIND AGAIN IF that check is dropped from `--self`, or `--self` leaves
+    // the baseline.
+    n: 522, gate: SELF, name: "a break's replacement is expanded as a template, and `$'` pastes the rest of the line in",
+    file: 'tools/battery.js',
+    anchor: 'const applyBreak = (src, b) => src.replace(b.anchor, ' + '() => b.to);',
+    to: 'const applyBreak = (src, b) => src.replace(b.anchor, b.to);',
+  },
 ];
 
 const pristine = {};
@@ -7491,6 +7531,14 @@ const run = (gate, dir, port) => new Promise((resolve) => {
 // that line on. A gate that says nothing either way is reported as having said
 // nothing, with the last lines it printed, rather than dressed up as a verdict.
 const VERDICT_MAX = 8;
+
+// R199 — A BREAK IS WRITTEN AS IT IS TYPED. A string second argument to
+// `replace` is a template: `$'` is the rest of the text after the match, and
+// `$&` the match itself. Break 6's replacement has `'$'` in it, so the file
+// its gate ran was the break with the remainder of the tokenizer pasted in,
+// a SyntaxError, and R196's full battery read it caught for a reason that
+// was not its check. What a function returns is never expanded.
+const applyBreak = (src, b) => src.replace(b.anchor, () => b.to);
 const VERDICT_MARK = /✗/;
 const VERDICT_NOISE = [/^\s*$/, /^\(node:\d+\) /, /^\(Use `node --trace-/, /^Node\.js v\d/];
 const STACK_FRAME = /^\s+at /;
@@ -7689,13 +7737,16 @@ if (process.argv.includes('--self')) {
   }
   if (!breakLine(quiet).includes('said nothing')) bad.push(`a break caught in silence reads as a verdict: ${JSON.stringify(breakLine(quiet))}`);
   if (!green.ok) bad.push(`a gate that exits 0 came back red (${green.exit})`);
+  // R199 — and a break reaches its file as it is typed, `$` and all.
+  const typed = applyBreak("a c === 'x' b", { anchor: "c === 'x'", to: "c === '$' && d" });
+  if (typed !== "a c === '$' && d b") bad.push(`a break's replacement is expanded as a template, not written: ${JSON.stringify(typed)}`);
   cleanup();
   if (bad.length) {
     console.error(`battery ✗  self: ${bad.length} problem${bad.length === 1 ? '' : 's'} reading a red gate`);
     for (const line of bad) console.error(`  · ${line}`);
     process.exit(1);
   }
-  console.log(`battery ✓  self: ${VERDICT_FIXTURES.length} reds read as their gates meant them, and 3 gates run end to end through the baseline's and the break loop's own printers`);
+  console.log(`battery ✓  self: ${VERDICT_FIXTURES.length} reds read as their gates meant them, 3 gates run end to end through the baseline's and the break loop's own printers, and a break is written as it is typed`);
   process.exit(0);
 }
 
@@ -7798,7 +7849,7 @@ const results = await pool(picked, async (b, dir, port) => {
   const src = readFileSync(path, 'utf8');
   const hits = src.split(b.anchor).length - 1;
   if (hits !== 1) return { ...b, verdict: 'BADANCH', hits };
-  writeFileSync(path, src.replace(b.anchor, b.to));
+  writeFileSync(path, applyBreak(src, b));
   const r = await run(b.gate, dir, port);
   restore(dir, b.file);
   if (r.ok) return { ...b, verdict: 'MISSED', said: [] };

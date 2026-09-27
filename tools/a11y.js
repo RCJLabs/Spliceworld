@@ -784,6 +784,26 @@ async function main() {
   try {
     cdp = await connect(cdpPort);
     const { evaluate, errors } = cdp;
+    // R199 — A NAV CONTROL THAT IS NOT A BUTTON IS A PROBLEM, NOT A CRASH.
+    // Every pointer pass below reaches a screen by clicking its nav button,
+    // and each used to do it with a bare `querySelector(...).click()`. So a
+    // tab turned into a <div> (break 59) threw a TypeError halfway through,
+    // which the battery read as a caught break while the check that owns the
+    // question, the keyboard walk in §6a, never ran. This clicks the button
+    // if there is one and says whether it did. A pass skips a screen it
+    // cannot open; §6a reports why a keyboard cannot reach it, and the end of
+    // the run names what the pointer passes had to skip.
+    const pointerless = new Set();
+    const tabTo = async (s) => {
+      const ok = await evaluate(`(() => {
+        const b = document.querySelector('#tabs button[data-screen="${s}"]');
+        if (!b) return false;
+        b.click();
+        return true;
+      })()`);
+      if (!ok) pointerless.add(s);
+      return ok;
+    };
     // R115 — SNAPSHOT BEFORE EVERY NAVIGATION, because precise coverage lives
     // in the isolate and a reload throws away what the previous document ran.
     // One `takePreciseCoverage` at the end reports the LAST page load and
@@ -1002,7 +1022,7 @@ async function main() {
       await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(noFight))})`);
       await send('Page.navigate', { url });
       await sleep(2200);
-      await evaluate(`document.querySelector('#tabs button[data-screen="battle"]').click()`);
+      await tabTo('battle');
       await sleep(700);
       // R99 — AND THE WAR ROOM ITSELF, which no run had ever drawn. The
       // fixture ships a duel in progress so the arena can be measured, and
@@ -1163,7 +1183,7 @@ async function main() {
     //      controls on them that no floor, gutter or contrast rule had ever
     //      been applied to.
     const ceremonyPass = async () => {
-      await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]')?.click()`);
+      await tabTo('ranch');
       await sleep(600);
       // AN ANIMAL CARD HAS TO BE OPENED FIRST, and only one can be: R89 made
       // the roster's folds exclusive because nine open cards are 16,657px of
@@ -1229,9 +1249,12 @@ async function main() {
     await ceremonyPass();
     await briefingPass();
     await collect('shell');
-    const screens = await evaluate(`[...document.querySelectorAll('#tabs button')].map((b) => b.dataset.screen)`);
+    // R199 — the screens are the page's own, not the nav's buttons: a list
+    // read off `#tabs button` cannot contain the screen whose button is gone,
+    // and §6a then never asked whether a keyboard could reach it.
+    const screens = await evaluate(`[...document.querySelectorAll('.screen[id^="screen-"]')].map((el) => el.id.slice('screen-'.length))`);
     for (const s of screens) {
-      await evaluate(`document.querySelector('#tabs button[data-screen="${s}"]').click()`);
+      if (!(await tabTo(s))) continue;
       await sleep(600);
       await evaluate(OPEN_DETAILS);
       await sleep(400);
@@ -1256,7 +1279,7 @@ async function main() {
       // pinned in this gate, so a second tick inside the same wall-clock
       // second is the honest form of "nothing moved": the save advances by
       // no elapsed time it can act on.
-      await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]').click()`);
+      await tabTo('ranch');
       await sleep(500);
       const muts = Number(await evaluate(`(() => {
         let n = 0;
@@ -1276,7 +1299,7 @@ async function main() {
       // (ii) A TAP ON ONE CARD IS NOT A REASON TO REBUILD THE OTHERS. Node
       // identity, not HTML equality: a card rebuilt to the same string still
       // loses its selection, its scroll position and its focus.
-      await evaluate(`document.querySelector('#tabs button[data-screen="pens"]').click()`);
+      await tabTo('pens');
       await sleep(600);
       // Held as REFERENCES, never as a marker attribute. Stamping the cards
       // with `data-r104` to find them afterwards is the same trap the fix
@@ -1307,11 +1330,11 @@ async function main() {
       // recalculation walks what is still in the document, hidden or not.
       const leftBehind = [];
       for (const s of screens) {
-        await evaluate(`document.querySelector('#tabs button[data-screen="${s}"]').click()`);
+        if (!(await tabTo(s))) continue;
         await sleep(450);
         await evaluate(OPEN_DETAILS);
         await sleep(250);
-        await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]').click()`);
+        await tabTo('ranch');
         await sleep(450);
         const left = Number(await evaluate(`document.querySelector('#screen-${s}')?.querySelectorAll('*').length ?? 0`));
         if (s !== 'ranch') leftBehind.push(left);
@@ -1323,7 +1346,8 @@ async function main() {
       // (iv) THE FIRST PAINT OF A SCREEN IS WHAT THE PLAYER WAITS FOR. The
       // Dex is the one screen whose weight is art rather than text, so it is
       // the one that has to earn what it draws before it is looked at.
-      await evaluate(`document.querySelector('#tabs button[data-screen="dex"]').click()`);
+      let dexKb = 0;
+      if (await tabTo('dex')) {
       // …ON THE TAB A PLAYER LANDS ON. The walk above visits every Dex
       // subtab and leaves the screen on the LAST one, so measuring here
       // without saying which view is meant measures whichever tab the
@@ -1335,7 +1359,6 @@ async function main() {
       // measured the Dex mid-load — it is a LAZY screen, so what was on the
       // glass was still "Warming up the lab…" and the rule went green at
       // 1 KB against a screen that actually paints 274. Wait for the page.
-      let dexKb = 0;
       for (let i = 0; i < 25; i++) {
         await sleep(200);
         const now = Number(await evaluate(
@@ -1348,6 +1371,7 @@ async function main() {
       } else if (dexKb > DEX_FIRST_PAINT_KB) {
         note(`the Dex paints ${dexKb} KB before the player has scrolled (budget ${DEX_FIRST_PAINT_KB} KB)`);
       }
+      }
       return { muts, identity, dexKb, leftBehind };
     };
     const repaint = await repaintPass();
@@ -1359,7 +1383,7 @@ async function main() {
     //      for the smallest phone the game supports were the rules nothing
     //      had measured.
     await send('Emulation.setDeviceMetricsOverride', { width: VIEWPORT, height: 640, deviceScaleFactor: 1, mobile: true });
-    await evaluate(`document.querySelector('#tabs button[data-screen="battle"]').click()`);
+    await tabTo('battle');
     await sleep(700);
     await collect('battle@640');
     await arenaFits('battle@640');
@@ -1383,7 +1407,7 @@ async function main() {
     await send('Emulation.setDeviceMetricsOverride', { width: BAND_TOP, height: 780, deviceScaleFactor: 1, mobile: true });
     await sleep(350);
     for (const s of screens) {
-      await evaluate(`document.querySelector('#tabs button[data-screen="${s}"]').click()`);
+      if (!(await tabTo(s))) continue;
       await sleep(500);
       await evaluate(OPEN_DETAILS);
       await evaluate(`document.querySelector('#screen-${s} button[data-fold]')?.click()`);
@@ -1407,7 +1431,7 @@ async function main() {
     //      anything in this game (a native <select> is banned on sight), and
     //      until R80 the gate opened it once, four sections below here,
     //      purely to check that it behaved like a dialog.
-    await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]').click()`);
+    await tabTo('ranch');
     await sleep(600);
     if (await evaluate(`(() => { const b = document.querySelector('.pick-button:not([disabled])'); if (!b) return false; b.click(); return true; })()`)) {
       await sleep(450);
@@ -1488,7 +1512,7 @@ async function main() {
 
     // ---- 5b. the picker sheet is the game's OTHER modal, and it claimed to
     //      be a dialog long before it behaved like one.
-    await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]').click()`);
+    await tabTo('ranch');
     await sleep(600);
     const openedPicker = await evaluate(`(() => {
       const b = document.querySelector('.pick-button:not([disabled])');
@@ -1752,7 +1776,7 @@ async function main() {
     {
       const still = new Map();
       for (const s2 of ['ranch', 'pens', 'battle', 'vault', 'theater', 'dex']) {
-        await evaluate(`document.querySelector('#tabs button[data-screen="${s2}"]').click()`);
+        if (!(await tabTo(s2))) continue;
         await sleep(450);
         for (const m of await evaluate(STILL)) still.set(`${m.sel}|${m.what}`, { ...m, where: s2 });
       }
@@ -1855,7 +1879,7 @@ async function main() {
       if (live.live !== 'polite') note('the shell live region is not aria-live="polite"');
       if (live.hidden) note('the shell live region is display:none or visibility:hidden, which takes it out of the accessibility tree');
     }
-    await evaluate(`document.querySelector('#tabs button[data-screen="pens"]').click()`);
+    await tabTo('pens');
     await sleep(700);
     // R89 — the Retrain button moved twice: once behind the creature card's
     // fold, and once behind that card's Moves tab. Both are deliberate, and
@@ -1893,7 +1917,7 @@ async function main() {
     //     It was registered on `document` with no target check, so the two
     //     controls a keyboard user is most likely to be on — the field and
     //     the ✕ — both committed, and one of them means "no".
-    await evaluate(`document.querySelector('#tabs button[data-screen="ranch"]').click()`);
+    await tabTo('ranch');
     await sleep(700);
     // The rename sheet lives inside an animal's card, so open folds until one
     // appears rather than firing a single stale volley at all of them.
@@ -1973,7 +1997,7 @@ async function main() {
     // identity and philosophy pickers are two of the game's option builders
     // and the only ones on that screen.
     for (const screen of ['pens', 'ranch', 'theater', 'vault', 'dex', 'battle']) {
-      await evaluate(`document.querySelector('#tabs button[data-screen="${screen}"]')?.click()`);
+      if (!(await tabTo(screen))) continue;
       await sleep(500);
       await evaluate(OPEN_DETAILS);
       // Folds are exclusive on some screens, so each one is opened, its
@@ -2201,7 +2225,7 @@ async function main() {
       if (!tabs.length) { note(`${label}: the shell painted no tabs, so nothing was measured on it`); return; }
       const saw = new Set();
       for (const sc of tabs) {
-        await evaluate(`document.querySelector('#tabs button[data-screen="${sc}"]')?.click()`);
+        if (!(await tabTo(sc))) continue;
         await sleep(500);
         await evaluate(OPEN_DETAILS);
         await sleep(300);
@@ -2272,7 +2296,7 @@ async function main() {
       const tabs = await evaluate(`[...document.querySelectorAll('#tabs button')].map((b) => b.dataset.screen)`);
       for (const sc of tabs.length ? tabs : [null]) {
         if (sc) {
-          await evaluate(`document.querySelector('#tabs button[data-screen="${sc}"]')?.click()`);
+          if (!(await tabTo(sc))) continue;
           await sleep(500);
           await evaluate(OPEN_DETAILS);
           await sleep(300);
@@ -2366,7 +2390,7 @@ async function main() {
           }
           if (!booted) { note(`held-row worst case (${st.kind}): the app never booted, so nothing was measured`); continue; }
           await evaluate(`document.documentElement.style.fontSize = '${16 * TEXT_SCALE}px'`);
-          await evaluate(`document.querySelector('#tabs button[data-screen="battle"]')?.click()`);
+          await tabTo('battle');
           await sleep(600);
           await evaluate(OPEN_DETAILS);
           await sleep(300);
@@ -2475,6 +2499,13 @@ async function main() {
 
     // ---- 7. nothing narrated an error along the way ------------------------
     for (const e of [...new Set(errors)]) note(`console error during the walk: ${e}`);
+    // R199 — and what the pointer passes had to skip (see `tabTo`). §6a has
+    // already said why a keyboard cannot get there; this says how much of the
+    // walk above went without it.
+    if (pointerless.size) {
+      note(`the pointer passes could not open ${[...pointerless].join(', ')}: there is no <button> for it in the nav,`
+        + ' so every rule above measured the game without it');
+    }
 
     if (REPORT) {
       // R99 — WHICH views, not how many. "29 views" read like coverage while

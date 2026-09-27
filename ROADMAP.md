@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**1 entry queued.** R199.
+**0 entries queued.**
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -7324,7 +7324,7 @@ triangle working, and each region genuinely asks a different question)*.
     - 521 takes the variant's third slot.
 
 - **R199 — Break 59 is caught by the keyboard gate crashing, not by its
-  keyboard check.** Found by R197, on the first run that printed what each
+  keyboard check.** ✅ Found by R197, on the first run that printed what each
   caught break's gate said. Break 59 turns the Dex tab into a `<div>` ("a
   nav tab stops being a button, so the keyboard cannot reach that screen").
   `tools/a11y.js` visits screens with
@@ -7352,6 +7352,46 @@ triangle working, and each region genuinely asks a different question)*.
   gate dies on a link error before it weighs anything. Break 6 dies of a
   SyntaxError on load (`esm/utils:346`), cause not yet read. 179 and 297
   are breaks to re-aim, not gates to fix.
+
+  **Shipped: the keyboard gate reports an unreachable tab, and the four
+  breaks are caught by the checks they are named for.**
+  * **The keyboard gate** (`tools/a11y.js`). Two things kept break 59 from its
+    check, not one:
+    - Nineteen places clicked a nav tab with a bare
+      `querySelector(...).click()`, and the first one to meet a missing
+      button threw. They all go through `tabTo` now: it clicks the button if
+      there is one and says whether it did. A pass skips a screen it cannot
+      open, and the end of the run names what was skipped.
+    - Even without the crash, the keyboard walk read its list of screens off
+      `#tabs button`, so the screen whose button was gone was never on it.
+      The list comes from the page's own screens now.
+    - Break 59 is caught by §6a: 'the "dex" tab cannot be reached by Tab from
+      the top of the document'. The clean tree is green.
+  * **Break 6 was the battery's own bug.** Run by hand, it is caught by the
+    tokenizer's corpus. The battery wrote each break with `String.replace`
+    and a string, which expands `$'` into the rest of the line, and break 6's
+    replacement has `'$'` in it. Breaks are written through `applyBreak` now,
+    which uses a function, and `--self` checks a `$` survives (break 522). No
+    other break's replacement carried a `$` pattern.
+  * **179 and 297 are re-aimed** so their replacements run.
+    - 179 names the owned level the way the next line does, and smoke's
+      "titled after the machine, not its tier" goes red.
+    - 297 brings `theater.js` back into the first paint with a side-effect
+      import, and the boot gate's budget of uncalled functions goes red
+      (181.6 KB over 170, theater.js 13.0 of it). R121's module rule fires
+      with it: boot no longer calls anything in theater.js to be exempt.
+  * **The other thirteen are argued, not fixed.** Eleven are gates reporting
+    a throw in their own words, which is what they are for: the handler gate
+    fires every handler to see one throw (10), the retired-content gate
+    renders every screen with a part, species or class gone (22, 23, 24, 27,
+    31, 32, 33), the stale-save gate opens every old save (138), and the
+    untrusted-save gate paints junk (344, 389). Two are defects that are a
+    crash by name: 26 lets a wave reach `combatantFromUnit` with a retired
+    unit, and 322 lets a stranger's card crash the War Room.
+  * **Break 276 no longer needs re-aiming.** The queue is empty, so there is
+    nothing left to tick. It takes the tick off R199 instead, and the roadmap
+    gate says §9.0 does not queue it. Break 277 already covers the other
+    direction (a listed entry that has shipped).
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same
