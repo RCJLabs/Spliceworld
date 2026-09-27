@@ -1,5 +1,115 @@
 # PROGRESS
 
+## Session 220 — R196: the vet bill reads the patients, and Nurse Gauze costs $8 ✅
+
+**The walker now prices a vet on the wounds the Infirmary actually saw in
+the last thirty days, not on the roster. Priced that way, Nurse Gauze at
+$20 was nobody's hire, so her fee is $8 (Evan's call). At $8 she is the vet
+for a ranch that fights with its unstable creatures. The census has one such
+ranch, and it hires her.**
+
+### Measured first
+
+- **Census: sixteen 180-day campaigns on the tree before this milestone.**
+  - On the patients, Doc would have refused 9% of 21,555 wound-hours (holds
+    excluded). The median campaign was 5% and the worst (4242) 38%.
+  - The roster measure the bill used read a median 65% over his ceiling.
+  - The old bill hired Gauze first on 12 of 16.
+- **The window.** Trailing fourteen days, thirty days and the whole campaign
+  predicted the next thirty days' share within 5.4, 5.8 and 6.2 points over
+  43 decisions. They are within a point of each other, so the choice is a
+  judgment: thirty is the horizon the estimate was scored on, and rule 3b
+  keeps a vet for weeks.
+- **The fee.** Priced on the patients, Gauze at $20, $12 or $10 was the
+  cheaper vet at no decision in the census. At $8 she was the cheaper vet
+  on 99 and 4242 at tier IV. $8 is the highest fee tried at which anybody
+  wants her.
+
+### What shipped
+
+- **`patientCover` and `hireBill`** (tools/sim.js).
+  - The walk notes every new wound with its patient's instability, the
+    clock it brought in and its reason; holds are skipped.
+  - A vet is priced on the last thirty days of wound-hours, weighted by
+    hours. The roster stands in only before anybody has been hurt.
+  - The hire log carries the moment it was made (`at`).
+- **Nurse Gauze's fee: $20 to $8** (data/henchmen.json). She is the cheaper
+  vet once Doc would refuse more than ~22% of the hours at tier I and ~33%
+  at tier IV.
+- **Re-measured at $8, same sixteen campaigns.**
+  - Doc is the first vet on all sixteen.
+  - Gauze is hired on seed 99 (day 129, tier IV, 44% of its last thirty
+    days over Doc's ceiling) and kept to day 180. She saved 104 hours on
+    patients Doc would have refused and billed $1,647 for them, against
+    $2,559 at the Infirmary's price.
+  - Dominion median 29.3 days (was 29.9) and raids held 366 of 744 (was
+    367): noise.
+  - Seeds 101, 31, 12 and 404 end on Doc too: one campaign in twenty
+    keeps her.
+- **The gates.**
+  - Smoke recomputes every logged vet bill from the walk's own patients
+    (four walks, four hires), and checks that no hold is priced.
+  - Smoke prices the census's median ranch as Doc's at every tier and its
+    worst as Gauze's.
+  - Smoke asks rule 3b of `walkHire` directly (now exported).
+  - Diet section 5 reads seed 99 beside its seven seeds.
+  - Breaks 513-519; break 482 moved from diet to smoke.
+
+### Found on the way
+
+- **Break 482 went blind in the diet gate.** It removes rule 3b (re-choose a
+  vet only when a tier is bought). The diet gate caught it on seed 2026's
+  hire log, and priced on the patients 2026 hires once whether the rule is
+  there or not. Measured with the break: seed 4242 swaps vets five times in
+  eighteen days and the diet gate stays green. Smoke now asks the rule of
+  `walkHire` on a ranch whose bill has flipped.
+- **The four seeds diet section 5 counted on for Gauze had already drifted.**
+  R190's three (2026, 7, 55) ended on Doc before this milestone, and the
+  section stood on 4242 alone. It ends on Doc now.
+
+### Verification
+
+The full battery was owed: this milestone changed existing gates (diet
+section 5, and break 482 moved from diet to smoke).
+
+- `battery.js --anchors`: 510 of 510 match.
+- `battery.js --only 477-483,513-519` (the new breaks and every R190 vet
+  break): `BATTERY_EXIT 0` in 23m17s, 14 of 14 caught, each by the clause
+  it is aimed at.
+- `npm test`, alone: 595.9s wall, 1,404 of 1,929 budgeted CPU-seconds, on a
+  cold cache (14 walks rebuilt, seed 99's new). Again on the final tree,
+  warm: 274.9s wall, 990 of 1,425.
+- **The full battery, the thirteenth reading:** 510 breaks in four chunks
+  at 21m, 80m, 130m and 112m, which is 343 minutes. Chunks 1, 2 and 4 read
+  `BATTERY_EXIT 0`. Chunk 3 read 276 MISSED: it appends a tick to the
+  queue's head, which was R196, and R196 had ticked itself. `--anchors`
+  flags exactly that, but it ran before the tick. Break 276 now aims at
+  R198, and `--only 276` caught it behind a green baseline
+  (`BATTERY_EXIT 0`, 11m14s).
+- **Every caught break's line, read for R199.** Seventeen show an error.
+  Eleven are gates reporting a throw in their own words, and two are
+  defects that are themselves a crash. Four are breaks caught by a crash
+  that is not their check: 59 (known), 179 and 297, whose replacement code
+  cannot run, and 6. They are listed in the R199 entry.
+- Browser at 380px: every screen is 380 wide on a fresh save, the v64
+  fixture and the v60 fixture migrated to v64. Each survives a reload, and
+  there are no console errors. The War Room's Jobs tab lists Nurse Gauze on
+  both fixtures.
+- SAVE_VERSION stays 64: the fee is data, and the patient record lives
+  only in the walk.
+
+### Known issues
+
+- R198: diet section 6's odds branch rests on one choice.
+- R199: break 59 is caught by the keyboard gate crashing.
+- Diet section 5 stands on one campaign for Gauze (seed 99). That is what
+  the census says; if it goes red after an unrelated change, re-census
+  before re-pricing her.
+
+### Next session
+
+R199, or R198.
+
 ## Session 219 — R197: the battery reads what a red gate said ✅
 
 **A red gate is now reported by what it said, not by its first four lines.
