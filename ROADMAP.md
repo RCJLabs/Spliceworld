@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**3 entries queued.** R196, R198, R199.
+**2 entries queued.** R198, R199.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -7154,7 +7154,7 @@ triangle working, and each region genuinely asks a different question)*.
       shelf where R186 had 41).
 
 - **R196 — The vet bill prices Doc's refusals on the roster, not on the
-  patients.** Found by R193. `hireBill` takes Doc Sutures' coverage as the
+  patients.** ✅ Found by R193. `hireBill` takes Doc Sutures' coverage as the
   share of the roster under his ceiling. Averaged over his time on duty in
   the census that was 31%, while the share of injury hours he actually
   treated was 94%, before R193 took the holds away from him. After it, on
@@ -7171,6 +7171,47 @@ triangle working, and each region genuinely asks a different question)*.
   see, measured over the census; and either Gauze's price or ceiling is
   re-derived so that a ranch that hires her buys something the census can
   see, or the entry argues from the numbers why she belongs on the roster.*
+
+  **Shipped: the vet bill reads the patients, and Nurse Gauze costs $8.**
+  * **Measured first, over the census** (sixteen 180-day campaigns). On the
+    patients, Doc would have refused 9% of 21,555 wound-hours: a median
+    campaign 5%, the worst (4242) 38%. The roster measure the bill used read
+    a median 65% over his ceiling, and the old bill hired Gauze first on 12
+    of 16.
+  * **The bill** (`patientCover` in `tools/sim.js`). The walk notes every
+    new wound with its patient's instability and the clock it brought in,
+    and skips holds. A vet is priced on the wound-hours of the last thirty
+    days, and the share of them under its ceiling. The roster stands in only
+    before anybody has been hurt. Windows of fourteen days, thirty and the
+    whole campaign predicted the next thirty days within 5.4, 5.8 and 6.2
+    points over 43 decisions. The three are within a point of each other,
+    so thirty is a judgment, argued in data/notes/henchmen.md.
+  * **Gauze's price, re-derived: $20 to $8.** Priced on the patients, at
+    $20, $12 or $10 she was the cheaper vet at no decision in the census.
+    At $8 she is the cheaper vet once Doc would turn away over ~22% of the
+    hours at tier I and ~33% at tier IV. That is the highest fee tried at
+    which any ranch in the census wants her.
+  * **Re-measured at $8.** Doc is the first vet on all sixteen campaigns.
+    Gauze is hired on one, seed 99, at tier IV on day 129, with 44% of its
+    last thirty days' wound-hours over Doc's ceiling. She is kept to day
+    180, saving 104 hours on patients Doc would have refused and billing
+    $1,647 for them, against $2,559 at the Infirmary's price. Dominion
+    median 29.3 days (was 29.9), raids held 366 of 744 (was 367): noise.
+    Over twenty campaigns (the census plus 101, 31, 12 and 404) she is kept
+    on that one.
+  * **The gates.**
+    - Smoke recomputes every logged vet bill from the walk's own patients,
+      and checks that no hold is priced.
+    - Smoke prices the census's median ranch (5%) as Doc's at every tier,
+      and its worst (44% at tier IV) as Gauze's.
+    - Smoke checks rule 3b by calling `walkHire` directly (now exported).
+      The seed-2026 hire log the diet gate read for it went blind: 2026 now
+      hires once either way. Without the rule, seed 4242 swaps vets five
+      times in eighteen days while the diet gate stays green. Break 482
+      moved to smoke.
+    - Diet section 5 reads seed 99 beside its seven seeds. Of those seven,
+      the one that kept Gauze before (4242) ends on Doc now.
+    - Breaks 513-519.
 
 - **R197 — The battery shows a failing gate's first four lines, and the
   keyboard gate's problems come after them.** ✅ Found by R193. When a
@@ -7265,6 +7306,18 @@ triangle working, and each region genuinely asks a different question)*.
   problem rather than crashing, break 59 is caught by that problem, and the
   next full battery's caught-by-a-crash lines are counted and each one is
   either fixed or argued.*
+  R196's full battery was the first to print every caught break's line,
+  and seventeen of them show an error. Eleven are a gate reporting a throw
+  in its own words, which is what the handler, retired-content, stale-save
+  and untrusted-save gates are for (10, 22, 23, 24, 27, 31, 32, 33, 138, 344,
+  389). Six are a gate dying of an uncaught throw. Two of those are the
+  defect itself, whose names are a crash (26, 322). Four are the shape this
+  entry is about. 59 as above. 179 and 297 are caught because the break's
+  own replacement cannot run: 179 reads `level` before it is declared, and
+  297 imports `isSettled` from a module that does not export it, so the boot
+  gate dies on a link error before it weighs anything. Break 6 dies of a
+  SyntaxError on load (`esm/utils:346`), cause not yet read. 179 and 297
+  are breaks to re-aim, not gates to fix.
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same
@@ -7775,7 +7828,7 @@ adds is a CHOICE rather than another button that is always available.
   Gauze** both halve the Infirmary clock: Doc is free and refuses anything
   over 40 instability — a third of the day-180 walk's roster, measured —
   and Gauze treats anything and bills $20 an hour, about the Infirmary's own
-  rush price. One slot to start, a second at twelve held blocks, one hire
+  rush price (R196 re-derived it to $8). One slot to start, a second at twelve held blocks, one hire
   per duty.
 
   *THE MEASURABLE WAS THE CARE CLOCK, NOT THE LANES.* The entry's premise

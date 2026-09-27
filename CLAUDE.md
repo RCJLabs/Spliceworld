@@ -79,7 +79,13 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (4h45m to 6h30m. R193 is the TWELFTH reading: 491 breaks
+**The full battery (4h45m to 6h30m. R196 is the THIRTEENTH reading: 510
+breaks at 21m, 80m, 130m and 112m, which is 343 minutes — 41 under R193 with
+nineteen more breaks, so the range holds. Chunk 3 read 276 MISSED: an
+append-style break aimed at the entry R196 itself had ticked, because
+`--anchors` ran before the tick and had nothing to warn about. It was
+re-aimed at R198 and re-run behind a green baseline. Run `--anchors` AFTER a
+milestone ticks its own entry. R193 is the TWELFTH reading: 491 breaks
 at 22m, 85m, 141m and 136m, which is 384 minutes — 31 over R192 with twelve
 more breaks, 23 of those minutes in chunk 4, where the new ones live — so the
 top of the range is now six and a half hours. Chunk 4's baseline went red
@@ -134,7 +140,7 @@ R116 before chunking: one to a tree edited underneath it, one to a restart
 twenty-five minutes in. Build the id list from the file, because break
 numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327, 347
 are retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
-503 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
+510 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
 gene probe, R183 added 399-401 for the job headline, R185 added 402-404 for
 the Dex tab list, R176 added 405-407 for the lazy synth, R179 added 408-412
 for the expedition, R180 added 413-422 for the mission board, R181 added
@@ -145,9 +151,10 @@ that remembers one, R187 added 465-468 for the gates that build their
 worst case, R189 added 469-476 for the agent, R190 added 477-483 for the
 vet's bill, R192 added 484-488 for the agent's policy, R193 added
 489-500 for the injury clocks and the hold, R194 added 501-504 for the
-agent's wage and the length he is sent on, and R197 added 505-512 for the
-battery reading what a red gate said. The count and the top id have
-not agreed since the retirements: 503 breaks, numbered to 512. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
+agent's wage and the length he is sent on, R197 added 505-512 for the
+battery reading what a red gate said, and R196 added 513-519 for the vet
+bill priced on the patients. The count and the top id have
+not agreed since the retirements: 510 breaks, numbered to 519. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
 against a tree carrying 410, because a milestone that adds breaks has to
 remember to come back here and nobody had. Trust `--anchors`, which prints
 the real total, over this sentence. Count with `--anchors`, which

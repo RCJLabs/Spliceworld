@@ -1547,8 +1547,9 @@ const WALK_RESERVE_DAYS = 14;
 //   2. WITHIN A DUTY, THE HIRE WHO COVERS THE MOST OF THIS RANCH, then the
 //      cheapest quirk, then roster order — for a duty the game does not sell
 //      (2b prices the one it does). Coverage is the share of the herd
-//      a hand reaches, or of the roster a vet will touch. That is the whole
-//      trade R181 built: which one is right depends on the ranch you have.
+//      a hand reaches, or of the wound-hours a vet would take (R196). That is
+//      the whole trade R181 built: which one is right depends on the ranch
+//      you have.
 //   3. A HIRE WHO CANNOT DO THE JOB IS REPLACED; ONE WHO CAN IS KEPT. When
 //      the herd outgrows a hand's reach or a vet starts refusing patients,
 //      the better-covering hire takes the slot. Nobody lets a working hand go
@@ -1565,20 +1566,26 @@ const WALK_RESERVE_DAYS = 14;
 //      refuses, and the cheaper bill takes the slot. Measured over sixteen
 //      seeds, coverage-first bought Nurse Gauze everywhere and paid ~$45 for
 //      every hour she saved over Doc, for no change in dominion on any seed.
-//      Priced properly the answer depends on the ranch: on a tier-I
-//      Infirmary a refusal costs ~$18 a clock-hour against Gauze's $10, so
-//      Doc is the cheaper vet only while he treats over ~44% of the roster;
-//      on a tier-IV one it costs ~$12, and he stays cheaper until ~81% of
-//      the roster is over his ceiling (R193's clock; R190's read $17 and
-//      $13). A hold is nobody's patient (R193), so neither bill counts one.
-//      Care has no such price (a feed is a button), so a hand is still
-//      ranked on coverage.
+//      R196 — WHO IT REFUSES IS THE PATIENTS, NOT THE ROSTER. R190 read the
+//      share of the roster over Doc's ceiling, and wounds land on the
+//      creatures that fight: over sixteen campaigns 65% of the roster was
+//      over it and 5% of the wound-hours were. So `patientCover` reads the
+//      last PATIENT_DAYS of wounds by their hours. On that, Gauze at R190's
+//      $20 was nobody's pick on any campaign, and her fee is $8: a refusal
+//      costs ~$18 a clock-hour at tier I and ~$12 at tier IV (R193's clock)
+//      against her $4, so she is the cheaper vet once Doc would turn away
+//      more than ~22% of the hours at tier I, ~33% at tier IV. The census
+//      median is 5%. The worst ranch in it (seed 99) was at 44% when it
+//      bought tier IV, and hired her. A hold is nobody's patient (R193), so
+//      neither bill counts one. Care has no such price (a feed is a
+//      button), so a hand is still ranked on coverage.
 //   3b. R190 — A PRICED DUTY IS RE-DECIDED WHEN ITS PRICE CHANGES, which is
-//      when an Infirmary tier is bought, and kept otherwise. A roster that
-//      sits at the break-even (a late one does, three creatures in thirteen
-//      under Doc's ceiling) flips the cheaper bill whenever one creature
-//      crosses it, and a walker that followed it swapped vets thirty-two
-//      times in one campaign. Nobody re-hires a vet over one patient.
+//      when an Infirmary tier is bought, and kept otherwise. A ranch that
+//      sits at the break-even flips the cheaper bill whenever one patient
+//      moves it (R190's roster bill did every time one creature crossed
+//      Doc's ceiling), and a walker that followed it swapped vets
+//      thirty-two times in one campaign. R196's thirty-day window moves with
+//      every wound. Nobody re-hires a vet over one patient.
 //   5. R192 — A HIRE WHO IS SENT COMES AFTER EVERY HIRE WHO IS STATIONED.
 //      A duty the file marks `sent` (Fieldwork) holds no standing clock: its
 //      hire earns the wage only on the missions it is sent on. It takes a
@@ -1635,12 +1642,41 @@ export function refusalPrice(content, state, rate = 2) {
   return (t.base / infirmaryClock(content, state) + t.perHour * (1 - 1 / rate)) * g.treatScale;
 }
 
+// R196 — WHO THE INFIRMARY ACTUALLY SEES. Every new wound, with the patient's
+// instability and the clock it brought in, noted once a step after the walker
+// has acted. A hold is nobody's patient (R193); the reason rides along so a
+// gate can say so.
+function notePatients(state, now) {
+  const seen = (state.__walkPatientOf ??= new Map());
+  for (const c of state.chimeras ?? []) {
+    const inj = c.injury;
+    if (!inj || !(inj.until > now) || isHold(inj) || seen.get(c.id) === inj) continue;
+    seen.set(c.id, inj);
+    (state.__walkPatients ??= []).push({ at: now, inst: c.instability ?? 0, hours: (inj.until - now) / HOUR_MS, reason: inj.reason ?? null });
+  }
+}
+
+// R196 — the share of the work a vet would take: the last PATIENT_DAYS of
+// wound-hours on patients under its ceiling. Wounds land on the creatures
+// that fight, and the walker fights with its stable ones, so the roster is
+// the wrong sample by fifty points and more (65% of it over Doc's ceiling,
+// 5% of its wound-hours). Before anybody has been hurt there is only the
+// roster to go on. Why thirty days, in data/notes/henchmen.md.
+export const PATIENT_DAYS = 30;
+export function patientCover(state, h, now = state.lastTickAt ?? 0) {
+  const ceiling = h.ceiling ?? 100;
+  const recent = (state.__walkPatients ?? []).filter((p) => p.at > now - PATIENT_DAYS * WALK_DAY);
+  const hours = recent.reduce((n, p) => n + p.hours, 0);
+  if (hours > 0) return recent.filter((p) => p.inst <= ceiling).reduce((n, p) => n + p.hours, 0) / hours;
+  const pens = state.chimeras ?? [];
+  return pens.length ? pens.filter((c) => (c.instability ?? 0) <= ceiling).length / pens.length : 1;
+}
+
 // R190 — what a hire costs on THIS ranch, per clock-hour of the work, for a
 // duty whose work the game sells; null for one it does not (rule 2b above).
-export function hireBill(content, h, state) {
+export function hireBill(content, h, state, now = state.lastTickAt ?? 0) {
   if (h?.duty !== 'infirmary') return null;
-  const pens = state.chimeras ?? [];
-  const cov = pens.length ? pens.filter((c) => (c.instability ?? 0) <= (h.ceiling ?? 100)).length / pens.length : 1;
+  const cov = patientCover(state, h, now);
   const rate = h.rate ?? 2;
   return cov * (h.fee ?? 0) / rate + (1 - cov) * refusalPrice(content, state, rate);
 }
@@ -1657,7 +1693,7 @@ export function agentHours(content, mission, h) {
   return missionHours(mission).reduce((a, b) => (net(b) / (b + rest) > net(a) / (a + rest) ? b : a));
 }
 
-function walkHire(state, content, now, did, introduced) {
+export function walkHire(state, content, now, did, introduced) {
   if (!introduced) return;
   const day = Math.floor(now / WALK_DAY);
   if (state.__walkHireDay === day) return;
@@ -1673,11 +1709,10 @@ function walkHire(state, content, now, did, introduced) {
     .sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0)).map(([id]) => id);
   const staffed = (duty) => hiredOf(state).some((r) => content.henchmen?.[r.id]?.duty === duty);
   const herd = state.ranch.stock.length;
-  const pens = state.chimeras ?? [];
   const coverage = (h) => (h.duty === 'care'
     ? (herd ? Math.min(1, (h.reach ?? Infinity) / herd) : 1)
-    : (pens.length ? pens.filter((c) => (c.instability ?? 0) <= (h.ceiling ?? 100)).length / pens.length : 1));
-  const bill = (h) => hireBill(content, h, state);
+    : patientCover(state, h, now));
+  const bill = (h) => hireBill(content, h, state, now);
   const pick = (duty) => roster.filter((h) => h.duty === duty)
     .sort((a, b) => (bill(a) ?? 0) - (bill(b) ?? 0) || coverage(b) - coverage(a) || (a.fee ?? 0) - (b.fee ?? 0))[0] ?? null;
   // Rule 3b: the Infirmary's tier is the price, so the tier is when to ask.
@@ -1691,7 +1726,7 @@ function walkHire(state, content, now, did, introduced) {
   // What the choice was made on, logged with the hire so the gate can check
   // each one against the prices of its own moment rather than the last day's.
   const priced = (duty, extra) => Object.assign(extra, {
-    tier, bills: Object.fromEntries(roster.filter((h) => h.duty === duty).map((h) => [h.id, Number(bill(h).toFixed(3))])),
+    at: now, tier, bills: Object.fromEntries(roster.filter((h) => h.duty === duty).map((h) => [h.id, Number(bill(h).toFixed(3))])),
   });
 
   for (const duty of duties) {
@@ -3404,6 +3439,7 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
       stall = 0;
     }
     walkAct(state, content, now, shape.open, { t0, stepHours, sparsPerDay, stableCap, priceBeats, hire: hires, payrollOpen: at.payroll !== undefined });
+    notePatients(state, now);
     // R155 — whoever is STILL at risk after the walker has had its turn.
     for (const c of state.chimeras) {
       if (feralStatus(c, content, now).atRisk) {
@@ -3470,6 +3506,7 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
   return {
     seed,
     at,
+    t0,
     // R105 — how many of the year's seasons a campaign of this length
     // actually reaches. Four over 180 days is the entry's own clause; a
     // number here rather than an assertion in one gate means the next
@@ -3505,6 +3542,8 @@ export function campaignWalk(content, { seed = 2026, days = 180, stepHours = 2, 
     // R193 — every wound the Infirmary was brought, by the tier it was
     // brought to and by kind (the kinds of data/scars.json's `injuries`).
     wounds: state.__walkWounds ?? {},
+    // R196 — every patient the Infirmary saw, as `hireBill` reads them.
+    patients: state.__walkPatients ?? [],
     actions: (state.__walkLog ?? []).length,
     reachedDominion: state.dominionAt != null,
     nodes: state.campaign.heldNodes.length,

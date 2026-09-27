@@ -4475,11 +4475,14 @@ const BREAKS = [
     // it again before ticking itself: re-aimed at R189, the head after it.
     // R189 likewise, before its own tick: re-aimed at R190. R190 likewise:
     // re-aimed at R192, the head of the queue it leaves. R192 likewise:
-    // re-aimed at R193. R193 likewise: re-aimed at R194.
+    // re-aimed at R193. R193 likewise: re-aimed at R194. R194 likewise:
+    // re-aimed at R196. R196 did not: it ran `--anchors` before ticking
+    // itself, so the warning had nothing to see yet, and its full battery
+    // read 276 MISSED. Re-aimed at R198. Run `--anchors` AFTER the tick.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: "- **R196 — The vet bill prices Doc's refusals on the roster, not on the\n  patients.**",
-    to: "- **R196 — The vet bill prices Doc's refusals on the roster, not on the\n  patients.** ✅",
+    anchor: "- **R198 — The agent's odds branch rests on one choice.**",
+    to: "- **R198 — The agent's odds branch rests on one choice.** ✅",
   },
   {
     // The other direction: the count beside the list stops matching the list.
@@ -6945,7 +6948,7 @@ const BREAKS = [
   {
     // R190 — A VET IS PRICED ON ITS FEE AS WELL AS ITS REFUSALS. Dropping the
     // fee half makes the vet who treats everybody free, and Nurse Gauze takes
-    // the slot on every seed for the $20 an hour the census measured.
+    // the slot on every seed for the fee R196 set at $8 an hour.
     // BLIND AGAIN IF the unit clause stops recomputing the bill for a vet
     // with a fee.
     n: 477, gate: SHARD_B, name: "a vet's bill forgets the vet's own fee, so the dearest one reads as free",
@@ -6967,11 +6970,10 @@ const BREAKS = [
   },
   {
     // R190 — THE DEFECT ITSELF: the walker ranks vets by how many patients
-    // each would touch, and Doc Sutures is nobody's vet again. SMOKE CANNOT
-    // SEE THIS ONE: on all four of its seeds the bill's first pick is Nurse
-    // Gauze too, so coverage-first hires the same vet on the same day and the
-    // walks are identical to dominion. The seven full campaigns can, since
-    // Doc holds four of them at day 180.
+    // each would touch, and Doc Sutures is nobody's vet again. The diet
+    // gate's campaigns see it (Doc holds seven of its eight at day 180). So
+    // does smoke since R196, whose four walks now hire Doc on the bill, but
+    // R190 wrote this for the diet gate and it stays aimed there.
     // BLIND AGAIN IF Doc's ceiling reaches 100 in the data — then he covers
     // everybody, wins on coverage too, and this stops being a defect.
     n: 479, gate: DIET, name: 'the walker hires the vet who touches the most patients again, whatever the refusals would cost',
@@ -6981,11 +6983,10 @@ const BREAKS = [
   },
   {
     // R190 — A REFUSED PATIENT IS A VISIT, NOT ONLY HOURS. The call-out is
-    // most of what the Infirmary charges for a three-hour clock, and it is
-    // the half of the price that makes Nurse Gauze the cheaper vet on a
-    // young ranch; without it Doc wins everywhere by construction ($9 a
-    // refused clock-hour against her $10), which is the answer R190 wanted
-    // and the reason it had to be checked.
+    // half of what the Infirmary charges a tier-I clock-hour ($9 of ~$18),
+    // so without it a refusal reads half price and the share of Doc's
+    // patients he must turn away before Nurse Gauze's $4 wins doubles (R196's
+    // fee; R190 measured it against her $10).
     // BLIND AGAIN IF the unit clause stops recomputing the bill with the
     // call-out in it, and the "dearer call-out" clause is dropped.
     n: 480, gate: SHARD_B, name: "a refusal is priced on the Infirmary's hours alone, so its call-out is free",
@@ -7007,13 +7008,16 @@ const BREAKS = [
   {
     // R190 — RULE 3b: A VET IS RE-CHOSEN WHEN THE PRICE MOVES. Without it
     // the walker follows the cheaper bill daily, and a late roster sitting at
-    // the break-even swaps vets 32 times in a campaign (seed 2026). Caught
-    // twice: smoke's seed 7 swaps five times before dominion, and the diet
-    // gate reads seed 2026's whole hire log.
-    // BLIND AGAIN IF both clauses stop comparing consecutive vet hires'
-    // tiers, or the diet gate stops walking seed 2026 itself (a cached save
-    // carries no hire log).
-    n: 482, gate: DIET, name: 'the walker re-hires its vet whenever one patient crosses the ceiling',
+    // the break-even swaps vets 32 times in a campaign (seed 2026). R190
+    // caught it on seed 2026's hire log in the diet gate. R196 moved it to
+    // smoke: priced on the patients, 2026 sits far under the break-even and
+    // hires once either way, and no smoke walk swaps before dominion.
+    // Measured: without the rule seed 4242 swaps five times in eighteen days
+    // and the diet gate stays green. Smoke asks it of `walkHire` on a ranch
+    // whose bill has flipped, chosen this tier and chosen a tier ago.
+    // BLIND AGAIN IF that clause's patients stop flipping the bill (it
+    // asserts they do), or it stops comparing the two ranches.
+    n: 482, gate: SHARD_B, name: 'the walker re-hires its vet whenever one patient crosses the ceiling',
     file: 'tools/sim.js',
     anchor: '    : (state.__walkVetTier ?? tier) !== tier && bill(held) > bill(want));',
     to: '    : bill(held) > bill(want));',
@@ -7323,6 +7327,87 @@ const BREAKS = [
     file: 'tools/battery.js',
     anchor: '    return { found: true, lines: [...said' + '.slice(Math.max(0, k - (VERDICT_MAX - after.length)), k), ...after] };',
     to: '    return { found: true, lines: said.slice(0, VERDICT_MAX) };',
+  },
+  {
+    // R196 — THE BILL PRICES DOC'S REFUSALS ON THE ROSTER AGAIN. 65% of the
+    // roster sat over his ceiling and 5% of the wound-hours did, so the
+    // roster-priced bill hired Nurse Gauze first on twelve campaigns of
+    // sixteen, for patients Doc would have taken for nothing. Smoke's unit
+    // clause reads a ward all over his ceiling whose patients are all under
+    // it, and every logged vet bill is recomputed from the walk's patients.
+    // BLIND AGAIN IF the recompute reads the bill back through
+    // `patientCover` instead of summing the window itself.
+    n: 513, gate: SHARD_B, name: "the vet bill prices Doc's refusals on the roster again, not on the patients he would see",
+    file: 'tools/sim.js',
+    anchor: '  if (hours > 0) return recent.filter((p) => p.inst <= ceiling).reduce((n, p) => n + p.hours, 0) / hours;\n',
+    to: '',
+  },
+  {
+    // R196 — THE WINDOW. Thirty days predicted the next thirty within 5.8
+    // points over the census and the whole campaign within 6.2, but at $8 a
+    // whole-campaign bill made Gauze the pick at no decision in the census: a
+    // ranch whose fights have moved onto its unstable stock is priced on who
+    // it fought with months ago.
+    // BLIND AGAIN IF the unit clause's old wound moves inside the window.
+    n: 514, gate: SHARD_B, name: 'the vet bill reads every wound since day one, however long ago the ranch stopped taking them',
+    file: 'tools/sim.js',
+    anchor: '  const recent = (state.__walkPatients ?? []).filter((p) => p.at > now - PATIENT_DAYS * WALK_DAY);',
+    to: '  const recent = state.__walkPatients ?? [];',
+  },
+  {
+    // R196 — A PATIENT COUNTS BY THE HOURS THEY BRING IN. A vet refuses a
+    // clock, not a head, and the refusal is priced per clock-hour; counting
+    // heads prices a nine-hour setback like a one-hour scrape.
+    // BLIND AGAIN IF the unit clause's two patients bring the same hours.
+    n: 515, gate: SHARD_B, name: 'the vet bill counts patients by the head, so a long clock refused weighs what a scrape does',
+    file: 'tools/sim.js',
+    anchor: '  if (hours > 0) return recent.filter((p) => p.inst <= ceiling).reduce((n, p) => n + p.hours, 0) / hours;\n',
+    to: '  if (hours > 0) return recent.filter((p) => p.inst <= ceiling).length / recent.length;\n',
+  },
+  {
+    // R196 — THE WALK NOTES WHO THE INFIRMARY SEES. Without the note there is
+    // no patient on record and the roster stands in for the whole campaign,
+    // which is R190's bill wearing R196's name.
+    // BLIND AGAIN IF smoke's recompute skips a hire with no patients in its
+    // window rather than failing it.
+    n: 516, gate: SHARD_B, name: 'the walk stops noting its wounds, and every vet is priced on the roster behind a new name',
+    file: 'tools/sim.js',
+    anchor: '    notePatients(state, now);\n',
+    to: '',
+  },
+  {
+    // R196 — A HOLD IS NOBODY'S PATIENT (R193), SO IT IS NOBODY'S PRICE. The
+    // walker's spies are its unstable creatures, so a hold counted as a
+    // patient reads as a refusal Doc would make, and it was 41% of all
+    // injury hours before R193. Measured with the break: the windows of three
+    // of smoke's four vet hires carry 10, 11 and 1 holds.
+    // BLIND AGAIN IF smoke's walks stop running espionage before their vet
+    // hire, or the patient note stops carrying the wound's reason.
+    n: 517, gate: SHARD_B, name: 'a night in a holding pen is priced as a patient Doc would turn away',
+    file: 'tools/sim.js',
+    anchor: '    if (!inj || !(inj.until > now) || isHold(inj) || seen.get(c.id) === inj) continue;',
+    to: '    if (!inj || !(inj.until > now) || seen.get(c.id) === inj) continue;',
+  },
+  {
+    // R196 — NURSE GAUZE AT R190'S $20. Priced on the patients, that fee made
+    // her the cheaper vet at no decision on any campaign in the census, so the
+    // vet who takes everybody was a card nobody would play. Smoke prices the
+    // census's worst ranch, 44% of its hours over Doc's ceiling at tier IV.
+    // BLIND AGAIN IF that ranch is moved under the $8 break-even (~33%).
+    n: 518, gate: SHARD_B, name: "Nurse Gauze bills R190's $20 again, and the worst ranch in the census is still Doc's",
+    file: 'data/henchmen.json',
+    anchor: '      "fee": 8,',
+    to: '      "fee": 20,',
+  },
+  {
+    // R196 — THE SAME FEE, ON THE CAMPAIGNS. The diet gate reads who is on the
+    // books at day 180, and at $20 no campaign keeps her.
+    // BLIND AGAIN IF seed 99 leaves VET_SEEDS, or the rule reads the hire
+    // log (which a cached save does not carry) instead of the books.
+    n: 519, gate: DIET, name: 'Nurse Gauze is priced out of every campaign, and no gate that reads a whole one notices',
+    file: 'data/henchmen.json',
+    anchor: '      "fee": 8,',
+    to: '      "fee": 20,',
   },
 ];
 

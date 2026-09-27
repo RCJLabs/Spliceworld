@@ -78,7 +78,7 @@
       "wage": 4,
       "rate": 2,
       "ceiling": 100,
-      "fee": 20,
+      "fee": 8,
       "quirk": "Halves the Infirmary clock for anything with a pulse. Bills by the hour.",
       "report": "{name} cut {done} hours off the Infirmary clock, however unstable the patient, and sent a bill for {billed}.",
       "order": 4

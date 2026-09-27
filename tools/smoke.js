@@ -18299,9 +18299,11 @@ if (inShard('contest')) {
   //     shipped R181, where every walk ends with an empty payroll.
   {
     const { slotsOf, hireRoster } = await import('../campaign/staff.js');
-    const { hireBill } = await import('./sim.js');
+    const { hireBill, refusalPrice, PATIENT_DAYS } = await import('./sim.js');
+    const { HOLD } = await import('../splice/facility.js');
     const duties = Object.keys(content.henchmenMeta?.duties ?? {});
     const said = [];
+    const vetSaid = [];
 
     // R190 — A REFUSAL HAS A PRICE, AND THE GAME STATES IT. The walker ranked
     // vets by how much of the roster each would touch, so the one who refuses
@@ -18356,6 +18358,71 @@ if (inShard('contest')) {
         'a better Infirmary makes a refusal cheaper — the tier is read');
       assert.equal(hireBill(content, hireRoster(content).find((h) => h.duty === 'care'), ward([10])), null,
         'a duty whose work the game does not sell (a feed is a button) has no bill, and keeps R188\'s coverage rule');
+
+      // R196 — THE BILL IS PRICED ON THE PATIENTS, NOT THE ROSTER. Wounds
+      // land on the creatures that fight, and the walker fights with its
+      // stable ones: over sixteen campaigns 65% of the roster sat over Doc's
+      // ceiling and 5% of the wound-hours did, so a roster-priced bill hired
+      // Nurse Gauze first on twelve campaigns for patients Doc would have
+      // taken for free. The walk notes every wound with its patient's
+      // instability (`__walkPatients`), and a vet is priced on the last
+      // PATIENT_DAYS of them, by hours. Only before anybody has been hurt
+      // does the roster stand in, which is the ward the formula above reads.
+      {
+        const { PATIENT_DAYS, patientCover } = await import('./sim.js');
+        const DAYMS = 24 * HOUR;
+        const at = t0 + 90 * DAYMS;
+        const seen = (list) => ({ ...ward([90, 95, 99]), lastTickAt: at,
+          __walkPatients: list.map(([ago, inst, hours]) => ({ at: at - ago * DAYMS, inst, hours })) });
+        const stable = seen([[1, 10, 3], [2, 20, 3], [5, 30, 2]]);
+        assert.equal(patientCover(stable, doc), 1,
+          'a roster that is all over Doc\'s ceiling, whose patients are all under it, is a ranch Doc covers whole');
+        assert.equal(hireBill(content, doc, stable), 0, 'and on it Doc\'s bill is his fee, which is nothing');
+        assert.equal(patientCover(seen([[1, 10, 1], [2, 90, 3]]), doc), 0.25,
+          'a patient counts by the hours they bring in: one clock of 1h under the ceiling and one of 3h over is a quarter');
+        assert.equal(patientCover(seen([[PATIENT_DAYS + 1, 90, 50], [1, 10, 2]]), doc), 1,
+          `a wound older than ${PATIENT_DAYS} days is not a patient this vet would see`);
+        assert.ok(Math.abs(patientCover(seen([]), doc)) < 1e-9,
+          'and with no patient on record the roster stands in (here, three creatures all over the ceiling)');
+        // WHAT NURSE GAUZE'S $8 BUYS. Priced on the patients, at R190's $20 she
+        // was the cheaper vet on no campaign in the census, so the vet who
+        // takes everybody was a card nobody would ever play. The census's
+        // median ranch sends Doc 5% of its wound-hours over his ceiling, and
+        // that is Doc's ranch at any tier. Its worst (seed 99) was at 44% when
+        // it bought tier IV, and that one is hers.
+        const gauze = vets.find((h) => (h.ceiling ?? 100) >= 100);
+        const over = (pct, lvl) => ({ ...seen([[1, 10, 100 - pct], [2, 90, pct]]), facility: { infirmary: lvl } });
+        for (const lvl of [1, top]) {
+          assert.ok(hireBill(content, doc, over(5, lvl)) < hireBill(content, gauze, over(5, lvl)),
+            `a tier-${lvl} ranch sending Doc 5% of its wound-hours over his ceiling (the census median) is Doc's`);
+        }
+        assert.ok(hireBill(content, gauze, over(44, top)) < hireBill(content, doc, over(44, top)),
+          `and one sending him 44% at tier ${top} (seed 99's, the census's worst) is Nurse Gauze's `
+          + `($${hireBill(content, gauze, over(44, top)).toFixed(2)} against $${hireBill(content, doc, over(44, top)).toFixed(2)} a clock-hour)`);
+
+        // RULE 3b, ASKED OF `walkHire` ITSELF. A ranch near the break-even
+        // flips the cheaper bill from one week to the next, and a walker that
+        // follows it swaps vets: without the rule seed 4242 did it five times
+        // in eighteen days at tiers III and IV. R190 caught that on seed
+        // 2026's hire log, and since R196 that log cannot show it — 2026's
+        // patients sit so far under the break-even that it hires once either
+        // way. So: Doc on the books, patients half over his ceiling, Gauze's
+        // bill the cheaper at tier III, and the only difference between the
+        // two ranches the tier Doc was chosen at.
+        const { walkHire } = await import('./sim.js');
+        const flipped = (chosenAt) => {
+          const ms = { ...newGameState(), seed: 96, funds: 1e6 };
+          ensureRanchSeeded(ms, content, t0);
+          Object.assign(ms, { lastTickAt: at, facility: { ...(ms.facility ?? {}), infirmary: 3 }, __walkVetTier: chosenAt,
+            staff: { hired: [{ id: doc.id, at: t0, done: 0, missed: 0 }] },
+            __walkPatients: [{ at: at - DAYMS, inst: 10, hours: 5 }, { at: at - 2 * DAYMS, inst: 90, hours: 5 }] });
+          assert.ok(hireBill(content, gauze, ms, at) < hireBill(content, doc, ms, at), 'the bill on this ranch has flipped to Gauze');
+          walkHire(ms, content, at, () => true, true);
+          return ms.staff.hired.map((r) => r.id);
+        };
+        assert.deepEqual(flipped(3), [doc.id], 'rule 3b: a vet chosen at this tier is kept when the patients flip the bill');
+        assert.deepEqual(flipped(2), [gauze.id], 'and re-chosen once a tier has been bought since');
+      }
 
       // R193 — THE MIX NAMES EVERY WOUND THE TABLE STATES, and the clock it
       // gives moves when the table does. A kind added to `injuries` with no
@@ -18536,6 +18603,28 @@ if (inShard('contest')) {
             const least = Math.min(...logged.map(([, v]) => v));
             assert.ok(e.bills[e.id] <= least + 1e-9, `${w.seed}: day ${e.day}, tier ${e.tier}: ${e.id} was the cheaper ${h.duty} hire `
               + `(${logged.map(([id, v]) => `${id} $${v.toFixed(2)}`).join(', ')} a clock-hour)`);
+            // R196 — AND EACH BILL IS THE ONE THE WALK'S OWN PATIENTS GIVE: the
+            // wound-hours of the PATIENT_DAYS before the hire, the share of them
+            // under each vet's ceiling, at the tier the hire was made at.
+            // Recomputed from the walk's record rather than read back through
+            // `patientCover`, so a bill priced on the roster again cannot agree
+            // with itself here.
+            const window = (w.patients ?? []).filter((q) => q.at < e.at && q.at > e.at - PATIENT_DAYS * 24 * HOUR);
+            assert.ok(!window.some((q) => q.reason === HOLD), `${w.seed}: day ${e.day}: no night in a holding pen is priced as a patient `
+              + `(${window.filter((q) => q.reason === HOLD).length} of ${window.length}) — a hold is nobody's patient (R193)`);
+            const hours = window.reduce((n, q) => n + q.hours, 0);
+            assert.ok(hours > 0, `${w.seed}: the ${h.duty} hire on day ${e.day} was priced on patients `
+              + `(${window.length} wounds in the ${PATIENT_DAYS} days before it) — the walk notes who the Infirmary sees`);
+            for (const r of same) {
+              const cov = window.filter((q) => q.inst <= (r.ceiling ?? 100)).reduce((n, q) => n + q.hours, 0) / hours;
+              const rate = r.rate ?? 2;
+              const want = cov * (r.fee ?? 0) / rate + (1 - cov) * refusalPrice(content, { facility: { infirmary: e.tier } }, rate);
+              assert.ok(Math.abs(e.bills[r.id] - want) < 1e-3, `${w.seed}: day ${e.day}: ${r.id}'s bill ($${e.bills[r.id]}) is the one `
+                + `its patients give ($${want.toFixed(3)}: ${(100 * cov).toFixed(0)}% of ${hours.toFixed(0)} wound-hours under its ceiling)`);
+            }
+            const low = Math.min(...same.map((r) => r.ceiling ?? 100));
+            vetSaid.push(`${w.seed}@d${e.day}t${e.tier} ${e.id}, ${(100 * window.filter((q) => q.inst > low)
+              .reduce((n, q) => n + q.hours, 0) / hours).toFixed(0)}% over ${low}`);
           }
           // Rule 3b: a vet is re-chosen when the price moves, which is a tier.
           for (let i = 1; i < made.length; i++) {
@@ -18554,11 +18643,12 @@ if (inShard('contest')) {
       said.push(`${w.seed}:${p.hires.map((e) => `${e.id}@d${e.day}`).join('>')}`);
     }
     console.log(`   R188 payroll: ${said.join(' ')}`);
-    // R190's last clause — Doc Sutures is somebody's vet — is asked in
-    // tools/diet.js, over seven full campaigns. These four stop at dominion
-    // (day 28-36) and Nurse Gauze is the vet on all four; over sixteen full
-    // campaigns Doc holds the slot at day 180 on eleven, eight of them by a
-    // swap made when tier IV was bought (days 39-124).
+    console.log(`   R196 vet hires, on the wound-hours of the ${PATIENT_DAYS} days before: ${vetSaid.join(' · ')}`);
+    // R190's last clause — each vet is somebody's pick — is asked in
+    // tools/diet.js, of full campaigns. These four stop at dominion (day
+    // 28-36) and Doc Sutures is the vet on all four. Over sixteen full
+    // campaigns (R196) Doc is the first vet on all sixteen, and Nurse Gauze
+    // is hired on one: seed 99, when it bought tier IV on day 129.
 
     // THE DAY-180 NUMBERS THE ENTRY REPORTS, off the save the height and
     // untrusted-input gates already read. Printed, not pinned: a wage share

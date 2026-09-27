@@ -343,29 +343,48 @@ sockets across ${bodies} kept chimeras: `
 // Nurse Gauze: the walker ranked coverage before cost, and Doc Sutures refuses
 // anything over 40 instability. R190 prices a refusal at what the Infirmary
 // charges to buy the same hours back (`hireBill` in tools/sim.js) and re-makes
-// the choice when the Infirmary's tier — its price — changes. Measured over
-// sixteen full campaigns, Doc holds the slot at day 180 on 11 and Gauze on 5,
-// with dominion unmoved on all sixteen. On the seven this gate walks: Doc on
-// 101, 4242, 900 and 31, Gauze on 2026, 7 and 55.
+// the choice when the Infirmary's tier — its price — changes.
+//
+// R196 — AND THEN THE BILL WAS PRICED ON THE PATIENTS, and the answer moved.
+// R190 read Doc's refusals off the roster, 65% of which sat over his ceiling
+// while 5% of the wound-hours did, and that overpricing was the only reason
+// Gauze was anybody's hire. Priced on the patients at her old $20, she was
+// the cheaper vet on no campaign in the census. At $8 (data/notes/henchmen.md
+// says why that fee) Doc is the first vet on all sixteen campaigns, and Gauze
+// is hired on one: seed 99, which bought tier IV on day 129 with 44% of its
+// last thirty days' wound-hours over Doc's ceiling, and kept her. She saved
+// 104 hours there on patients Doc would have turned away, and billed $1,647
+// for them against $2,559 at the Infirmary's price. Of the seven campaigns
+// this gate walks for other reasons, the one that kept her before R196 was
+// 4242 (R190's three, 2026, 7 and 55, had already gone to Doc), and it ends
+// on Doc now. So do 12 and 404: one campaign in twenty keeps her. So the rule
+// reads the campaign that does, beside the seven it already walks. One cached
+// walk more, and nothing on a warm run.
 //
 // IT LIVES HERE RATHER THAN IN SMOKE for R154's reason: smoke's walks stop
-// at dominion (day 28-36), and Gauze is the vet on all four, because most of
-// Doc's swaps come when tier IV is bought (eight of eleven, days 39-124). The
-// claim is about a campaign, so it is asked of campaigns.
-// BLIND AGAIN IF the seed list shrinks until one seed is the only holder of
-// either vet, or the rule reads `payroll.hires` (which a cached save does not
-// carry) instead of the books.
+// at dominion (day 28-36), and Doc is the vet on all four, because Gauze's
+// ranch is a tier-IV one. The claim is about a campaign, so it is asked of
+// campaigns. Smoke asks the price half: every hire's bill recomputed from the
+// walk's own patients, and the census's median and worst ranches priced.
+// IF THIS GOES RED on Gauze after a change elsewhere, the answer is a census
+// rather than another seed: if no campaign keeps her, her price is R196 again.
+// BLIND AGAIN IF seed 99 leaves this list while another seed is found to hold
+// her by luck of one run, or the rule reads `payroll.hires` (which a cached
+// save does not carry) instead of the books.
+const VET_SEEDS = [...COMBO_SEEDS, 99];
 {
   const vets = Object.entries(content.henchmen ?? {}).filter(([, h]) => h.duty === 'infirmary').map(([id]) => id);
-  const held = COMBO_SEEDS.map((seed) => {
+  const held = VET_SEEDS.map((seed) => {
     const save = seed === 2026 ? walk.save : walkedSave({ seed, days: 180 });
     return (save.staff?.hired ?? []).map((r) => r.id).find((id) => vets.includes(id)) ?? 'nobody';
   });
-  const said = COMBO_SEEDS.map((s, i) => `${s}: ${held[i]}`).join(', ');
+  const said = VET_SEEDS.map((s, i) => `${s}: ${held[i]}`).join(', ');
   // And rule 3b, on the one campaign here that carries its hire log: a vet is
   // re-chosen when the Infirmary's price moves, so a second vet hire comes at
   // a higher tier. Without the rule, seed 2026 swapped vets 32 times in 180
-  // days, because its late roster sits at the break-even.
+  // days, because its late roster sat at R190's break-even. Priced on the
+  // patients (R196) it sits far under it and hires once either way, so smoke
+  // asks the rule of `walkHire` directly; this stays for the log it reads.
   const made = (walk.payroll?.hires ?? []).filter((e) => vets.includes(e.id));
   for (let i = 1; i < made.length; i++) {
     if (!(made[i].tier > made[i - 1].tier)) {
@@ -376,8 +395,8 @@ sockets across ${bodies} kept chimeras: `
   if (REPORT) console.log(`\n  vets at day 180: ${said}; seed 2026 hired ${made.map((e) => `${e.id} (day ${e.day}, tier ${e.tier})`).join(' > ')}`);
   for (const id of vets) {
     if (!held.includes(id)) {
-      fails.push(`${content.henchmen[id].name} is the vet on the books at day 180 on none of ${COMBO_SEEDS.length} campaigns`
-        + ` (${said}) — a vet the walker never keeps is R190 again`);
+      fails.push(`${content.henchmen[id].name} is the vet on the books at day 180 on none of ${VET_SEEDS.length} campaigns`
+        + ` (${said}) — a vet the walker never keeps is R190 again (R196: census it before re-pricing)`);
     }
   }
 }
