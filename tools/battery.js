@@ -7532,6 +7532,18 @@ const BREAKS = [
     anchor: '    if (v.a' + "ll.join('\\n').includes(b.expect)) return { verdict: 'caught' };",
     to: "    if (v.lines.join('\\n').includes(b.expect)) return { verdict: 'caught' };",
   },
+  {
+    // R200's baseline went red on the wide gate measuring main.js's
+    // "Warming up the lab…" card as the arena. The wait refuses that card
+    // now; this takes the refusal away, and the gate's every-run probe (the
+    // card alone, scripts off) is what has to notice.
+    // BLIND AGAIN IF the probe stops running with the page's scripts off.
+    n: 527, gate: WIDE, name: 'the wait settles on a screen still loading its module, and the arena is measured before it exists',
+    file: 'tools/wide.js',
+    anchor: "        if (el.innerHTML === ${JSON.stringify(WARMING)}) return '';\n",
+    to: '',
+    expect: 'still loading its module',
+  },
 ];
 
 const pristine = {};

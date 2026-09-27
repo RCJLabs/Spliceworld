@@ -7454,6 +7454,27 @@ triangle working, and each region genuinely asks a different question)*.
     - Breaks 523-526 take away the crash rule, `expect`, the field check,
       and `expect` read from the whole verdict. 509 and 512 are re-aimed at
       `verdict`'s new return.
+  * **Found on the way: the wide gate measured a screen still loading.**
+    R200's first baseline went red on `tools/wide.js`: "the arena at 380px
+    has no stage or no creatures to measure". The tree passes that gate
+    alone every time. Five screens lazy-load, and while the module is
+    fetched `lazy()` in main.js paints one card, "Warming up the lab…". The
+    gate's wait takes a visible, non-empty screen that stops changing for
+    three polls (180ms) as painted, and that card is all three. With 250ms
+    of latency on every fetch the gate went red on demand, and what it had
+    measured at 380px was the card. Folded in at Evan's call, because a fix
+    filed on its own changes a gate's logic and owes a full battery of its
+    own.
+    - The wait refuses main.js's placeholder, read from `lazy()` rather than
+      typed, so a reworded card is still the card; the gate fails loudly if
+      it cannot find it.
+    - Every run, with the page's scripts off, a probe holding only that card
+      must not read as painted. Break 527 takes the refusal away, and the
+      probe names it.
+    - Under the same 250ms of latency the fixed gate measured the arena at
+      every width, three runs of three.
+    - At rest the hole went the other way: a placeholder measured as a
+      screen is short and fits everything, so it would have passed.
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same
