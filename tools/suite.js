@@ -64,9 +64,16 @@ const JOBS = [
 // finished at 207s against a 180s budget, on a suite whose total work had
 // just gone DOWN. `cost` is a rough measured seconds, and wrong by a few
 // seconds costs nothing: it decides order, never anything else.
+// R198 — `walks` is the one job whose cost depends on the cache: it is where
+// every 180-day walk is built, so it read 389s on R196's cold run and 80s
+// warm. R198 moved the agent's six campaigns into the cache: 467s measured
+// against an empty cache (diet 331, reach 136, twenty walks built), and
+// about 30s warm (diet's own seed-2026 walk). Cold it is the longest job, and started
+// last it would end the suite ~250s after the smoke lanes; warm it is short
+// enough that its place changes nothing. So it is costed at its cold number.
 const COST = {
   'smoke:a': 111, 'smoke:b': 104, 'smoke:c': 132, 'smoke:d': 134,
-  walks: 77, vault: 24, handlers: 24, scopecheck: 2, roadmap: 1, saves: 1, worker: 1,
+  walks: 467, vault: 24, handlers: 24, scopecheck: 2, roadmap: 1, saves: 1, worker: 1,
 };
 const picked = (only ? JOBS.filter((j) => j.name === only || j.name.startsWith(`${only}:`)) : JOBS)
   .slice().sort((a, b) => (COST[b.name] ?? 0) - (COST[a.name] ?? 0));

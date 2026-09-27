@@ -4479,10 +4479,11 @@ const BREAKS = [
     // re-aimed at R196. R196 did not: it ran `--anchors` before ticking
     // itself, so the warning had nothing to see yet, and its full battery
     // read 276 MISSED. Re-aimed at R198. Run `--anchors` AFTER the tick.
+    // R198 re-aimed it at R199, the last entry in the queue, before its tick.
     n: 276, gate: ROADMAP, name: 'an entry is ticked shipped and the queue is not told',
     file: 'ROADMAP.md',
-    anchor: "- **R198 — The agent's odds branch rests on one choice.**",
-    to: "- **R198 — The agent's odds branch rests on one choice.** ✅",
+    anchor: "- **R199 — Break 59 is caught by the keyboard gate crashing, not by its\n  keyboard check.**",
+    to: "- **R199 — Break 59 is caught by the keyboard gate crashing, not by its\n  keyboard check.** ✅",
   },
   {
     // The other direction: the count beside the list stops matching the list.
@@ -4494,9 +4495,11 @@ const BREAKS = [
     // every session is a break that will one day be edited wrong. So it
     // patches the LIST instead, past a prefix no count can move, and breaks
     // the same rule both ways at once — the list is one longer than the
-    // stated size, and R999 is not an entry §9 has.
+    // stated size, and R999 is not an entry §9 has. R198 took the queue to
+    // one entry, and "entries" became "entry": the anchor is the part of the
+    // line neither the count nor its plural can move.
     n: 277, gate: ROADMAP, name: 'the queue states a size the list does not have',
-    file: 'ROADMAP.md', anchor: ' entries queued.**', to: ' entries queued.** R999,',
+    file: 'ROADMAP.md', anchor: ' queued.**', to: ' queued.** R999,',
   },
   {
     // The defect itself: a paragraph somewhere else in the document calls a
@@ -7408,6 +7411,31 @@ const BREAKS = [
     file: 'data/henchmen.json',
     anchor: '      "fee": 8,',
     to: '      "fee": 20,',
+  },
+  {
+    // R198 — THE ODDS CLAUSE ITSELF. Without it the agent goes only where a
+    // creature's failure is permanent, and never because he is the better
+    // infiltrator. On seeds 2026 and 7 the odds decided ONE choice, so this
+    // break was one choice away from going unseen; on the six campaigns the
+    // section reads now, the odds decide 205 choices on four of them.
+    // BLIND AGAIN IF section 6 goes back to two seeds, or stops recomputing
+    // each choice from its logged chances.
+    n: 520, gate: DIET, name: 'the agent never goes on the odds, only where a creature would be lost for good',
+    file: 'tools/sim.js',
+    anchor: '      const sendAgent = !!odds && (odds.creature === null || permanent || odds.agent >= odds.creature);',
+    to: '      const sendAgent = !!odds && (odds.creature === null || permanent);',
+  },
+  {
+    // R198 — THE VARIANT IS WHAT MAKES THE AGENT HIREABLE. The shipped file
+    // opens two slots and two stationed duties fill them, so a variant that
+    // loses its third slot walks six campaigns in which nothing is weighed.
+    // Its home moved into tools/fixtures.js with the cache.
+    // BLIND AGAIN IF section 6 stops asking that every campaign hired an
+    // agent, or stops requiring each branch to occur.
+    n: 521, gate: DIET, name: "the agent's campaigns lose their third slot, and six walks weigh nobody",
+    file: 'tools/fixtures.js',
+    anchor: 'export const agentVariant = (content) => ({ ...content, henchmenMeta: { ...content.henchmenMeta, slots: 2, maxSlots: 3 } });',
+    to: 'export const agentVariant = (content) => ({ ...content, henchmenMeta: { ...content.henchmenMeta, slots: 2, maxSlots: 2 } });',
   },
 ];
 

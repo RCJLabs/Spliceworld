@@ -283,12 +283,13 @@ export function checkQueue(md = readFileSync(join(root, 'ROADMAP.md'), 'utf8')) 
   // else in the section: the prose underneath it explains what went wrong by
   // NAMING the entries that were wrongly queued, and a rule that read the
   // whole block would take that history for the list.
-  const parts = block.split(/\*\*(\d+) entries queued\.\*\*/);
-  if (parts.length < 3) {
+  // R198 — "entry" when there is one. The queue had never been that short.
+  const parts = block.split(/\*\*(\d+) (entry|entries) queued\.\*\*/);
+  if (parts.length < 4) {
     note('§9.0 does not say "**N entries queued.**" followed by the list');
     return problems;
   }
-  const listed = idsIn(parts[2].split(/\n\s*\n/)[0]);
+  const listed = idsIn(parts[3].split(/\n\s*\n/)[0]);
   for (const id of listed) if (!queued.includes(id)) {
     note(`§9.0 queues ${id}, which is marked shipped at line ${byId.get(id)?.[0].line ?? '?'}`);
   }
@@ -312,7 +313,7 @@ export function checkQueue(md = readFileSync(join(root, 'ROADMAP.md'), 'utf8')) 
   // checks id by id. Exempting the whole section instead would have left the
   // one block a session is told to trust as the one block nothing reads — and
   // the prose under the list is where a future correction would go.
-  const listing = `**${parts[1]} entries queued.**${parts[2].split(/\n\s*\n/)[0]}`;
+  const listing = `**${parts[1]} ${parts[2]} queued.**${parts[3].split(/\n\s*\n/)[0]}`;
   for (const para of md.split(/\n\s*\n/)) {
     if (para.includes(listing.slice(0, 40))) continue;
     if (!/\bunshipped\b/i.test(para)) continue;

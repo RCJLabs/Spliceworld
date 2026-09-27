@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**2 entries queued.** R198, R199.
+**1 entry queued.** R199.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -7276,7 +7276,7 @@ triangle working, and each region genuinely asks a different question)*.
   * **Not explained yet:** the keyboard gate's intermittent red under four
     lanes (R193, R194). The next one will say why.
 
-- **R198 — The agent's odds branch rests on one choice.** Found by R194.
+- **R198 — The agent's odds branch rests on one choice.** ✅ Found by R194.
   Diet section 6 replays the third-slot variant on seeds 2026 and 7 and
   requires each branch of rule 5 to occur: sent for permanence, sent on the
   odds, a creature sent past him. R192 measured 7 / 135 / 234. After R194's
@@ -7288,6 +7288,40 @@ triangle working, and each region genuinely asks a different question)*.
   campaigns where each one occurs with a margin (more seeds, or seeds
   chosen by what the census measured), or the entry argues from a
   re-measurement why one choice is enough.*
+
+  **Shipped: six campaigns, cached, and the branch is carried by four.**
+  * **Measured first, on four trees.** The census's third-slot variant was
+    run on sixteen campaigns on each of R192, R193, R194 and R196.
+    - The odds branch is bimodal. A campaign sends the agent on the odds
+      dozens of times or never, depending on whether its walk has bred a
+      spare infiltrator that beats his 0.45.
+    - The side a seed lands on flips between trees. Only 1337 of the sixteen
+      stayed on one side all four times, and 2026 flipped with R194.
+    - Per tree, the odds branch occurred on 8 to 13 campaigns of 16 and
+      permanence on 12 to 14.
+    - Shorter walks lose it: by day 90, 4 to 10 of 16.
+    - So no seed can be chosen by how it came out, and more seeds is the
+      answer. Over every subset of the sixteen and all four trees, the odds
+      branch was missing from 11.7% of two-seed sets, 1.2% of four and 0.1%
+      of six.
+  * **Section 6 reads six campaigns:** 2026, 7, 99, 4242, 42 and 900, the
+    first six of the census's list, taken in order.
+    - On all four trees the odds branch occurs on 2 to 5 of them (128 to 468
+      choices) and permanence on 4 or 5.
+    - On this tree it reads permanence 19 on 5 of 6, odds 205 on 4, creature
+      763 on 6. `--report` prints each campaign's three counts.
+    - The floor stays "each branch occurs". Asking each branch of two
+      campaigns would have failed 1.7% of six-seed sets on those trees.
+  * **The walks are cached** (`walkedAgentCampaign` in `tools/fixtures.js`).
+    They are keyed like `walkedSave` and store only the mission log and the
+    payroll. A warm diet run fell from ~70s to 24s, and a cold one pays four
+    more walks than before.
+    Section 8 reads the same six: 224 agent jobs where it read 12, each
+    paying at least 6.9x his wage over its hours of the board.
+  * **Breaks 520-521.**
+    - 520 drops the odds clause, a break that was one choice from going
+      unseen on the old two seeds.
+    - 521 takes the variant's third slot.
 
 - **R199 — Break 59 is caught by the keyboard gate crashing, not by its
   keyboard check.** Found by R197, on the first run that printed what each

@@ -32,7 +32,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadSimContent, campaignWalk, WALK_INJURY_MIX, infirmaryClock } from './sim.js';
 import { infirmaryGrants } from '../splice/facility.js';
-import { walkedSave, primeWalkCache } from './fixtures.js';
+import { walkedSave, primeWalkCache, walkedAgentCampaign } from './fixtures.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const REPORT = process.argv.includes('--report');
@@ -417,14 +417,34 @@ const agentWalks = [];
 // a slot only after every stationed one has a hire, and there are two slots.
 //
 // So this runs the census's own variant — two slots to start, three at
-// most — on two full campaigns, and checks every choice the walker made
-// with the agent free against the rule, recomputed here from the mission
-// data rather than read back from the walker's log. Measured on these two:
-// 7 sends decided by the permanent risk, 135 by the odds, 234 creatures sent
-// past a free agent. Each branch must occur, so a rule that collapses into
-// "always the agent" or "never the agent" has a branch that stops appearing.
+// most — on full campaigns, and checks every choice the walker made with the
+// agent free against the rule, recomputed here from the mission data rather
+// than read back from the walker's log. Each branch must occur, so a rule
+// that collapses into "always the agent" or "never the agent" has a branch
+// that stops appearing.
+//
+// R198 — AND ON SIX CAMPAIGNS, BECAUSE ONE BRANCH IS A COIN TOSS PER SEED.
+// R192 measured 7 / 135 / 234 (permanence / odds / creature) on seeds 2026
+// and 7. After R194's wage change it read 11 / 1 / 415: the odds branch hung
+// on one choice. Censused over sixteen campaigns on four trees (R192, R193,
+// R194, R196), the odds branch is bimodal: a campaign sends him on the odds
+// dozens of times or not at all, depending on whether its walk has bred a
+// spare infiltrator that beats his 0.45, and a seed's answer flips between
+// trees (1337 is the only one of sixteen on the same side of it all four
+// times). It occurred on 8 to 13 of 16 campaigns per tree, permanence on 12
+// to 14. Over every subset of the sixteen and all four trees, the odds branch
+// was missing from 11.7% of two-seed sets, 1.2% of four and 0.1% of six. So
+// six: the first six of the census's list, taken in order rather than
+// chosen by how they came out. On all four trees the odds branch occurs on
+// 2 to 5 of them (128 to 468 choices) and permanence on 4 or 5 (16 to 27).
+// The walks are cached (`walkedAgentCampaign`), so a warm run costs nothing.
+// Asking each branch of TWO campaigns instead would have failed 1.7% of six-
+// seed sets on those trees, so the floor stays "occurs" and the margin is
+// the number of campaigns that carry it, printed with --report.
 // BLIND AGAIN IF the log stops recording the chances a choice was made on,
-// or the variant loses its third slot (then nothing is weighed at all).
+// or the variant loses its third slot (then nothing is weighed at all), or
+// the seed list shrinks back toward two.
+const AGENT_SEEDS = [2026, 7, 99, 4242, 42, 900];
 {
   const meta = content.henchmenMeta?.duties ?? {};
   const isSent = (id) => !!meta[content.henchmen?.[id]?.duty]?.sent;
@@ -433,13 +453,14 @@ const agentWalks = [];
     fails.push(`seed 2026 hired ${shipped.map((e) => `${e.id} on day ${e.day}`).join(', ')} on the shipped file,`
       + ' where two slots and two stationed duties leave no room for a sent one');
   }
-  const variant = { ...content, henchmenMeta: { ...content.henchmenMeta, slots: 2, maxSlots: 3 } };
   const branch = { permanent: 0, odds: 0, creature: 0 };
+  const carried = { permanent: 0, odds: 0, creature: 0 };
   const wrong = [];
   const said = [];
-  for (const seed of [2026, 7]) {
-    const w = campaignWalk(variant, { seed, days: 180, stopAtDominion: false });
+  for (const seed of AGENT_SEEDS) {
+    const w = walkedAgentCampaign({ seed, days: 180 });
     agentWalks.push({ seed, w });
+    const own = { permanent: 0, odds: 0, creature: 0 };
     // The hire order: the agent only after a hand and a vet are on the books.
     const firstAgent = w.payroll.hires.findIndex((e) => isSent(e.id));
     const before = new Set(w.payroll.hires.slice(0, Math.max(0, firstAgent)).map((e) => content.henchmen[e.id]?.duty));
@@ -458,17 +479,22 @@ const agentWalks = [];
       if (should !== !!e.agent) {
         wrong.push(`seed ${seed} day ${e.day} ${e.mission}: sent ${e.agent ? 'the agent' : 'a creature'} at ${e.odds.agent.toFixed(3)}`
           + ` against ${e.odds.creature === null ? 'no spare creature' : e.odds.creature.toFixed(3)}${permanent ? ', a permanent risk' : ''}`);
-      } else if (e.agent) branch[permanent && e.odds.creature !== null && e.odds.agent < e.odds.creature ? 'permanent' : 'odds']++;
-      else branch.creature++;
+      } else if (e.agent) own[permanent && e.odds.creature !== null && e.odds.agent < e.odds.creature ? 'permanent' : 'odds']++;
+      else own.creature++;
     }
+    for (const k of Object.keys(branch)) { branch[k] += own[k]; if (own[k]) carried[k]++; }
     const ag = ms.filter((e) => e.agent);
-    said.push(`${seed}: ${ag.length} agent / ${ms.length - ag.length} creature, agent net $${ag.reduce((n, e) => n + (e.funds ?? 0) - (e.expenses ?? 0), 0)}`
+    said.push(`${seed}: ${own.permanent}/${own.odds}/${own.creature}, agent net $${ag.reduce((n, e) => n + (e.funds ?? 0) - (e.expenses ?? 0), 0)}`
       + ` against $${Object.entries(w.payroll.paid ?? {}).filter(([id]) => isSent(id)).reduce((n, [, v]) => n + v, 0)} of wages`);
   }
-  if (REPORT) console.log(`\n  agent (third slot): ${said.join('; ')} · decided by permanence ${branch.permanent}, odds ${branch.odds}, creature ${branch.creature}`);
+  if (REPORT) {
+    console.log(`\n  agent (third slot), permanence/odds/creature: ${said.join('; ')}`);
+    console.log(`  decided by permanence ${branch.permanent} on ${carried.permanent} of ${AGENT_SEEDS.length} campaigns,`
+      + ` odds ${branch.odds} on ${carried.odds}, creature ${branch.creature} on ${carried.creature}`);
+  }
   for (const wr of wrong.slice(0, 5)) fails.push(`R192 rule 5: ${wr}`);
   for (const [k, n] of Object.entries(branch)) {
-    if (!n) fails.push(`R192 rule 5: no choice on seeds 2026/7 was decided by ${k === 'creature' ? 'sending a creature past a free agent' : `the ${k} clause`}`
+    if (!n) fails.push(`R192 rule 5: no choice on seeds ${AGENT_SEEDS.join('/')} was decided by ${k === 'creature' ? 'sending a creature past a free agent' : `the ${k} clause`}`
       + ` (${JSON.stringify(branch)}) — the rule has collapsed to one answer`);
   }
 }
@@ -527,15 +553,16 @@ const agentWalks = [];
 // in tools/sim.js sends him on the length that pays most per hour of the
 // board, and his wage in data/henchmen.json is one the census's median
 // campaign earns back (the argument is in data/notes/henchmen.md). This
-// reads the two campaigns section 6 walked, and for every job he went on:
+// reads the campaigns section 6 walked (six since R198), and for every job
+// he went on:
 //   - it was the length rule 6 picks, recomputed here from the mission data
 //     and his fee rather than read off the walker;
 //   - its expected pay, net of that fee, beat his wage over the hours it
 //     held the board (the job plus the board's rest), at the day rate he
 //     was drawing when he went.
 // Whether a whole campaign earns him back also turns on how often a creature
-// beats his odds, which is chaos on two seeds, so that total is printed and
-// not pinned: sixteen campaigns are the evidence, in ROADMAP R194.
+// beats his odds, which is chaos per seed (R198), so that total is printed
+// and not pinned: sixteen campaigns are the evidence, in ROADMAP R194.
 // BLIND AGAIN IF the walk stops logging his day rate (refused below, rather
 // than compared against undefined), or section 6 stops walking the variant.
 {
@@ -572,10 +599,10 @@ const agentWalks = [];
       .filter(([id]) => meta[content.henchmen?.[id]?.duty]?.sent).reduce((n, [, v]) => n + v, 0);
   }
   for (const wr of wrong.slice(0, 5)) fails.push(`R194: ${wr}`);
-  if (!jobs) fails.push('R194: the third-slot campaigns on seeds 2026/7 sent the agent on no job, so nothing says what his wage buys');
+  if (!jobs) fails.push(`R194: the third-slot campaigns on seeds ${AGENT_SEEDS.join('/')} sent the agent on no job, so nothing says what his wage buys`);
   if (REPORT) {
     console.log(`\n  R194 agent: ${jobs} jobs, each paying at least ${thin.toFixed(1)}x his wage over its hours of the board;`
-      + ` $${Math.round(net)} net of his fee against $${Math.round(wages)} of wages on these two campaigns`);
+      + ` $${Math.round(net)} net of his fee against $${Math.round(wages)} of wages on these ${agentWalks.length} campaigns`);
   }
 }
 
