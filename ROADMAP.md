@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**1 entry queued.** R202.
+**0 entries queued.**
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -7538,8 +7538,8 @@ triangle working, and each region genuinely asks a different question)*.
     break caught and none CRASHED or ELSEWHERE. Breaks 527-530 are each
     caught by the probe they name.
 
-- **R202 — The keyboard gate waits on the clock after a page load.** Found
-  by R201. After each navigation `tools/a11y.js` sleeps a fixed time (900ms,
+- **R202 — The keyboard gate waits on the clock after a page load.** ✅
+  Found by R201. After each navigation `tools/a11y.js` sleeps a fixed time (900ms,
   2200ms and others) and then measures, so a boot slower than the sleep is
   measured before it exists. With 250ms of latency on every fetch, on
   R201's tree, three problems are exactly that: "a fresh browser did not
@@ -7551,6 +7551,39 @@ triangle working, and each region genuinely asks a different question)*.
   page it expects rather than a fixed time, the 250ms probe reads no
   problem that is only a slow boot, and the change is argued against a
   measured baseline wall-time.*
+
+  **Shipped: every page load waits for the page, and the gate got faster.**
+  * **Measured first, on R201's tree** (a probe timing each page the gate
+    loads, twice, warm):
+    - At rest every page arrived in 0.36-0.70s and every tab painted in
+      about 0.15s, against sleeps of 900-2400ms.
+    - With 250ms on every fetch, a page took 4.5-5.3s and a tab 1.4-1.6s.
+    - So all seven problems R201 left were one cause. Three were a boot
+      measured before it finished. The War Room's four were a tab pressed
+      while the page was still booting: its tabs were not bound yet, so the
+      click did nothing and the screen "was still loading" 12s later.
+  * **`arrive` and `settled`** (`tools/a11y.js`). Every navigation (eleven
+    fixed sleeps, and the held-row pass's own boot poll) waits until three
+    things are true:
+    - the app has booted onto something: a painted screen that is not
+      main.js's loading card, the founding picker, or the boot-failure card;
+    - nothing is in flight, counted off the Network domain. After the first
+      paint main.js still fetches the welcome-back card, the creature
+      geometry (then repaints) and the sky, which the old sleeps covered by
+      accident;
+    - the DOM has held still for three 100ms polls.
+    What a pass expects of the page, it still checks itself after that, in
+    the words it always used. A page that has not arrived in 30s is a
+    problem, named after the page.
+  * **Proved every run.** With the page's scripts off, a navigation must not
+    read as arrived, and with a request held in flight neither may a booted
+    page. Breaks 531 and 532 take each half away.
+  * **250ms on every fetch: green.** It read 18 problems on R200's tree and
+    7 on R201's.
+  * **Wall time, measured alone on the same box:** 202.0s and 200.8s before,
+    188.2s and 187.5s after, about 7% faster. No count moved: 119 controls,
+    82 views, 6 of 6 screens, 125 reached by Tab, 0 nodes rewritten by an
+    unchanged tick, 92 KB of Dex before a scroll.
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same

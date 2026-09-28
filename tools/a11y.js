@@ -880,13 +880,79 @@ async function main() {
     };
 
     const url = `http://127.0.0.1:${port}/index.html`;
+    // R202 — A PAGE LOAD WAITS FOR THE PAGE IT EXPECTS, NOT FOR A NUMBER. Every
+    // navigation in this walk used to sleep a fixed 900-2400ms and then
+    // measure, so a boot slower than the sleep was measured before it existed.
+    // Measured on R201's tree, warm: each page arrived in 0.36-0.70s at rest
+    // and 4.5-5.3s with 250ms on every fetch. At 250ms the gate read seven
+    // problems, and all seven were that: the founding picker, the boot-failure
+    // card and the welcome-back card measured mid-boot, and a War Room tab
+    // pressed before boot had bound it, so the click did nothing and the
+    // screen "was still loading" twelve seconds later.
+    // Arrived means three things, and the first paint is only the first:
+    //   1. the app has booted onto something: a painted screen that is not
+    //      main.js's loading card (R201), the founding picker, or the
+    //      boot-failure card;
+    //   2. nothing is in flight. After the first paint main.js still fetches
+    //      the welcome-back card, the creature geometry (then repaints) and the
+    //      sky, and the old sleeps covered those by accident;
+    //   3. the DOM has held still for three polls.
+    // What a pass expects of the page (the picker, the card) it still checks
+    // itself, after this, with the words it always used.
+    const BOOTED = `(() => {
+      if (document.readyState !== 'complete') return false;
+      if (document.querySelector('.boot-fail-card') || document.querySelector('#overlay:not([hidden]) .founding')) return true;
+      const s = document.querySelector('main > .screen:not([hidden])');
+      return !!s && s.children.length > 0 && s.innerHTML !== ${JSON.stringify(WARMING)};
+    })()`;
+    const inFlight = new Set();
+    cdp.ws.addEventListener('message', (e) => {
+      const m = JSON.parse(e.data);
+      if (m.method === 'Network.requestWillBeSent') inFlight.add(m.params.requestId);
+      else if (m.method === 'Network.loadingFinished' || m.method === 'Network.loadingFailed') inFlight.delete(m.params.requestId);
+    });
+    const settled = async (label, { deadline = 30000, silent = false } = {}) => {
+      const t0 = Date.now();
+      let last = null;
+      let still = 0;
+      while (Date.now() - t0 < deadline) {
+        await sleep(100);
+        let sig = '';
+        try {
+          sig = await evaluate(`${BOOTED} ? document.getElementsByTagName('*').length + ':' + document.documentElement.scrollHeight : ''`);
+        } catch { /* between documents */ }
+        if (sig && !inFlight.size && sig === last) {
+          if (++still >= 3) return true;
+        } else { still = 0; last = sig; }
+      }
+      if (!silent) note(`${label}: the page had not finished booting ${deadline / 1000}s after it was asked for, so what follows measured a page still loading`);
+      return false;
+    };
+    const arrive = async (label) => {
+      inFlight.clear();
+      await send('Page.navigate', { url });
+      return settled(label);
+    };
+    // …and the wait refuses both halves every run, not only on a slow box:
+    // a page no script has run in never boots, and a page with a request
+    // still in flight has not finished arriving.
+    await send('Emulation.setScriptExecutionDisabled', { value: true });
+    inFlight.clear();
     await send('Page.navigate', { url });
-    await sleep(900);
+    if (await settled('', { deadline: 1500, silent: true })) {
+      note('a page no script has run in reads as arrived, so a pass can measure a shell the app never booted');
+    }
+    await send('Emulation.setScriptExecutionDisabled', { value: false });
+    await arrive('a fresh browser');
+    inFlight.add('r202-probe');
+    if (await settled('', { deadline: 800, silent: true })) {
+      note('a page with a request still in flight reads as arrived, so a pass can measure it before the geometry or the welcome card lands');
+    }
+    inFlight.delete('r202-probe');
     const fixture = await fixtureSave();
     await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(fixture)})`);
     errors.length = 0;
-    await send('Page.navigate', { url });
-    await sleep(2200);
+    await arrive('the lab fixture');
     // R201 — and the wait refuses the card every run, not only on a slow box:
     // a probe holding nothing but main.js's placeholder must never read as
     // painted. The app does not touch an element it did not make.
@@ -1027,8 +1093,7 @@ async function main() {
         localStorage.clear();
         await new Promise((r) => { const q = indexedDB.deleteDatabase('spliceworld'); q.onsuccess = r; q.onerror = r; q.onblocked = r; });
       })()`);
-      await send('Page.navigate', { url });
-      await sleep(2200);
+      await arrive('a fresh browser, for the founding picker');
       if (!await evaluate(`!document.querySelector('#overlay').hidden && !!document.querySelector('.founding')`)) {
         note('a fresh browser did not reach the founding picker, so nothing measured the first screen of the game');
       } else {
@@ -1041,8 +1106,7 @@ async function main() {
         if (spill > 1) note(`founding: the picker overflows the viewport by ${spill}px, and a fixed overlay does not scroll`);
       }
       await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(fixture)})`);
-      await send('Page.navigate', { url });
-      await sleep(2200);
+      await arrive('the lab fixture, put back');
     };
 
     // R88 — THE BRIEFING WITH AN OFFER ON IT. "Send them without me" only
@@ -1057,8 +1121,7 @@ async function main() {
       const noFight = JSON.parse(fixture);
       noFight.battle = null;
       await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(noFight))})`);
-      await send('Page.navigate', { url });
-      await sleep(2200);
+      await arrive('the lab with no fight in progress');
       await tabTo('battle');
       await sleep(700);
       // R99 — AND THE WAR ROOM ITSELF, which no run had ever drawn. The
@@ -1106,8 +1169,7 @@ async function main() {
         }
       }
       await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(fixture)})`);
-      await send('Page.navigate', { url });
-      await sleep(2200);
+      await arrive('the lab fixture, put back');
     };
 
     // R80 — the arena is the one screen that does not scroll
@@ -1278,8 +1340,7 @@ async function main() {
       }
       // Put the fixture back: a graduation spends an animal and writes a save.
       await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(fixture)})`);
-      await send('Page.navigate', { url });
-      await sleep(2200);
+      await arrive('the lab fixture, put back');
     };
 
     await foundingPass();
@@ -2154,8 +2215,7 @@ async function main() {
       future.saveVersion = SAVE_VERSION + 1;
       const futureText = JSON.stringify(future);
       await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(futureText)})`);
-      await send('Page.navigate', { url });
-      await sleep(2200);
+      await arrive('a save one version ahead');
       const boot = await evaluate(`(() => ({
         card: !!document.querySelector('.boot-fail-card'),
         heading: document.querySelector('.boot-fail-card h1')?.textContent ?? '',
@@ -2240,8 +2300,7 @@ async function main() {
         await new Promise((r) => { const q = indexedDB.deleteDatabase('spliceworld'); q.onsuccess = r; q.onerror = r; q.onblocked = r; });
       })()`);
       await setup();
-      await send('Page.navigate', { url });
-      await sleep(2200);
+      await arrive(label);
       // A save-less browser opens on the founding choice; pick a lab and take
       // whatever the first splice puts up, because what this pass is for is
       // the screens BEHIND that, which no other pass reaches on a fresh save.
@@ -2419,13 +2478,7 @@ async function main() {
             await new Promise((r) => { const q = indexedDB.deleteDatabase('spliceworld'); q.onsuccess = r; q.onerror = r; q.onblocked = r; });
           })()`);
           await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(s))})`);
-          await send('Page.navigate', { url });
-          let booted = false;
-          for (let i = 0; i < 100 && !booted; i++) {
-            await sleep(200);
-            booted = await evaluate(`!!document.querySelector('main > .screen:not([hidden])')`);
-          }
-          if (!booted) { note(`held-row worst case (${st.kind}): the app never booted, so nothing was measured`); continue; }
+          if (!(await arrive(`held-row worst case (${st.kind})`))) continue;
           await evaluate(`document.documentElement.style.fontSize = '${16 * TEXT_SCALE}px'`);
           await tabTo('battle');
           await sleep(600);
@@ -2575,8 +2628,7 @@ async function main() {
       const week = JSON.parse(fixture);
       week.lastTickAt = Date.now() - 7 * 24 * 3600000;
       await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(JSON.stringify(week))})`);
-      await send('Page.navigate', { url });
-      await sleep(2400);
+      await arrive('a week away');
       const card = JSON.parse(await evaluate(`(() => {
         const el = document.querySelector('#welcome');
         const btn = el?.querySelector('#welcome-dismiss');
@@ -2616,8 +2668,7 @@ async function main() {
       }
       // Back to the steady-state save for everything after this.
       await evaluate(`localStorage.setItem('spliceworld_save', ${JSON.stringify(fixture)})`);
-      await send('Page.navigate', { url });
-      await sleep(2200);
+      await arrive('the lab fixture, put back');
     }
 
     // Say the four numbers even when they pass. A budget that only speaks
