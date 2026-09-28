@@ -7533,6 +7533,10 @@ triangle working, and each region genuinely asks a different question)*.
     - That probe is harsher than anything a real baseline has shown: R200's
       red was one slow lazy fetch, which the 800ms probe models and which is
       green. The sleeps after a navigation are filed as R202.
+  * **The full battery** (a gate's logic changed): 521 breaks in four
+    chunks (23m, 67m, 139m, 115m; 344 minutes), four baselines green, every
+    break caught and none CRASHED or ELSEWHERE. Breaks 527-530 are each
+    caught by the probe they name.
 
 - **R202 — The keyboard gate waits on the clock after a page load.** Found
   by R201. After each navigation `tools/a11y.js` sleeps a fixed time (900ms,
