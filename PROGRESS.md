@@ -1,5 +1,73 @@
 # PROGRESS
 
+## Session 224 — R201: the height and keyboard gates refuse a screen still loading ✅
+
+**R200 found the wide gate measuring main.js's "Warming up the lab…" card as
+a screen. The height and keyboard gates had the same hole. All three now
+read the card from one place and refuse it, and each proves that on every
+run. With the lazy modules 800ms slow, all three are green where the height
+gate read 39 problems and the keyboard gate two.**
+
+### Measured first
+
+- **250ms of latency on every fetch** (a scratch copy of R200's tree):
+  height 39 problems, keyboard 18. That probe also slows the eager boot, so
+  it does not isolate the card.
+- **Only the five lazy modules paused 800ms** (the Fetch domain). The
+  keyboard gate's waits are 450-700ms sleeps.
+  - Height: the same 39 problems, all its "never reached" checks (32
+    worst-case Vaults, seven Dex budgets).
+  - Keyboard: two problems, the War Room's tab bar and the dominion banner
+    "never drawn", because it measured the War Room's card.
+  - So the card accounts for every height problem and both keyboard
+    problems. The other 16 keyboard problems under the first probe are the
+    slow boot.
+
+### What shipped
+
+- **`warmingCard` in `tools/cdp.js`**, which all three browser gates import,
+  reads the card from `lazy()` in main.js. The wide gate's own copy of the
+  reader is gone. A gate that cannot find the card says so and goes red.
+- **Height:** `READY` refuses the card.
+- **Keyboard:** `tabTo` waits, up to 12s, until the screen it opened is
+  visible, not empty and not the card. The sleeps after it are unchanged.
+- **Every run**, each gate checks that a probe div holding only the card does
+  not read as painted. Breaks 528 (height), 529 (keyboard) and 530 (the
+  shared reader finds nothing).
+
+### Verification
+
+- **Fixed tree, lazy modules 800ms slow:** height, keyboard and wide all
+  green. **250ms on every fetch:** height green, the probe the entry named.
+- **At rest, no measurement moved:** height 10 screens and 133 folds;
+  keyboard 119 controls, 82 views, 125 reached by Tab.
+- `--anchors` after the tick: 521 anchors match. `npm test` alone: green,
+  289s wall, 1,117 CPU-s of 1,425, walk cache warm.
+- **Full battery** (a gate's logic changed): 521 breaks in four chunks,
+  chunk 4 first (115m), then 1 (23m), 2 (67m) and 3 (139m). That is 344
+  minutes, the fifteenth reading. Four baselines green (41 of 41 each), and
+  521 caught with 0 MISSED, 0 CRASHED and 0 ELSEWHERE.
+- No game code, data or save schema changed (tools and docs only). The
+  browser gates for 380px, console errors and old saves are green in all
+  four baselines.
+
+### Known issues
+
+- **R202 (queued): the keyboard gate still sleeps a fixed time after a page
+  load.** Under 250ms on every fetch it reads 7 problems, down from 18, and
+  none of them is the card.
+  - Three are those sleeps: the founding picker, the boot-failure card and
+    the welcome-back card.
+  - Four follow from the War Room's import chain outlasting `tabTo`'s 12s.
+- The keyboard gate's intermittent red under four lanes (R193, R194) is
+  still unexplained. It may have been the card, now refused, or the sleeps.
+
+### Next session
+
+R202, the one entry queued: every navigation in the keyboard gate waits for
+the page it expects rather than a fixed time. It changes a gate's logic, so
+it owes a full battery too.
+
 ## Session 223 — R200: the battery judges how a break was caught ✅
 
 **A break used to be caught whenever its gate went red, whatever turned it

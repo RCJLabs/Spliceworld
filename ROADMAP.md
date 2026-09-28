@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**1 entry queued.** R201.
+**1 entry queued.** R202.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -7482,7 +7482,7 @@ triangle working, and each region genuinely asks a different question)*.
     other breaks with an `expect` (6, 7, 15, 43, 59, 179, 297) each read the
     check they name.
 
-- **R201 — The height gate takes a screen still loading for a painted one.**
+- **R201 — The height gate takes a screen still loading for a painted one.** ✅
   Found by R200, which fixed the same hole in the wide gate. The height
   gate's `READY` is `!el.hidden && el.children.length > 0 && el.scrollHeight
   > 0`, and main.js's "Warming up the lab…" card, painted while a lazy
@@ -7496,6 +7496,61 @@ triangle working, and each region genuinely asks a different question)*.
   the wide gate does, read from `lazy()` and proved every run; the 250ms
   probe reads green on it; and the keyboard gate is probed the same way and
   fixed or argued.*
+
+  **Shipped: one reader for the loading card, and all three browser gates
+  refuse it.**
+  * **Measured first, two ways, on R200's tree.**
+    - With 250ms of latency on every fetch: height 39 problems, keyboard 18.
+      That probe also slows the eager boot, so it does not isolate the card.
+    - With only the five lazy modules paused 800ms (the Fetch domain; the
+      keyboard gate's waits are 450-700ms sleeps): height the same 39, and
+      keyboard two. Those two are the War Room's tab bar and the dominion
+      banner, "never drawn" because the walk measured the War Room's card.
+      So all 39 and both are the card. The other 16 keyboard problems are
+      the slow boot, a different question (R202 below).
+  * **`warmingCard` in `tools/cdp.js`**, the helper all three gates already
+    import, reads the card from `lazy()` in main.js. The wide gate's own
+    copy of that reader is gone. A gate that cannot find the card says so
+    and goes red.
+  * **The height gate's `READY`** refuses the card, so three quiet polls
+    can no longer settle on it.
+  * **The keyboard gate's `tabTo`** waits, up to 12s, until the screen it
+    opened is visible, not empty and not the card. The fixed sleeps after it
+    are unchanged. A screen still loading at 12s is a problem, not a skip.
+  * **Proved every run**, as the wide gate does: a probe div holding only
+    the card must not read as painted. Breaks 528 (height `READY`), 529
+    (keyboard `painted`) and 530 (the shared reader finds nothing).
+  * **Re-measured on the fixed tree.** Lazy modules 800ms slow: height,
+    keyboard and wide all green. 250ms on every fetch: height green, which
+    is the probe this entry named. At rest the numbers did not move: height
+    10 screens, 133 folds; keyboard 119 controls, 82 views, 125 tabbed to.
+  * **Argued, not fixed: the keyboard gate under 250ms on every fetch.** It
+    reads 7 problems where it read 18, and none is the card.
+    - Three are its fixed sleeps after a page load (900ms, 2200ms): the
+      founding picker, the boot-failure card, the welcome-back card.
+    - Four follow from one cause: with every module request 250ms slow, the
+      War Room's import chain took longer than `tabTo`'s 12s.
+    - That probe is harsher than anything a real baseline has shown: R200's
+      red was one slow lazy fetch, which the 800ms probe models and which is
+      green. The sleeps after a navigation are filed as R202.
+  * **The full battery** (a gate's logic changed): 521 breaks in four
+    chunks (23m, 67m, 139m, 115m; 344 minutes), four baselines green, every
+    break caught and none CRASHED or ELSEWHERE. Breaks 527-530 are each
+    caught by the probe they name.
+
+- **R202 — The keyboard gate waits on the clock after a page load.** Found
+  by R201. After each navigation `tools/a11y.js` sleeps a fixed time (900ms,
+  2200ms and others) and then measures, so a boot slower than the sleep is
+  measured before it exists. With 250ms of latency on every fetch, on
+  R201's tree, three problems are exactly that: "a fresh browser did not
+  reach the founding picker", "a save one version ahead did not reach the
+  boot-failure card" and "a week away opens the app with no welcome-back
+  card". The gate's intermittent red under four lanes (R193, R194) was
+  never explained. It may be this, or it may have been the card R201
+  removed. *Done when: every navigation in the keyboard gate waits for the
+  page it expects rather than a fixed time, the 250ms probe reads no
+  problem that is only a slow boot, and the change is argued against a
+  measured baseline wall-time.*
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same

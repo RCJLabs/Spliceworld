@@ -24,7 +24,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { sleep, serve, findChrome, connect } from './cdp.js';
+import { sleep, serve, findChrome, connect, warmingCard } from './cdp.js';
 import { walkedSave } from './fixtures.js';
 // R159 — the verdict decision, in its own file so both of its branches can
 // be unit-tested without a browser. See the note at the top of settling.js.
@@ -599,6 +599,11 @@ const proc = spawn(chrome, ['--headless=new', `--remote-debugging-port=${cdpPort
 
 const problems = [];
 const rows = [];
+// R201 — the card main.js paints into a screen while its module is fetched
+// (see `warmingCard` in cdp.js). READY below refuses it; if it cannot be
+// found, READY cannot, and the gate says so rather than measure blind.
+const WARMING = warmingCard();
+if (!WARMING) problems.push('main.js no longer paints a placeholder this gate can find in `lazy()`, so no wait here can tell a loading screen from a painted one');
 // R159 — which screens never went quiet. Declared out here with `rows`,
 // because the rules that read it run after the browser is gone.
 const stalls = new Map();
@@ -687,7 +692,15 @@ try {
   // exact sentence this milestone exists to stop printing. A reading taken
   // before the screen is up is not a quiet reading, it is NO reading: it
   // comes back empty and resets the count.
-  const READY = '!el.hidden && el.children.length > 0 && el.scrollHeight > 0';
+  // R201 — AND A SCREEN STILL FETCHING ITS MODULE IS NOT UP EITHER. `lazy()`
+  // paints one card into it while the fetch runs, and that card has
+  // children and a height, so READY passed it and three quiet polls took it
+  // for the screen. With the five lazy modules 800ms slow, the walk measured
+  // the Vault's and the Dex's cards and went red 39 times: 32 worst-case
+  // Vaults that "never reached every bay", and seven Dex budgets whose tab
+  // bar "offered nothing". The card is refused by what it IS, read from
+  // main.js, not by how long it usually lasts.
+  const READY = `!el.hidden && el.children.length > 0 && el.scrollHeight > 0 && el.innerHTML !== ${JSON.stringify(WARMING)}`;
   const signature = async (sel, ready) => await evaluate('(() => {'
     + `  const el = document.querySelector('${sel}');`
     + '  if (!el) return "";'
@@ -725,6 +738,19 @@ try {
   if (!(await settle('#screen-ranch', { deadline: 20000 })).settled) {
     stalled('boot', 'the Ranch never painted and went quiet within 20s of loading');
   }
+  // R201 — and READY refuses the card every run, not only on a slow box: a
+  // probe holding nothing but main.js's placeholder must never settle. The
+  // app does not touch an element it did not make, so nothing repaints it.
+  await evaluate(`(() => {
+    const probe = document.createElement('div');
+    probe.id = 'r201-warming';
+    probe.innerHTML = ${JSON.stringify(WARMING)};
+    document.body.append(probe);
+  })()`);
+  if ((await settle('#r201-warming', { deadline: 800 })).settled) {
+    problems.push(`READY settles on a screen still loading its module (${JSON.stringify(WARMING)}), so a lazy screen can be measured before it exists`);
+  }
+  await evaluate(`document.getElementById('r201-warming')?.remove()`);
   // R98 — `innerText`, so it is what the player READS: hidden folds and
   // display:none contribute nothing, which is exactly the difference a fold
   // is there to make.

@@ -30,7 +30,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 // R81 — the driver moved to its own module so tools/boot.js could use it too.
-import { sleep, serve, findChrome, connect, CHROME_CANDIDATES } from './cdp.js';
+import { sleep, serve, findChrome, connect, CHROME_CANDIDATES, warmingCard } from './cdp.js';
 // R115 — the boot-failure pass drives the future-save branch, which needs to
 // know what "one version ahead" is. Read off the engine, never typed twice.
 import { SAVE_VERSION } from '../save/save.js';
@@ -794,6 +794,26 @@ async function main() {
     // cannot open; §6a reports why a keyboard cannot reach it, and the end of
     // the run names what the pointer passes had to skip.
     const pointerless = new Set();
+    // R201 — …AND IT WAITS FOR THE SCREEN IT OPENED, NOT FOR THE CLICK. Five
+    // screens lazy-load, and every pass slept a fixed 450-700ms after the
+    // click and measured whatever was there. With the lazy modules 800ms
+    // slow, what was there in the War Room was main.js's "Warming up the
+    // lab…" card, and the walk reported the War Room's tab bar and the
+    // dominion banner as never drawn. A screen is open when it is visible,
+    // has something in it, and is not that card (`warmingCard` in cdp.js).
+    const WARMING = warmingCard();
+    if (!WARMING) note('main.js no longer paints a placeholder this gate can find in `lazy()`, so no pass here can tell a loading screen from a painted one');
+    const painted = async (sel, deadline = 12000) => {
+      const t0 = Date.now();
+      do {
+        if (await evaluate(`(() => {
+          const el = document.querySelector('${sel}');
+          return !!el && !el.hidden && el.children.length > 0 && el.innerHTML !== ${JSON.stringify(WARMING)};
+        })()`)) return true;
+        await sleep(50);
+      } while (Date.now() - t0 < deadline);
+      return false;
+    };
     const tabTo = async (s) => {
       const ok = await evaluate(`(() => {
         const b = document.querySelector('#tabs button[data-screen="${s}"]');
@@ -801,8 +821,12 @@ async function main() {
         b.click();
         return true;
       })()`);
-      if (!ok) pointerless.add(s);
-      return ok;
+      if (!ok) { pointerless.add(s); return false; }
+      if (!(await painted(`#screen-${s}`))) {
+        note(`the ${s} screen was still loading its module 12s after its tab was pressed, so nothing measured it`);
+        return false;
+      }
+      return true;
     };
     // R115 — SNAPSHOT BEFORE EVERY NAVIGATION, because precise coverage lives
     // in the isolate and a reload throws away what the previous document ran.
@@ -863,6 +887,19 @@ async function main() {
     errors.length = 0;
     await send('Page.navigate', { url });
     await sleep(2200);
+    // R201 — and the wait refuses the card every run, not only on a slow box:
+    // a probe holding nothing but main.js's placeholder must never read as
+    // painted. The app does not touch an element it did not make.
+    await evaluate(`(() => {
+      const probe = document.createElement('div');
+      probe.id = 'r201-warming';
+      probe.innerHTML = ${JSON.stringify(WARMING)};
+      document.body.append(probe);
+    })()`);
+    if (await painted('#r201-warming', 800)) {
+      note(`a screen still loading its module (${JSON.stringify(WARMING)}) reads as painted, so a pass can measure a lazy screen before it exists`);
+    }
+    await evaluate(`document.getElementById('r201-warming')?.remove()`);
 
     // ---- 1. every control clears the floor, on every view ------------------
     const seen = new Map();

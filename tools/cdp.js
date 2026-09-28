@@ -10,13 +10,30 @@
 
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// R201 — WHAT A SCREEN SAYS WHILE IT IS STILL ON ITS WAY, in one place. Five
+// of the six screens lazy-load, and while the module is fetched `lazy()` in
+// main.js paints one card into the screen. It is visible, it is not empty,
+// and it does not change, so a wait that asks only those three things takes
+// it for a painted screen. R200 found that in the wide gate (a red on its own
+// baseline); R201 found it in the height gate (39 reds with the lazy modules
+// 800ms slow) and in the keyboard gate's War Room (two). Every browser gate
+// reads the card from here, and here reads it from main.js, so a reworded card
+// is still the card. `null` when `lazy()` no longer paints one this can find,
+// and a gate that gets `null` has to say so and go red: a wait that cannot
+// refuse the card is the wait R200 found.
+export function warmingCard() {
+  let src;
+  try { src = readFileSync(join(root, 'main.js'), 'utf8'); } catch { return null; }
+  return src.match(/function lazy\([\s\S]*?root\.innerHTML = '([^']+)';/)?.[1] ?? null;
+}
 
 // --- a static server, so the gate needs nothing running ---------------------
 export const MIME = {
