@@ -7577,6 +7577,30 @@ const BREAKS = [
     to: '  return null;',
     expect: 'no longer paints a placeholder this gate can find',
   },
+  // R202 — A PAGE LOAD WAITS FOR THE PAGE, NOT FOR A NUMBER. Each takes
+  // one half of what `settled` asks away, and the keyboard gate's every-run
+  // checks (a page with its scripts off; a request held in flight) have to
+  // notice.
+  {
+    // With 250ms on every fetch the gate read seven problems that were all
+    // a boot measured before it finished; the wait is what closed them.
+    // BLIND AGAIN IF the scripts-off check stops running before the walk.
+    n: 531, gate: A11Y, name: 'a page load is taken as arrived whether or not the app has booted',
+    file: 'tools/a11y.js',
+    anchor: "          sig = await evaluate(`${BOOTED} ? document.getElementsByTagName('*').length + ':' + document.documentElement.scrollHeight : ''`);",
+    to: "          sig = await evaluate(`document.getElementsByTagName('*').length + ':' + document.documentElement.scrollHeight`);",
+    expect: 'a page no script has run in reads as arrived',
+  },
+  {
+    // After the first paint main.js still fetches the welcome card, the
+    // geometry and the sky; the old sleeps covered them by accident.
+    // BLIND AGAIN IF the in-flight check stops holding a request open.
+    n: 532, gate: A11Y, name: 'a page load is taken as arrived with requests still in flight',
+    file: 'tools/a11y.js',
+    anchor: '        if (sig && !inFlight.size && sig === last) {',
+    to: '        if (sig && sig === last) {',
+    expect: 'a page with a request still in flight reads as arrived',
+  },
 ];
 
 const pristine = {};
