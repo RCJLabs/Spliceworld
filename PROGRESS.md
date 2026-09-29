@@ -1,5 +1,69 @@
 # PROGRESS
 
+## Session 226 — R203: the Dex draws every creature it holds back ✅
+
+**Reported from a phone: the Dex roster showed names and part counts but no
+creatures past the first three rows. From R104 on, every deferred Dex
+portrait stayed blank, because the draw was handed a cell without its
+species. It is fixed, the keyboard gate now walks both grids and says so,
+and the service worker's cache is bumped so an installed game picks it up.**
+
+### Measured first
+
+- **At 380px on the keyboard gate's lab save, every cell scrolled into
+  view:** 9 of 37 roster creatures drawn and 0 of 6 variants, with no
+  console error. The first empty cells were chameleon, skunk, porcupine and
+  mantis, the same as the phone.
+- **The cause, in R104's own commit (`c70fc7a`).** Each deferred cell's
+  species moved out of a `data-portrait` attribute and into a JS queue, and
+  `draw(cell)` became `draw(cell, entry)`. Both callers kept passing the cell
+  alone, so `entry` was undefined and `draw` returned before drawing. The
+  no-observer fallback iterated the queue as if it were cells.
+- **Why no gate saw it.** The keyboard gate measured that the Dex paints
+  92 KB before a scroll (the art is deferred). Nothing measured that a scroll
+  brings it.
+
+### What shipped
+
+- **`fillPortraits`** pairs each cell with its entry once, in a map, and
+  `draw` takes only the cell. Position is the pairing, because each
+  `dex-later` cell is written by the same expression that pushes its entry.
+- **The keyboard gate** walks the Roster and Variants tabs, scrolls every
+  cell into view, and names a blank cell, or a roster cell that drew another
+  species (its clip-path is named after the species). Breaks 533 (no
+  species, R104's shape) and 534 (paired with the neighbour).
+- **`sw.js` CACHE** is bumped to `spliceworld-v64-605baaf5`, because
+  `dex-ui.js` is precached.
+
+### Verification
+
+- **After, same save, same walk:** 37 of 37 roster and 6 of 6 variants
+  drawn, no console error. Screenshots before and after at 380px show the
+  Air band blank, then drawn. The first paint is still 92 KB (budget 100).
+- `--anchors` after the tick: 525 anchors match. `--self` green.
+- `--only 533,534` behind a baseline: 41 of 41 gates green, and both breaks
+  caught by the check they name. 533 reads "leaves 28 of 37 creatures blank
+  … (chameleon, skunk, porcupine, mantis, cobra, …)", the phone's own list.
+  BATTERY_EXIT 0.
+- `npm test` alone: green, 1,173 CPU-s of 1,641 (six walks rebuilt, since
+  the game code changed).
+- **The full battery is not owed.** This adds a rule to the keyboard gate and
+  changes none of its existing ones, and the rot check last ran at R202.
+- No save schema change. The keyboard gate's console check and 380px
+  measurements are green.
+
+### Known issues
+
+- **R204 (queued): the height gate measures a mostly blank roster.** A Dex
+  cell reserves no box for its portrait. The roster grows from 2426px to
+  3280px as its cells draw, but the height gate measures without scrolling:
+  `dex:roster` 2253px against a 3100px budget, 28 cells blank.
+
+### Next session
+
+R204: the height gate measures the roster a player actually scrolls to,
+and `dex:roster`'s budget is re-derived or argued.
+
 ## Session 225 — R202: every page load in the keyboard gate waits for the page ✅
 
 **The keyboard gate slept a fixed 0.9-2.4s after every page load and then
