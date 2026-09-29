@@ -1,5 +1,75 @@
 # PROGRESS
 
+## Session 225 — R202: every page load in the keyboard gate waits for the page ✅
+
+**The keyboard gate slept a fixed 0.9-2.4s after every page load and then
+measured. It now waits for the page it expects: the app booted, nothing in
+flight, and the DOM still. With 250ms on every fetch it reads green where it
+read 7 problems (18 on R200's tree). At rest it runs about 7% faster, with
+byte-identical output. The queue is empty.**
+
+### Measured first
+
+- **A probe timing every page the gate loads** (twice, warm, on R201's tree).
+  - At rest every page arrived in 0.36-0.70s and every tab painted in about
+    0.15s, against sleeps of 900-2400ms.
+  - With 250ms on every fetch, a page took 4.5-5.3s and a tab 1.4-1.6s.
+- **So R201's seven leftover problems were one cause.** Three were a boot
+  measured before it finished. The War Room's four were a tab pressed while
+  the page was still booting: its tabs were not bound yet, so the click did
+  nothing, and the screen "was still loading" 12s later.
+- **Wall time before** (alone): 202.0s and 200.8s.
+
+### What shipped
+
+- **`arrive` and `settled`** (`tools/a11y.js`). Eleven fixed sleeps, and the
+  held-row pass's own boot poll, now wait until three things are true:
+  - the app has booted onto a painted screen that is not the loading card,
+    the founding picker, or the boot-failure card;
+  - no request is in flight (counted off the Network domain; main.js still
+    fetches the welcome card, the geometry and the sky after the first
+    paint);
+  - the DOM has held still for three 100ms polls.
+  Each pass still checks what it expects of the page itself, in the words it
+  always used. A page that has not arrived in 30s is a problem, named.
+- **Proved every run:** a page with its scripts off, and a booted page with a
+  request held in flight, must not read as arrived. Breaks 531 and 532.
+
+### Verification
+
+- **250ms on every fetch:** green (was 7 problems, 18 on R200's tree).
+- **Wall time after** (alone, same box): 188.2s and 187.5s. All four runs'
+  summary lines are byte-identical: 119 controls, 82 views, 6 of 6 screens,
+  125 reached by Tab, 0 nodes rewritten, 92 KB of Dex.
+- `--anchors` after the tick: 523 match. `--self` green.
+- **`npm test`: red on SECONDS only, and the A/B says the host.** The
+  container restarted onto a slower machine.
+  - This tree read 1,468 CPU-s, then 1,466.
+  - A worktree at R201's merge, same box, same hour, read 1,473 and 1,456.
+  - The budget is 1,425; R201 read 1,117 the day before. Every job passed.
+    R202 changes nothing the suite runs.
+- **Full battery**: 523 breaks, four baselines green (41 of 41), 523 caught,
+  0 MISSED, 0 CRASHED, 0 ELSEWHERE, BATTERY_EXIT 0 in every chunk.
+  - Chunk 4 ran first (144m), then the container restarted.
+  - Chunks 1-3 were re-run whole (28m, 108m, 184m); chunk 1 rebuilt the
+    wiped walk cache.
+  - 464 minutes on a host about 30% slower, so not a reading to plan on.
+- No game code, data or save schema changed (tools and docs only).
+
+### Known issues
+
+- The suite budget (1,425 CPU-s) does not fit this host: the unchanged R201
+  tree is over it too. If the next session lands on the same kind of
+  machine, `npm test` will read red on seconds again, and its own A/B is the
+  answer. It is not re-budgeted here, because one host is not a trend.
+- The queue is empty.
+
+### Next session
+
+The queue is empty. The next session starts by deciding what to file. The
+full battery ran in each of R200, R201 and R202, so the rot check is not due
+before about R207.
+
 ## Session 224 — R201: the height and keyboard gates refuse a screen still loading ✅
 
 **R200 found the wide gate measuring main.js's "Warming up the lab…" card as

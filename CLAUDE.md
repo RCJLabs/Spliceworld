@@ -79,7 +79,15 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (4h45m to 6h30m. R201 is the FIFTEENTH reading: 521
+**The full battery (4h45m to 6h30m. R202 is the SIXTEENTH reading, and it is
+NOT on the same host: 523 breaks at 28m, 108m, 184m and 144m, which is 464
+minutes. The container restarted onto a machine where the unchanged R201 tree
+read `npm test` 1,473 and 1,456 CPU-s against 1,117 the day before, about 30%
+slower, and it restarted again mid-run and wiped the walk cache, so chunk 1
+rebuilt the walks. Chunk 4 had finished before that restart; chunks 1-3 were
+re-run whole (R192's rule). Do not move the range for it: every chunk is
+25-35% over R201's, which is the host. 523 caught, none CRASHED or ELSEWHERE,
+four baselines green. R201 is the FIFTEENTH reading: 521
 breaks at 23m, 67m, 139m and 115m, which is 344 minutes — 21 under R200 with
 three more breaks, so the range holds. 521 caught, none CRASHED or
 ELSEWHERE, four baselines green. R200 is the FOURTEENTH reading: 518

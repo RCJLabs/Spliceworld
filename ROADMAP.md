@@ -7584,6 +7584,12 @@ triangle working, and each region genuinely asks a different question)*.
     188.2s and 187.5s after, about 7% faster. No count moved: 119 controls,
     82 views, 6 of 6 screens, 125 reached by Tab, 0 nodes rewritten by an
     unchanged tick, 92 KB of Dex before a scroll.
+  * **The full battery** (a gate's logic changed): 523 breaks, four
+    baselines green, every break caught and none CRASHED or ELSEWHERE.
+    Breaks 531 and 532 are each caught by the check they name. It read 464
+    minutes on a host about 30% slower than R201's, and the container
+    restarted once mid-run: chunk 4 had finished, and chunks 1-3 were re-run
+    whole.
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same
