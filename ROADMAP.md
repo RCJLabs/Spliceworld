@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**0 entries queued.**
+**1 entry queued.** R204.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -7590,6 +7590,57 @@ triangle working, and each region genuinely asks a different question)*.
     minutes on a host about 30% slower than R201's, and the container
     restarted once mid-run: chunk 4 had finished, and chunks 1-3 were re-run
     whole.
+
+- **R203 — The Dex draws nine creatures and never the rest.** ✅ Reported
+  from a phone: the Roster tab's cells past the first three rows show a name, a
+  role and a part count, and no creature. R104 deferred every cell past the
+  ninth until it scrolls into view, then moved each deferred cell's species
+  id out of a `data-portrait` attribute and into a JS queue. It changed
+  `draw(cell)` to `draw(cell, entry)` and left both callers passing the cell
+  alone, so `entry` is undefined and the draw returns before drawing
+  anything. Measured on R202's tree at 380px, every cell scrolled into view:
+  9 of 37 roster portraits drawn, 0 of 6 variants, no console error. No gate
+  asks. The keyboard gate measures that the Dex paints 92 KB before a scroll
+  (that the art is deferred), and nothing measures that it arrives after
+  one. *Done when: every roster and variant cell draws its creature once it
+  has been scrolled into view, at 380px, in a real browser; a gate walks the
+  grid and says so, with a break for the draw losing its species; and the
+  first paint stays deferred (the 100 KB budget holds).*
+
+  **Shipped: the Dex draws every creature it holds back.**
+  * **`fillPortraits`** (`splice/dex-ui.js`) pairs each deferred cell with
+    its entry once, in a map, and `draw` takes only the cell and looks its
+    own entry up. So no caller can hand it half a pair again. Position is
+    the pairing because every `dex-later` cell is written by the same
+    template expression that pushes its entry. The fallback with no
+    IntersectionObserver iterated the queue as if it were cells, and now
+    iterates the cells.
+  * **Measured after, same save, same walk:** roster 37 of 37 drawn (was 9),
+    variants 6 of 6 (was 0), no console error. The first paint is unchanged
+    at 92 KB, under the 100 KB budget.
+  * **The keyboard gate walks the grids.** After its first-paint check it
+    opens the Roster and Variants tabs, scrolls every cell into view the way
+    a thumb does, and names any cell still blank. A roster cell must also
+    have drawn its own species (its clip-path is named after it). Break 533
+    hands the draw no species (R104's shape), and break 534 pairs every
+    cell with its neighbour.
+  * **The service worker's cache is bumped** (`spliceworld-v64-605baaf5`),
+    because `splice/dex-ui.js` is precached. Without it, an installed copy
+    of the game keeps the broken module.
+  * **Found on the way (R204):** the roster grows 854px as its cells draw,
+    and the height gate has been measuring it mostly blank since R104.
+
+- **R204 — The height gate measures a Dex roster that is mostly blank.**
+  Found by R203. A Dex cell reserves no box for its portrait, and 28 of the
+  roster's 37 cells draw only once scrolled into view. The height gate
+  measures without scrolling, so `dex:roster` has read a roster with 28
+  blank cells since R104 (2253px against 3100 on its day-180 save, R203's
+  tree). On the keyboard gate's lab save the roster is 2426px on arrival and
+  3280px once every cell has drawn. The variants tab does not move (1187px
+  either way), because its portraits sit in a fixed column. *Done when: the
+  height gate measures the roster a player scrolls to (every portrait drawn,
+  or a reserved box that makes drawn and undrawn the same height), and the
+  `dex:roster` budget is re-derived from that or argued.*
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same
