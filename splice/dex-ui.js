@@ -607,7 +607,17 @@ export function renderDexScreen(root, ctx) {
 function fillPortraits(root, content, queue) {
   const cells = [...(root.querySelectorAll?.('.dex-later') ?? [])];
   if (!cells.length || !queue.length) return;
-  const draw = (cell, entry) => {
+  // R203 — EACH CELL KNOWS ITS OWN ENTRY. R104 moved the species id off the
+  // cell and into `queue`, changed `draw(cell)` to `draw(cell, entry)`, and
+  // left both callers passing the cell alone: every deferred portrait read an
+  // undefined entry and drew nothing, from R104 until a phone reported it (9
+  // of 37 roster cells drawn, 0 of 6 variants). The pairing lives here now,
+  // made once, so no caller can hand `draw` the wrong half of it. Position is
+  // the pairing because both lists come out of one template: every
+  // `dex-later` cell is written by the same expression that pushes its entry.
+  const entryOf = new Map(cells.map((cell, k) => [cell, queue[k]]));
+  const draw = (cell) => {
+    const entry = entryOf.get(cell);
     const id = entry?.id;
     if (!id || !content.species[id]) return;
     // The prefix is not decoration: it keeps the clip-path ids unique when
@@ -620,7 +630,7 @@ function fillPortraits(root, content, queue) {
     cell.classList.remove('dex-later');
   };
   if (typeof IntersectionObserver !== 'function') {
-    for (const cell of pending) draw(cell);
+    for (const cell of cells) draw(cell);
     return;
   }
   const obs = new IntersectionObserver((entries) => {

@@ -7601,6 +7601,28 @@ const BREAKS = [
     to: '        if (sig && sig === last) {',
     expect: 'a page with a request still in flight reads as arrived',
   },
+  // R203 — THE DEX DRAWS WHAT IT HELD BACK. Reported from a phone: from
+  // R104 on, every deferred Dex portrait stayed blank, because the draw was
+  // handed a cell without its species. The keyboard gate now walks both
+  // grids into view and counts blanks, and wrong species.
+  {
+    // The R104 shape exactly: the draw gets a cell and no species.
+    // BLIND AGAIN IF the walk stops scrolling the cells past the ninth.
+    n: 533, gate: A11Y, name: 'a Dex cell scrolled into view is handed no species, and stays blank',
+    file: 'splice/dex-ui.js',
+    anchor: '    const entry = entryOf.get(cell);',
+    to: '    const entry = cell.entry;',
+    expect: 'creatures blank after every cell was scrolled into view',
+  },
+  {
+    // The pairing off by one: every deferred cell draws its neighbour.
+    // BLIND AGAIN IF the walk stops checking a roster cell's clip-path.
+    n: 534, gate: A11Y, name: "a Dex cell scrolled into view draws its neighbour's creature",
+    file: 'splice/dex-ui.js',
+    anchor: '  const entryOf = new Map(cells.map((cell, k) => [cell, queue[k]]));',
+    to: '  const entryOf = new Map(cells.map((cell, k) => [cell, queue[k + 1]]));',
+    expect: 'draws another species into',
+  },
 ];
 
 const pristine = {};

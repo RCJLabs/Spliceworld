@@ -1469,6 +1469,48 @@ async function main() {
       } else if (dexKb > DEX_FIRST_PAINT_KB) {
         note(`the Dex paints ${dexKb} KB before the player has scrolled (budget ${DEX_FIRST_PAINT_KB} KB)`);
       }
+      // R203 — …AND WHAT IT HELD BACK ARRIVES. The rule above proves the art
+      // waits for a scroll, and nothing proved a scroll brings it: from R104
+      // until a phone reported it, no deferred cell ever drew (9 of 37 roster
+      // creatures, 0 of 6 variants), because the draw was handed a cell
+      // without its species. So walk each grid the way a thumb does, every
+      // cell into view, and count what is still blank. A roster cell must also
+      // have drawn its OWN species, named in its clip-path, or a pairing that
+      // went wrong would pass as art.
+      for (const tab of ['roster', 'variants']) {
+        const opened = await evaluate(`(() => {
+          const b = document.querySelector('#screen-dex button[data-dex-tab="${tab}"]');
+          if (!b) return false;
+          b.click();
+          return true;
+        })()`);
+        if (!opened) { note(`the Dex has no ${tab} tab to walk, so nothing measured whether its deferred art arrives`); continue; }
+        await sleep(300);
+        const CELLS = `document.querySelectorAll('#screen-dex .dex-portrait, #screen-dex .variant-portrait')`;
+        const n = Number(await evaluate(`${CELLS}.length`));
+        for (let k = 0; k < n; k++) {
+          await evaluate(`${CELLS}[${k}]?.scrollIntoView({ block: 'center' })`);
+          await sleep(40);
+        }
+        await sleep(300);
+        const walked = JSON.parse(await evaluate(`JSON.stringify((() => {
+          const cells = [...${CELLS}];
+          const blank = cells.filter((c) => !c.querySelector('svg'));
+          const wrong = cells.filter((c) => {
+            const sp = c.closest('[data-species]')?.dataset.species;
+            return sp && c.querySelector('svg') && !c.querySelector('[id^="dex-' + sp + '-"]');
+          });
+          const name = (c) => (c.closest('[data-species]')?.dataset.species ?? c.parentElement?.querySelector('strong')?.textContent ?? '?').trim();
+          return { n: cells.length, blank: blank.map(name), wrong: wrong.map(name) };
+        })())`));
+        if (!walked.n) note(`the Dex ${tab} tab drew no portrait cells at all, so nothing was walked`);
+        if (walked.blank.length) {
+          note(`the Dex ${tab} tab leaves ${walked.blank.length} of ${walked.n} creatures blank after every cell was scrolled into view (${walked.blank.slice(0, 5).join(', ')}${walked.blank.length > 5 ? ', …' : ''})`);
+        }
+        if (walked.wrong.length) {
+          note(`the Dex ${tab} tab draws another species into ${walked.wrong.length} cell(s) (${walked.wrong.slice(0, 5).join(', ')})`);
+        }
+      }
       }
       return { muts, identity, dexKb, leftBehind };
     };
