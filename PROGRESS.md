@@ -30,7 +30,11 @@ a 22-seed census puts at least three of them on a chimera.**
   - `dex:combos` +4 rows;
   - the combo-by-grade count 480 -> 544;
   - the growth table;
-  - §4.0's species, parts and combo counts.
+  - §4.0's species, parts and combo counts;
+  - the suite's battle budget, 1,110,000 -> 1,255,000, and its floor,
+    910,000 -> 1,030,000. Both trees were counted per call site: +61,513,
+    all of it the catalogue (8 more builds in every balance pool is 47,616
+    of it).
 - **The vet census** (diet section 5): 22 campaigns, Gauze kept on one, seed
   91. It replaces seed 99, which now ends on Doc.
 - **R148's chassis rule, split, with break 537.** It now has a grounded-body
@@ -45,6 +49,14 @@ a 22-seed census puts at least three of them on a chimera.**
   fixed: it is outside R205's criterion.
 - **R148's comment said +2.6pp; the tree before R205 read +2.2.** Drift since
   R148, still inside the 1.5 floor.
+- **The battery's lanes share one battle log.** Each lane copies the tree but
+  not the temp directory, and `tools/flown.js` writes to
+  `tmpdir/sw-walk-cache/.flown`. So two SUITE-gated breaks in flight at once
+  read each other's battles. In R205's `--only 261,262,300`, break 300 (the
+  sweep stops counting) reported 3,094,974 battles, which were 261's.
+  Run alone, 300 reads 654,654, under the floor as built. All three were
+  caught either way, but a count-based verdict in a parallel run cannot be
+  trusted. Filed, not fixed.
 - **Two log files landed in `/`** (`/diet.log`, `/reach.log`) from a shell
   variable that was not set in a subshell. The safety check refused to
   delete files at the root, rightly; they are harmless in this container.
@@ -63,6 +75,9 @@ a 22-seed census puts at least three of them on a chimera.**
   at +800ms latency, measured with four smoke lanes sharing the box. It was
   green in the first baseline and green again run alone, so it is not this
   milestone's.
+- **The battle budget's three breaks** (261, 262, 300) were all caught behind
+  a green baseline. 300 was re-run alone because of the shared log above,
+  and read 654,654 against the new floor of 1,030,000.
 - **The full battery was not run.** R205 split R148's rule: it lowered one
   floor and added an assertion. All three breaks aimed at that rule were
   re-run and caught. The battery last ran in full at R202, three milestones

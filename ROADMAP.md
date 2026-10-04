@@ -7960,6 +7960,12 @@ written so that it has something on screen when it ships.
     not ground: +5.7 before R205 and after, floor 4. The roster-wide floor
     moved by the same 1.1, 1.5 -> 0.4.
   * **The combo-by-grade count** 480 -> 544 (34 combos x 16).
+  * **The suite's battle budget, 1,110,000 -> 1,255,000** (floor 910,000 ->
+    1,030,000). Both trees were counted per call site. The four animals and
+    four combos add 61,513 battles, 47,616 of them as eight more builds in
+    every balance pool; all of it is catalogue, none of it sampling. The
+    tree before R205 already flew 1,081,205, so content since R118 had
+    spent most of the headroom. Breaks 261, 262 and 300 still go red.
 
   **Done when, checked.** The balance gate's 24 pools are clean at every
   grade. The day-180 walk wears all four fliers at some point and ends
