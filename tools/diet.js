@@ -368,10 +368,16 @@ sockets across ${bodies} kept chimeras: `
 // walk's own patients, and the census's median and worst ranches priced.
 // IF THIS GOES RED on Gauze after a change elsewhere, the answer is a census
 // rather than another seed: if no campaign keeps her, her price is R196 again.
-// BLIND AGAIN IF seed 99 leaves this list while another seed is found to hold
-// her by luck of one run, or the rule reads `payroll.hires` (which a cached
-// save does not carry) instead of the books.
-const VET_SEEDS = [...COMBO_SEEDS, 99];
+// BLIND AGAIN IF the seed that keeps her is swapped for one found by luck of
+// one run rather than by a census, or the rule reads `payroll.hires` (which a
+// cached save does not carry) instead of the books.
+// R205 — AND THE CENSUS WAS RUN, as the note above asks, because four new
+// animals change what every campaign buys and seed 99 now ends on Doc. 22
+// campaigns on R205's tree (R196's sixteen, the reach seeds and 99): Gauze is
+// the vet on the books at day 180 on ONE, seed 91, and Doc on the other 21.
+// One in twenty-two is R196's one in twenty, so her price stands and the rule
+// reads the campaign that keeps her now.
+const VET_SEEDS = [...COMBO_SEEDS, 91];
 {
   const vets = Object.entries(content.henchmen ?? {}).filter(([, h]) => h.duty === 'infirmary').map(([id]) => id);
   const held = VET_SEEDS.map((seed) => {

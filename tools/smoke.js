@@ -2192,7 +2192,8 @@ for (const combo of Object.values(content.combos)) {
     gradeAssignmentsChecked++;
   }
 }
-assert.equal(gradeAssignmentsChecked, 480, 'every combo × grade assignment was actually checked');
+// R205 — 34 combos x 16 grade pairs; the four fliers brought four combos.
+assert.equal(gradeAssignmentsChecked, 544, 'every combo × grade assignment was actually checked');
 // Grades are the power curve: each tier opens the boss further.
 //
 // Measured on the MEAN across builds, not the max. A max over a couple of
@@ -22692,11 +22693,42 @@ if (inShard('bulk')) {
   assert.ok(spread <= 3,
     `no chassis is simply better than the others over the whole live band (${table} — ${spread.toFixed(1)}pp apart, ceiling 3, measured 1.3)`);
 
-  // 2. BULK IS WORTH A FRAME AGAINST A GRIND. Measured +2.6pp.
+  // 2. BULK IS WORTH A FRAME AGAINST A GRIND, asked first of the bodies the
+  //    frame does NOT ground. R205 split this, because the roster-wide number
+  //    below was measuring flight as well as bulk: a flier keeps its flight on
+  //    a Scamper and loses it on a Rumbler, so every flier pulls the average
+  //    toward the Scamper whatever its strength (fliers -7.9pp before R205,
+  //    -8.4 after). Bodies that stay on the ground either way are the honest
+  //    measure of what the bulk buys, and R205's four fliers did not move
+  //    them: +5.7pp on the tree before it and +5.7 after. Floor 4.
+  const tkPrime = (partId) => ({ id: `bulk-${partId}`, partId, grade: 'prime' });
+  const grounded = purebred.filter((sp) => !analyze('S', BAYS.map((bay) => tkPrime(`${sp}_${bay}`)), content).flight.capable);
+  const groundedOver = (frame) => {
+    let wins = 0; let n = 0;
+    for (const sp of grounded) {
+      const c = mkBulk(frame, BAYS.map((bay) => `${sp}_${bay}`), 'prime', content);
+      for (const id of long) for (let i = 0; i < SEEDS; i++) {
+        n++; if (bulkFight(c, content.encounters[id], content, 60000 + i, 3).outcome === 'win') wins++;
+      }
+    }
+    return (wins / n) * 100;
+  };
+  const groundedGrind = groundedOver('L') - groundedOver('S');
+  assert.ok(grounded.length >= 20 && grounded.length < purebred.length,
+    `the bodies a Rumbler does not ground are most of the roster, and not all of it (${grounded.length} of ${purebred.length})`);
+  assert.ok(groundedGrind >= 4,
+    `for the bodies a Rumbler does not ground, bulk is worth the frame against a long one `
+    + `(${groundedGrind >= 0 ? '+' : ''}${groundedGrind.toFixed(1)}pp over ${long.length} grinding fights and ${grounded.length} bodies, floor 4, measured +5.7)`);
+  //    ...AND ACROSS THE WHOLE ROSTER, fliers included. Measured +2.6pp at
+  //    R148 and +2.2 on the tree before R205, with ten fliers in 39 bodies.
+  //    R205 brought four more (14 of 43), and they read like the ten (-8.4
+  //    against -7.9), so the roster's number fell by exactly what the flier
+  //    share moved it: 2.2 -> 1.1. The floor moved by the same 1.1, 1.5 ->
+  //    0.4, and the half above carries the claim at full strength.
   const grind = on.L.long - on.S.long;
-  assert.ok(grind >= 1.5,
+  assert.ok(grind >= 0.4,
     `and bulk is worth the frame against a long one (Rumbler ${on.L.long.toFixed(1)}% vs Scamper ${on.S.long.toFixed(1)}% `
-    + `over ${long.length} grinding fights, +${grind.toFixed(1)}pp, floor 1.5, measured +2.6)`);
+    + `over ${long.length} grinding fights, +${grind.toFixed(1)}pp, floor 0.4, measured +1.1)`);
 
   // 3. AND COSTS YOU IN A SHORT ONE. Measured -0.2pp, against +2.7 before.
   //    Without this half the rule passes on a Rumbler that was simply handed
@@ -22705,10 +22737,11 @@ if (inShard('bulk')) {
   assert.ok(dash <= 1,
     `and costs you when the fight is over quickly — a chassis that wins everywhere is not a choice `
     + `(Rumbler ${on.L.short.toFixed(1)}% vs Scamper ${on.S.short.toFixed(1)}% over ${short.length} short fights, `
-    + `${dash >= 0 ? '+' : ''}${dash.toFixed(1)}pp, ceiling 1, measured -0.2)`);
+    + `${dash >= 0 ? '+' : ''}${dash.toFixed(1)}pp, ceiling 1, measured -1.3 since R205)`);
 
   console.log(`   R148 chassis: ${table} over ${live.length} live fights (${spread.toFixed(1)}pp apart) — `
-    + `the Rumbler ${grind >= 0 ? '+' : ''}${grind.toFixed(1)}pp in a grind, ${dash >= 0 ? '+' : ''}${dash.toFixed(1)}pp in a dash`);
+    + `the Rumbler ${grind >= 0 ? '+' : ''}${grind.toFixed(1)}pp in a grind (${groundedGrind >= 0 ? '+' : ''}${groundedGrind.toFixed(1)} on the ${grounded.length} bodies it does not ground), `
+    + `${dash >= 0 ? '+' : ''}${dash.toFixed(1)}pp in a dash`);
 }
 
 // ---------------------------------------------------------------------------

@@ -5442,12 +5442,13 @@ const BREAKS = [
     // spread), so the anchor follows the number it sits beside, and R186
     // moved it again for R182's least-missed card. R187 bounded the SHUT half
     // on the worst case; the open half is still a reading, and session 216's
-    // faster table moved it by two species bays (4440 -> 4600). What the
+    // faster table moved it by two species bays (4440 -> 4600), and R205's
+    // four species moved the shut bound by four (3300 -> 3586). What the
     // break aims at is `opens`, which is untouched.
     n: 199, gate: HEIGHT, name: 'the height gate stops asking whether a folding screen still opens',
     file: 'tools/height.js',
-    anchor: '  vault:          { folded: 3300,  tallest: 4600, opens: 20 },',
-    to: '  vault:          { folded: 3300,  tallest: 4600 },',
+    anchor: '  vault:          { folded: 3586,  tallest: 4600, opens: 20 },',
+    to: '  vault:          { folded: 3586,  tallest: 4600 },',
   },
   {
     // R137 — the five rows that point at the Ranch go back to navigating to
@@ -7451,8 +7452,9 @@ const BREAKS = [
   {
     // R196 — THE SAME FEE, ON THE CAMPAIGNS. The diet gate reads who is on the
     // books at day 180, and at $20 no campaign keeps her.
-    // BLIND AGAIN IF seed 99 leaves VET_SEEDS, or the rule reads the hire
-    // log (which a cached save does not carry) instead of the books.
+    // BLIND AGAIN IF the census seed that keeps her (99 until R205, 91 since)
+    // leaves VET_SEEDS, or the rule reads the hire log (which a cached save
+    // does not carry) instead of the books.
     n: 519, gate: DIET, name: 'Nurse Gauze is priced out of every campaign, and no gate that reads a whole one notices',
     file: 'data/henchmen.json',
     anchor: '      "fee": 8,',
@@ -7652,6 +7654,23 @@ const BREAKS = [
     anchor: "        await evaluate(`${CELLS}[${k}]?.scrollIntoView({ block: 'center' })`);\n        await sleep(30);",
     to: '        await sleep(30);',
     expect: 'portraits back after every cell was scrolled into view',
+  },
+  {
+    // R205 — ONE POINT OF THE RUMBLER'S STAYING POWER. Its regen goes 11 ->
+    // 10, and on the bodies a Rumbler does not ground its grind edge falls
+    // from +5.7pp to +3.3, under the floor of 4. A point and not the
+    // Scamper's 8: at 8 the Rumbler is 3.4pp behind over the whole live band,
+    // so "no chassis is simply better" fails first and this rule is never
+    // seen (R205 ran that, and the battery called it ELSEWHERE). At 10 the
+    // spread is 1.4, inside its 3, and the grounded half is the first to say
+    // so; the roster-wide floor would follow it (-0.3 against 0.4).
+    // BLIND AGAIN IF the grounded half runs after the roster-wide one, or the
+    // break is made big enough for the spread rule to see it first.
+    n: 537, gate: BULK, name: "the Rumbler loses a point of regen, and bulk stops paying in a grind",
+    file: 'data/frames.json',
+    anchor: '        "stamina": 52,\n        "regen": 11,',
+    to: '        "stamina": 52,\n        "regen": 10,',
+    expect: 'for the bodies a Rumbler does not ground',
   },
 ];
 
