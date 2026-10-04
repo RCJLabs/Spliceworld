@@ -1,5 +1,52 @@
 # PROGRESS
 
+## Session 228 — Brainstorm: ten phases of something to see (R205–R214)
+
+**Not a milestone. Asked for directly: ten phases of visible additions, more
+to do, more to see, and more animals for the splice. Filed as ROADMAP §9.32
+and queued in §9.0. No game code changed.**
+
+### Measured first
+
+Every screen was photographed at 380px on the day-180 campaign, and each
+number in §9.32 was checked against the tree before it was written down:
+
+- No creature is drawn outside the arena, the Theater's slab and the Dex grid
+  until a row is opened: 20 animals on the Ranch, eight to a page, and 13
+  chimeras in the Pens.
+- The War Room's map is five text cards, and every Theater socket is a
+  dropdown of part names.
+- The arena plays one lunge, one shake and one flop. Each of the 42 enemy
+  units has its own written exit that the screen never shows, and every
+  region fights on the same gradient.
+- All six facility tracks are bought out by day 180; the Theater has two
+  tiers.
+- The roster is 37 animals: 17 Ground, 12 Water, 8 Air. Camo has one
+  carrier and Electric one animal plus a variant; three animals ride the Kite
+  frame.
+
+### What was filed
+
+- R205 four fliers (hummingbird, vulture, peacock, flying squirrel).
+- R206 four animals nature spliced first (elephant, platypus, mantis shrimp,
+  cuttlefish), on four new shape families.
+- R207 the Hexapod: Theater Tier III and a third pair of limbs.
+- R208 the Surgery Theater you can see: part thumbnails, and "IT'S ALIVE".
+- R209 battles you can feel: tag effects, region backdrops, written exits.
+- R210 the Ranch as a pasture with the player's own animals in it.
+- R211 the county on a drawn map.
+- R212 commissions: clients asking for a creature by its anatomy.
+- R213 the County Fair at each season's turn.
+- R214 dyes and accessories, proven to change no number.
+
+Each entry's *Done when* names its gates. R212, R213 and R214 each move
+SAVE_VERSION.
+
+### Next session
+
+R205. This filing rides to `main` with R205's merge rather than as a
+separate push. The full battery last ran at R202.
+
 ## Session 227 — R204: a Dex cell waiting for its creature keeps its room ✅
 
 **From R104 on, the Dex roster held 28 of its 37 portraits back until
