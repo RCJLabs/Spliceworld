@@ -48,7 +48,27 @@ browser.**
 
 ### Verification
 
-VERIFY
+- **`npm test`, run alone, after the baseline:** 11 of 11 jobs green.
+  1,344 CPU-seconds of 1,641 (6 walks rebuilt, so the allowance applied),
+  436s wall. 1,205,354 battles against 1,255,000, with no budget change:
+  R205 re-based it with content headroom and R206's content fits inside.
+- **Battery:**
+  - `--anchors`: 531 of 531.
+  - `--only 538,539,540,465,195,198`: 6 of 6 caught behind a baseline that
+    was red only on my cache miss above.
+  - A fresh `--baseline` on the final tree: 41 of 41 gates green (840s).
+  - The full battery was not run (last at R202; owed, see below).
+- **At 380px** (scratchpad probe, real UI, day-180 save with one spare
+  part of each new animal added to the Vault):
+  - Fresh, migrated (v63 -> v64) and day-180 saves have 0 console errors
+    and no sideways scroll.
+  - The Dex's Water section has 15 drawn cells.
+  - Every new animal has a Vault bay and a catalog line.
+  - The Theater spliced the trunk/club/mantle chimera on a Trotter and the
+    bill chimera on the Kite; both survive a reload.
+  - The mantle's six layers read `mantle-shift running`, and `none` under
+    emulated reduced motion.
+  - The part gallery draws all four purebreds.
 
 ### Next session
 
