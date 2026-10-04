@@ -7623,6 +7623,31 @@ const BREAKS = [
     to: '  const entryOf = new Map(cells.map((cell, k) => [cell, queue[k + 1]]));',
     expect: 'draws another species into',
   },
+  // R204 — THE ROSTER A PLAYER SCROLLS TO. The height gate measured the Dex
+  // roster with 28 of its portraits undrawn from R104 on; a held cell now
+  // reserves its portrait's box, and the gate walks every cell into view and
+  // measures again.
+  {
+    // The reservation goes, and the roster grows 854px under a scrolling
+    // thumb while the gate's number describes the blank one.
+    // BLIND AGAIN IF the walk stops re-measuring after it scrolls.
+    n: 535, gate: HEIGHT, name: 'a Dex cell waiting for its creature holds no room for it, and the roster jumps as its art arrives',
+    file: 'style.css',
+    anchor: '.dex-later { aspect-ratio: 460 / 440; }',
+    to: '',
+    expect: 'held-back portraits draw',
+  },
+  {
+    // The walk stops scrolling, so nothing held back ever draws and the
+    // "drawn" height is the blank one again: R104's measurement, by the back
+    // door. The gate has to say it could not measure, not call it equal.
+    // BLIND AGAIN IF the walk stops counting what is still held back.
+    n: 536, gate: HEIGHT, name: "the height gate's Dex walk stops scrolling, and measures the held-back roster as drawn",
+    file: 'tools/height.js',
+    anchor: "        await evaluate(`${CELLS}[${k}]?.scrollIntoView({ block: 'center' })`);\n        await sleep(30);",
+    to: '        await sleep(30);',
+    expect: 'portraits back after every cell was scrolled into view',
+  },
 ];
 
 const pristine = {};
