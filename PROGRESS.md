@@ -1,5 +1,62 @@
 # PROGRESS
 
+## Session 230 — R206: four animals nature spliced first ✅
+
+**Elephant, Platypus, Mantis Shrimp and Cuttlefish are in the game, on four
+new shape families: a trunk, a duck's bill, a raptorial club and a mantle
+that changes colour. The roster is 45 animals: 18 Ground, 15 Water, 12 Air.
+The cuttlefish's coat holds still under reduced motion, checked in a
+browser.**
+
+### What shipped
+
+- **Four species**, each with a signature on an existing keyword, a unique
+  set bonus, a combo and a node unlock. ROADMAP R206 has the table.
+- **Shapes** (`tools/shapes.js`): `trunk`, `bill`, `club` and `mantle`, plus
+  a `width` on the rudder. Every default draws what it drew before.
+- **Parts that move.** A shape may carry `anim`; the renderer writes it as a
+  class and `style.css` animates it and turns it off under reduced motion.
+  The reasoning is in `data/notes/parts-shapes.md`, not in the renderer,
+  because the eager graph's comment budget (261 KB) had no room for it. A
+  smoke rule checks the chain from the data end; breaks 538-540.
+- **Re-derived by what the four add:**
+  - first paint, 1178 -> 1197 (19.5 KB itemised);
+  - `dex:roster` +1 row;
+  - the Vault's worst case +4 bays;
+  - `dex:combos` +4 rows, measured row by row;
+  - the combo-by-grade count, 544 -> 608;
+  - the growth table and §4.0's counts.
+- **The Vault's worst-case builder.** At 52 species, its own reached-every-
+  state check found it had stopped covering every bay (the tight level-1
+  shelf holds 51 parts) and had lost its spare. Vials now go first to the
+  species the parts missed, and the `spares` shelf opens on a duplicate.
+- **The part gallery** (`tools/gallery.html`) calls `loadShapes`. It never
+  had, so since R81 it showed every purebred as a bare chassis.
+
+### Found on the way
+
+- **The first drafts' set bonuses copied the bear's and the rhino's.** The
+  set-bonus rule refused them.
+- **The release gate went red in the first baseline: my own miss.** Files
+  the worker precaches changed after the last `release --fix`, which is
+  R183's standing example. Bumped, and the baseline re-run.
+- **A container restart killed the first battery run partway through its
+  baseline.** It was re-run whole.
+- **The Surgery Table's four-hour clock** stopped the probe's second splice
+  on the same pinned clock. The bill chimera was spliced on a fresh load of
+  the same save instead.
+
+### Verification
+
+VERIFY
+
+### Next session
+
+R207: the Hexapod. Theater Tier III and a third pair of limbs, the first
+engine change in this run of phases: a socket that takes either limb. The
+full battery last ran at R202, and R205 and R206 both changed existing gates
+(R148's split, the Vault's worst-case builder), so the rot check is owed.
+
 ## Session 229 — R205: four new fliers ✅
 
 **Ruby Hummingbird, Griffon Vulture, Peacock and Flying Squirrel are in the
