@@ -1,5 +1,77 @@
 # PROGRESS
 
+## Session 227 — R204: a Dex cell waiting for its creature keeps its room ✅
+
+**From R104 on, the Dex roster held 28 of its 37 portraits back until
+scrolled to, and held no room for them. The roster grew 854px under a
+scrolling thumb, and the height gate, which does not scroll, measured it
+mostly blank. A held cell now reserves its creature's exact box, and the
+gate scrolls the grid and checks that the height does not move. The queue is
+empty.**
+
+### Measured first
+
+- **The height gate's own new rule, on R203's tree:** `dex:roster is +854px
+  once its 28 held-back portraits draw (2253 -> 3107px)`. Fully drawn, the
+  roster was 7px over R89's 3,100px budget. That budget was set before R104
+  deferred anything, and the gate had not seen a drawn roster since.
+- **The variants tab does not move** (1,102px either way): its rows are set
+  by their text, not by the 72px portrait column.
+- **Every deferred portrait shares one box:** creature portraits all use the
+  renderer's 460x440 viewBox at full cell width.
+- **Grid rows at 380px:** 13 rows of 144-187px, plus an 8px gap.
+
+### What shipped
+
+- **`tools/height.js`.** For each Dex tab still holding art back, the walk
+  scrolls every portrait cell into view, waits for the page to settle, and
+  measures again. The two heights must agree within 2px. A cell still held
+  back after the walk is reported as unmeasured, not as a match.
+- **`style.css`: `.dex-later { aspect-ratio: 460 / 440; }`.** The reserved box
+  is exactly the drawn height. Roster 3,107px on arrival and 3,107px drawn.
+- **`dex:roster` re-derived as a bound, 3100 -> 3150.** The roster's height
+  follows the content (one cell per species), not the campaign. 43px of
+  slack is less than the smallest row (152px), so a species that adds a row
+  goes red on purpose.
+- **Breaks 535** (the reservation removed) **and 536** (the walk stops
+  scrolling).
+- **`sw.js` CACHE** bumped to `spliceworld-v64-7eb331e5`, because `style.css`
+  is precached.
+- **Break 402 gets an `expect`.** A seventh Dex tab adds a third row of tab
+  bar to every Dex tab, so the roster's tighter bound now prints first. Its
+  own check, "has no height budget", is still in the verdict (ninth of nine,
+  on stderr), and the battery now reads that instead of the first line.
+
+### Verification
+
+- `--anchors` after the tick: 527 anchors match. `--self` green.
+- `--only` behind a fresh baseline, on the two new breaks and every break
+  aimed at the Dex art or the height gate's Dex loop (290, 402-404, 533-536):
+  41 of 41 gates green, 8 of 8 caught, BATTERY_EXIT 0.
+  - 535 reads "dex:roster is +854px once its 28 held-back portraits draw
+    (2253 -> 3107px)".
+  - 536 reads "still holds 28 of 28 portraits back after every cell was
+    scrolled into view".
+- **Break 402 applied by hand** (a scratch copy): 9 problems. Its own check,
+  "dex:ledger has no height budget", is the ninth. The other eight are the
+  third row of tab bar on every tab, and happen with or without R204.
+- `npm test` alone: green, 1,215 CPU-s of 1,641 (six walks rebuilt).
+- **The full battery is not owed.** This adds a rule to the height gate and
+  re-derives one budget, but changes no existing rule's logic. It ran in each
+  of R200-R202.
+- No save schema change. The 380px gates and the console-error checks are
+  green in the baseline.
+
+### Known issues
+
+- None new. The suite budget's fit to this host is still the open question
+  R202 left (A/B: the host, not the code).
+
+### Next session
+
+The queue is empty. The next session starts by deciding what to file. The
+full battery last ran at R202.
+
 ## Session 226 — R203: the Dex draws every creature it holds back ✅
 
 **Reported from a phone: the Dex roster showed names and part counts but no

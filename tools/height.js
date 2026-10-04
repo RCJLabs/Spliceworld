@@ -298,7 +298,20 @@ const BUDGET = {
   // +162 over R186's 4,353 and the screen grew 154. Raised by exactly two
   // bays, keeping R186's headroom. The shut half is a bound and did not move.
   vault:          { folded: 3300,  tallest: 4600, opens: 20 },
-  'dex:roster':   { folded: 3100,  tallest: 3100 },
+  // R204 — 3100 -> 3150, and the first reading since R104 of the roster a
+  // player sees. R89 set 3100 against a fully drawn grid. R104 then held 28
+  // of its portraits back until scrolled to, and this walk does not scroll,
+  // so from R104 on it measured those cells at 0px of art: 2,253px against a
+  // budget written for ~3,100. Everything that grew the drawn roster after
+  // that went unmeasured, R117's 50px second row of tabs among it. Each held
+  // cell now reserves its portrait's box (`.dex-later` in style.css), so
+  // drawn and undrawn measure the same, and the walk checks that they do.
+  // Measured drawn: 3,107px, 13 rows of 144-187px plus an 8px gap. The roster
+  // is a function of the CONTENT (one cell per species; the save changes a
+  // part count, not a line), so this is a bound, not a campaign reading:
+  // 43px of slack, under the smallest row (152), so a species that adds a row
+  // goes red here on purpose and its milestone raises this by one row.
+  'dex:roster':   { folded: 3150,  tallest: 3150 },
   // R117 — 1100 -> 1150, and `dex:genes` below by the same 50, which is the
   // SHARED CHROME rather than the tab: the Dex's six-tab bar goes to two
   // rows of three under 430px, because `1fr` is `minmax(auto, 1fr)` and the
@@ -1099,6 +1112,35 @@ try {
       await settle('#screen-dex', { deadline: 12000, id: `dex:${tab}` });
     }
     const folded = await heightOf('#screen-dex');
+    // R204 — …AND THE HEIGHT IS THE ONE A PLAYER SCROLLS TO. R104 drew nine
+    // Dex portraits up front and the rest as they scroll into view, and this
+    // walk measures without scrolling, so for every milestone from R104 on it
+    // measured a roster whose other cells were not drawn yet: 2,253px of a
+    // screen that is ~850px taller once a thumb has been down it (R203 made
+    // those cells draw at all). A screen whose height depends on whether you
+    // have looked at it yet is also a screen that jumps as you scroll. So
+    // where a tab is still holding art back, walk every held cell into view,
+    // let it draw, and measure again: the two numbers must agree, or the one
+    // in the table is a page nobody sees.
+    const held = Number(await evaluate(`document.querySelectorAll('#screen-dex .dex-later').length`));
+    if (held) {
+      const CELLS = `document.querySelectorAll('#screen-dex .dex-portrait, #screen-dex .variant-portrait')`;
+      const n = Number(await evaluate(`${CELLS}.length`));
+      for (let k = 0; k < n; k++) {
+        await evaluate(`${CELLS}[${k}]?.scrollIntoView({ block: 'center' })`);
+        await sleep(30);
+      }
+      await settle('#screen-dex', { deadline: 4000 });
+      const left = Number(await evaluate(`document.querySelectorAll('#screen-dex .dex-later').length`));
+      const drawn = await heightOf('#screen-dex');
+      await evaluate('window.scrollTo(0, 0)');
+      if (left) {
+        problems.push(`dex:${tab} still holds ${left} of ${held} portraits back after every cell was scrolled into view, so its drawn height could not be measured`);
+      } else if (Math.abs(drawn - folded) > 2) {
+        problems.push(`dex:${tab} is ${drawn - folded > 0 ? '+' : ''}${drawn - folded}px once its ${held} held-back portraits draw (${folded} -> ${drawn}px) — `
+          + 'the height measured here is a screen nobody scrolls to, and the tab jumps as its art arrives');
+      }
+    }
     const foldsPainted = await foldsCount('#screen-dex');
     const wordsShut = await wordsOf('#screen-dex');
     const tallest = await tallestOf('#screen-dex', 40, `dex:${tab}`, BUDGET[`dex:${tab}`]?.opens ?? 0);

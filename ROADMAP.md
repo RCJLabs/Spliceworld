@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**1 entry queued.** R204.
+**0 entries queued.**
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -7630,7 +7630,7 @@ triangle working, and each region genuinely asks a different question)*.
   * **Found on the way (R204):** the roster grows 854px as its cells draw,
     and the height gate has been measuring it mostly blank since R104.
 
-- **R204 — The height gate measures a Dex roster that is mostly blank.**
+- **R204 — The height gate measures a Dex roster that is mostly blank.** ✅
   Found by R203. A Dex cell reserves no box for its portrait, and 28 of the
   roster's 37 cells draw only once scrolled into view. The height gate
   measures without scrolling, so `dex:roster` has read a roster with 28
@@ -7641,6 +7641,31 @@ triangle working, and each region genuinely asks a different question)*.
   height gate measures the roster a player scrolls to (every portrait drawn,
   or a reserved box that makes drawn and undrawn the same height), and the
   `dex:roster` budget is re-derived from that or argued.*
+
+  **Shipped: a held cell keeps its creature's room, and the gate checks it.**
+  * **The gate first** (`tools/height.js`). For each Dex tab still holding
+    art back, the walk scrolls every portrait cell into view, waits for the
+    page to settle, and measures again. The two heights must agree within
+    2px. If any cell is still held back after the walk, the gate says it
+    could not measure, rather than calling the heights equal. On R203's tree
+    it went red: `dex:roster is +854px once its 28 held-back portraits draw
+    (2253 -> 3107px)`, and 3,107 is 7px over the old budget.
+  * **The fix** (`style.css`): `.dex-later { aspect-ratio: 460 / 440; }`.
+    Every portrait the Dex defers is drawn in the renderer's 460x440 viewBox
+    at the cell's full width, so the reserved box is exactly the drawn
+    height. The roster now reads 3,107px on arrival and 3,107px fully drawn.
+    It no longer grows under a scrolling thumb. The variants tab is unmoved
+    at 1,102px, because its row height is set by its text.
+  * **The budget, re-derived: 3100 -> 3150, as a bound.** The roster's
+    height comes from the content (one cell per species), not from the
+    campaign. Measured: 13 rows of 144-187px plus an 8px gap. 43px of slack
+    is less than the smallest row (152px), so a species that adds a row goes
+    red on purpose. Nothing grew this milestone. R117's 50px second row of
+    tabs, among other things, had gone unmeasured since R104.
+  * **Breaks 535-536.** 535 removes the reservation. 536 stops the walk
+    scrolling, which would otherwise measure the held-back roster as drawn.
+  * **The service worker's cache is bumped** (`spliceworld-v64-7eb331e5`),
+    because `style.css` is precached.
 
 - **R187 — The gates that measure a fixture instead of a bound.** ✅ R180's rot
   check turned up four breaks going MISSED, and chasing them found the same

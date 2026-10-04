@@ -1647,6 +1647,13 @@ body.in-battle .ticker { font-size: 0.75rem; }
 }
 .list-group:first-child { margin-top: 4px; }
 .dex-portrait svg { width: 100%; height: auto; display: block; }
+/* R204 — a cell still waiting for its creature holds the creature's box. Every
+   portrait the Dex defers is drawn in the renderer's 460x440 viewBox at the
+   cell's full width, so this is the drawn height exactly, and the roster is
+   the same height before a scroll as after one. Without it the 28 cells past
+   the ninth were 0px of art until they drew: the screen grew 854px under a
+   scrolling thumb, and the height gate measured a page nobody scrolls to. */
+.dex-later { aspect-ratio: 460 / 440; }
 .dex-mystery {
   font-size: 2.4rem;
   color: var(--muted);
