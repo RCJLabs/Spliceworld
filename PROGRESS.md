@@ -52,9 +52,9 @@ empty.**
     (2253 -> 3107px)".
   - 536 reads "still holds 28 of 28 portraits back after every cell was
     scrolled into view".
-- **Break 402 applied by hand** (a scratch copy): 9 problems. The eighth
-  missing-budget tab is there; the other eight are the third row of tab bar
-  on every tab, and happen with or without R204.
+- **Break 402 applied by hand** (a scratch copy): 9 problems. Its own check,
+  "dex:ledger has no height budget", is the ninth. The other eight are the
+  third row of tab bar on every tab, and happen with or without R204.
 - `npm test` alone: green, 1,215 CPU-s of 1,641 (six walks rebuilt).
 - **The full battery is not owed.** This adds a rule to the height gate and
   re-derives one budget, but changes no existing rule's logic. It ran in each
