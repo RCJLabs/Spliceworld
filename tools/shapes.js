@@ -69,24 +69,55 @@ const HEADS = {
         : [po('2,-30 -6,-64 14,-38', A, { strokeWidth: 4 }), po('20,-30 30,-66 34,-34', A, { strokeWidth: 4 })];
     return [...horns.slice(0, 1), ...s, ...horns.slice(1)];
   },
-  bird({ beak = 'hook', crest = true, eyeR = 10.5, disc = false }) {
+  // R205 added four options, one per new flier, and every default is the
+  // shape this head has always drawn — so no shipped bird moves a pixel:
+  //   beak: 'needle'  — a hummingbird's bill, long and dark, for flowers.
+  //   gorget          — the iridescent throat patch under it, in accent.
+  //   bald            — a vulture's bare head in accent, a ruff of feathers
+  //                     at the neck, and the hooked beak in pale secondary
+  //                     so it does not vanish into the skin.
+  //   crest: 'coronet'— a peacock's three feathered stalks.
+  //   face            — which colour the skull is: the peacock's head is
+  //                     the blue of its body, not the green of its train.
+  bird({ beak = 'hook', crest = true, eyeR = 10.5, disc = false, gorget = false, bald = false, face = null }) {
     const s = [];
-    if (crest) s.push(pa('M 4 -42 q 8 -20 26 -16 q -8 9 -6 19 z', P));
-    s.push(ci(20, -20, 31, S), sheen(8, -34, 16, 10, 0.34));
+    if (crest === 'coronet') {
+      s.push(li('M 12 -46 L 4 -70 M 20 -50 L 20 -76 M 28 -46 L 36 -70', O, 2.5));
+      s.push(ci(4, -72, 5, A, { strokeWidth: 2.5 }), ci(20, -78, 5, A, { strokeWidth: 2.5 }), ci(36, -72, 5, A, { strokeWidth: 2.5 }));
+    } else if (crest) s.push(pa('M 4 -42 q 8 -20 26 -16 q -8 9 -6 19 z', P));
+    const skull = face ?? (bald ? A : S);
+    s.push(ci(20, -20, bald ? 28 : 31, skull), sheen(8, -34, 16, 10, 0.34));
+    if (bald) s.push(li('M 2 -30 q 6 -5 12 0 M 4 -18 q 6 -5 12 0', O, 2.5, { opacity: 0.35 }));
     // An owl's facial disc: two dishes of stiff feathers that aim sound at
     // the ears. Drawn under the eyes so the googly pair still reads on top.
     if (disc) s.push(ci(26, -26, 22, W, { stroke: 'none', opacity: 0.5 }),
                      ci(48, -30, 17, W, { stroke: 'none', opacity: 0.4 }),
                      li('M 6 -24 q 20 24 42 6', A, 3, { opacity: 0.5 }));
+    // The gorget is the lower segment of the skull itself — a chord across
+    // the throat and the circle's own arc under it — so it reads as a chin
+    // and not as a mouth.
+    if (gorget) s.push(pa('M -6 -4 A 31 31 0 0 0 46 -4 Q 20 4 -6 -4 Z', A, { strokeWidth: 3 }));
     s.push(...eye(45, -30, 6.5));
+    const bill = bald ? S : A;
     s.push(beak === 'hook'
-      ? pa('M 44 -30 C 65 -33 77 -26 78 -16 C 79 -6 69 -1 61 -6 C 65 -12 62 -17 46 -14 Z', A, { strokeWidth: 4 })
+      ? pa('M 44 -30 C 65 -33 77 -26 78 -16 C 79 -6 69 -1 61 -6 C 65 -12 62 -17 46 -14 Z', bill, { strokeWidth: 4 })
       : beak === 'spear'
-        ? pa('M 44 -25 L 84 -18 L 44 -10 Z', A, { strokeWidth: 4 })
-        : pa('M 44 -26 L 82 -18 L 44 -8 Z', A, { strokeWidth: 4 }));
-    s.push(ci(55, -23, 2.5, O, { stroke: 'none' }));
+        ? pa('M 44 -25 L 84 -18 L 44 -10 Z', bill, { strokeWidth: 4 })
+        : beak === 'needle'
+          // Angled a little down, as a hummingbird's is, which is also what
+          // lets it be the longest bill in the game and still fit a Rumbler's
+          // head socket: tools/bounds.js stops a beak pointing straight ahead
+          // at about the heron's length.
+          ? pa('M 44 -24 L 86 3 L 85 6 L 44 -12 Z', O, { strokeWidth: 3 })
+          : pa('M 44 -26 L 82 -18 L 44 -8 Z', bill, { strokeWidth: 4 }));
+    if (beak === 'needle') s.push(li('M 50 -19 L 82 0', W, 1.5, { opacity: 0.4 }));
+    else s.push(ci(55, -23, 2.5, O, { stroke: 'none' }));
     s.push(li('M 12 -38 L 40 -31', O, 5));
     s.push(...eye(27, -24, eyeR));
+    // The ruff sits over the neck, last, because it is the collar the bare
+    // head grows out of.
+    if (bald) s.push(pa('M -16 6 C -12 -6 -2 -8 4 -2 C 8 -12 20 -12 24 -2 C 30 -10 40 -6 40 4 C 26 14 -2 16 -16 6 Z', S, { strokeWidth: 4 }),
+                     li('M -6 4 l 2 6 M 8 2 l 1 7 M 22 2 l 0 7', O, 2.5, { opacity: 0.4 }));
     return s;
   },
   reptile({ jaw = 40, hood = false, fangs = true, eyeR = 10, frill = false }) {
@@ -203,8 +234,20 @@ const LIMBS = {
             pa(`M -12 ${len} h 24 l -2 15 h -20 z`, '#5b5349', { strokeWidth: 4 }),
             li(`M 0 ${len + 3} L 0 ${len + 15}`, O, 3)];
   },
-  wing({ span = 118, coverts = true }) {
+  wing({ span = 118, coverts = true, blur = false }) {
     const T = 'translate(6 -20) rotate(-4)';
+    // R205 — a hummingbird's wing beats too fast to see, so it is drawn as
+    // what you do see: two ghost strokes either side of a faint wing and
+    // the arcs it sweeps. Still a wing (it lifts and votes Air like one);
+    // only the drawing knows it is a blur.
+    if (blur) {
+      const outline = (rot, op) => pa(`M 4 10 C -10 -14 -40 -40 ${-span + 6} -52 C ${-span - 6} -54 ${-span - 8} -44 ${-span + 2} -38 Q -50 -10 -30 2 Q -16 14 2 15 Z`,
+        P, { transform: `translate(6 -20) rotate(${rot})`, opacity: op, strokeWidth: 3 });
+      return [outline(-26, 0.3), outline(18, 0.3), outline(-4, 0.55),
+              li(`M ${-span * 0.55} -78 Q ${-span - 8} -36 ${-span * 0.6} 8`, W, 3, { opacity: 0.5 }),
+              li(`M ${-span * 0.35} -64 Q ${-span * 0.7} -30 ${-span * 0.4} 0`, W, 2.5, { opacity: 0.35 }),
+              el(0, -2, 13, 12, P), sheen(-4, -6, 6, 5, 0.16)];
+    }
     const s = [pa(`M 4 10 C -10 -14 -46 -46 ${-span + 6} -64 C ${-span - 5} -67 ${-span - 10} -58 ${-span - 1} -51 Q ${-span - 3} -33 ${-span + 19} -31 Q ${-span + 25} -12 ${-span + 47} -15 Q -58 3 -34 1 Q -20 15 2 15 Z`, P, { transform: T }),
                li(`M ${-span + 2} -56 C -92 -42 -70 -30 -44 -22`, O, 3.5, { opacity: 0.5, transform: T }),
                li('M -96 -30 C -76 -20 -54 -10 -30 -4', O, 3.5, { opacity: 0.4, transform: T }),
@@ -297,6 +340,33 @@ const LIMBS = {
             po(`0,${len} -14,${len + 5} -13,${len + 11} 0,${len + 8}`, A, { strokeWidth: 3.5 }),
             li(`M 0 ${len + 3} L -3 ${len + 14}`, A, 3)];
   },
+  // R205 — a flying squirrel's patagium: a slim furry limb with a skin flap
+  // stretched along it toward the other pair. The forelimb's flap trails
+  // back and the hindlimb's (`rear`) reaches forward, so on a body the two
+  // meet under the belly as one gliding sheet. Not the Glider Skunk's
+  // `membrane`, which is a bat's wing on a skunk: this is a sail between
+  // legs that still walk.
+  //
+  // The flap is drawn in the pale underside colour, which is the side of a
+  // squirrel you see when it is gliding at you, and it hangs low and wide:
+  // drawn in the coat colour from the shoulder, it sat behind the torso and
+  // nobody could tell it was there.
+  //
+  // `span` is about half the gap between a Scamper's fore and hind sockets,
+  // so the two flaps meet edge to edge under the belly instead of crossing.
+  patagium({ len = 50, span = 38, rear = false }) {
+    const tip = (rear ? 1 : -1) * span;
+    return [
+      pa(`M 0 4 C ${tip * 0.35} 10 ${tip * 0.9} ${len * 0.32} ${tip} ${len * 0.62} C ${tip * 1.04} ${len * 0.86} ${tip * 0.6} ${len + 4} 0 ${len} Z`,
+        S, { opacity: 0.92, strokeWidth: 3.5 }),
+      li(`M ${tip} ${len * 0.62} C ${tip * 1.04} ${len * 0.86} ${tip * 0.6} ${len + 4} 2 ${len}`, P, 4, { opacity: 0.8 }),
+      li(`M ${tip * 0.2} ${len * 0.3} L ${tip * 0.75} ${len * 0.62}`, O, 2, { opacity: 0.25 }),
+      el(0, 2, 12, 12, P),
+      rc(-5.5, 0, 11, len, 5, P),
+      li(`M -2 6 q -2 ${len * 0.3} 0 ${len * 0.5}`, W, 3.5, { opacity: 0.14 }),
+      el(3, len + 2, 9, 6.5, S),
+    ];
+  },
   hop({ len = 50 }) {
     return [el(0, 8, 22, 24, P), sheen(-7, 0, 11, 12, 0.14),
             pa(`M -10 22 q 12 10 22 0 l 0 10 q -12 10 -22 0 z`, P, { strokeWidth: 4 }),
@@ -345,6 +415,40 @@ const TAILS = {
     li(`M -6 -2 C ${-len * 0.5} -9 ${-len * 0.78} -13 ${-len + 5} -14`, O, 3, { opacity: 0.4 }),
     ci(-len * 0.45, -11, 6, A, { strokeWidth: 3 }),
   ],
+  // R205 — a peacock's train, fanned up behind it: the largest tail in the
+  // game and the only one that is a display rather than a rudder. A solid
+  // fan so it reads as one shape at thumbnail size, quills over it, and an
+  // eyespot at every tip in all three palette colours (accent ring, primary
+  // iris, outline pupil). The fan sweeps from behind the rump, over the top,
+  // to just past vertical, so it rises behind the back and not over the head.
+  //
+  // The rim is a run of points along the arc rather than an SVG `A`
+  // command, because tools/bounds.js reads a path's numbers as x,y pairs and
+  // an arc's radii and flags would scramble its extents. `len` is capped by
+  // that gate too: the rim crosses straight behind at 180 degrees, and at 75
+  // that point is a whisker inside the Rumbler's viewBox.
+  plume: ({ len = 75, eyes = 7 }) => {
+    const FROM = 160, TO = 285;
+    const at = (deg, r) => [r * Math.cos((deg * Math.PI) / 180), r * Math.sin((deg * Math.PI) / 180)];
+    const rim = Array.from({ length: 25 }, (_, i) => at(FROM + ((TO - FROM) * i) / 24, len).join(' '));
+    const s = [pa(`M 0 4 L ${rim.join(' L ')} Z`, S, { strokeWidth: 4 })];
+    for (let i = 0; i < eyes; i++) {
+      const deg = FROM + ((TO - FROM) * (i + 0.5)) / eyes;
+      const [qx, qy] = at(deg, len * 0.94);
+      s.push(li(`M 0 0 L ${qx} ${qy}`, O, 2, { opacity: 0.3 }));
+    }
+    for (let i = 0; i < eyes - 1; i++) {
+      const [ex, ey] = at(FROM + ((TO - FROM) * (i + 1)) / eyes, len * 0.52);
+      s.push(ci(ex, ey, 6.5, A, { strokeWidth: 2 }), ci(ex, ey, 3.5, P, { stroke: 'none' }));
+    }
+    for (let i = 0; i < eyes; i++) {
+      const [ex, ey] = at(FROM + ((TO - FROM) * (i + 0.5)) / eyes, len * 0.8);
+      s.push(ci(ex, ey, 10.5, A, { strokeWidth: 2.5 }), ci(ex, ey, 6, P, { stroke: 'none' }),
+             ci(ex - 1, ey - 1, 2.5, O, { stroke: 'none' }));
+    }
+    s.push(el(-4, 0, 12, 9, P));
+    return s;
+  },
   // Trailing stinging threads. Not a tail so much as everything below the bell.
   drift: ({ len = 70 }) => [
     li(`M 0 -8 C ${-len * 0.4} -14 ${-len * 0.7} 2 ${-len} 6`, P, 6, { opacity: 0.9 }),

@@ -131,13 +131,13 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
      engine at test time, never typed twice. If you change content, this
      block is what tells you the prose above it has gone stale. -->
 
-- species: 44
-- parts: 259
+- species: 48
+- parts: 283
 - frames: 4
 - regions: 5
 - nodes: 23
 - keywords: 30
-- combos: 30
+- combos: 34
 - grades: 4
 - grade multipliers: 1/1.2/1.4/1.65
 - grade move bonus percent: 12
@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**0 entries queued.**
+**9 entries queued.** R206, R207, R208, R209, R210, R211, R212, R213, R214.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -7852,6 +7852,275 @@ triangle working, and each region genuinely asks a different question)*.
   deleted.
   Breaks 451–464, 443/193/409/441/199 re-aimed, and a full battery because three
   existing gates changed their logic.
+
+### 9.32 Something to see (R205–R214) — asked for directly
+
+Asked for directly: visible additions, more to do, more to see, and more
+animals so a splice has more options. Measured first, every screen
+photographed at 380px on the day-180 campaign:
+
+- **Outside the arena, the Theater's slab and the Dex grid, no creature is
+  drawn until something is opened.** The Ranch lists its twenty animals as
+  rows of text, eight to a page, and the Pens list thirteen chimeras as rows.
+  A portrait is built only when its row is opened. The War Room's map is five
+  text cards, and the Vault is a list of shelves.
+- **The core verb is chosen from dropdowns.** Every Theater socket is a
+  picker of part names, and the renderer cannot draw one part on its own.
+- **The arena does not show what a move is.** An Electric bite and a Ground
+  stomp play the same lunge and the same shake. Each of the 42 enemy units has
+  its own written exit (the Infantry Squad "parachutes away in tight
+  formation", the Police Cruiser "retires loudly, wheels spinning in
+  protest"), and on screen every one of them plays the same flop. Every fight
+  in all five regions and the Gauntlet is on one plain gradient, tinted only
+  by the player's colour theme.
+- **Five screens carry a facility card, and on the day-180 save all five
+  read "Maxed. There is nothing left to buy and that is its own kind of
+  sad."** All six tracks are bought out. The Surgery Theater has two tiers.
+- **The roster is 37 animals: 17 Ground, 12 Water, 8 Air** (the Dex's count;
+  the six variants and the salvage are on top). Camo is carried by one
+  animal, the chameleon, and Electric by one animal and one variant, the eel
+  and the Storm Eagle. Three animals ride the Kite frame.
+
+R205-R207 widen what a splice can be. R208 puts the splice on screen.
+R209-R211 draw the places the game happens. R212-R214 give the creatures
+somewhere to go and something to wear. Each phase is one session and is
+written so that it has something on screen when it ships.
+
+- **R205 — Four new fliers.** ✅
+  Air was eight of the 37 animals, and its section
+  was the shortest in the Dex. Four fliers, each drawn from the generator
+  (`tools/gen-parts.js`) with the new shape code it needs in
+  `tools/shapes.js`:
+  * **Hummingbird** — Speedster, Scamper frame. A `needle` beak and wings
+    drawn as a blur. Its signature move strikes first (`priority`).
+  * **Vulture** — Finisher. A bald head on the hooked beak; its signature
+    hits harder the lower the foe's health (`frenzy`, "Patient Circling").
+  * **Peacock** — Taunter, Airborne and Sonic. A fanned `plume` tail of
+    eyespots, built to be the largest tail in the game; its display lowers
+    the foe's aim (`accDown`).
+  * **Flying Squirrel** — Glider. A mammal head and `patagium` flaps
+    stretched between its fore and hind limbs.
+  Each comes with a palette, a set bonus, a signature move on a keyword the
+  engine already has, a catalog price and a node whose conquest opens it.
+  *Done when: four new Air species ship as data with their parts drawn,
+  signature moves and set bonuses; each can be bought in a campaign and
+  appears in the Dex, the Vault and the Theater; a chimera wearing a part
+  from each renders at 380px; the balance gate passes at every grade and the
+  class spread holds; the gates the roster feeds (reach, diet, tiers, the Dex
+  and Vault height bounds) are re-derived by exactly what four animals add;
+  and the day-180 walk splices at least one of them.*
+
+  **Shipped: four fliers, drawn, in the data, and in every campaign.**
+  * **The animals** (`data/species.json`, `tools/gen-parts.js`). Ruby
+    Hummingbird (Speedster), Griffon Vulture (Finisher), Peacock (Taunter,
+    Airborne and Sonic) and Flying Squirrel (Glider; its id is `squirrel`,
+    see below). Each has six parts, a palette, a set bonus, a catalog price
+    and a node that unlocks it: the Aerodrome, the Crucible Floor, the
+    Records Annex and the Checkpoint, four nodes that sold two animals or
+    fewer. The signatures use keywords the engine already reads:
+    Hover Jab (`priority`), Patient Circling (an Airborne `frenzy`, the
+    only one), Full Display (`accDown: 2`, no damage) and Drop In (an
+    Airborne `knockback`, the only one).
+  * **The shapes** (`tools/shapes.js`). The bird head takes a needle bill, a
+    ruby gorget, a bald head with a ruff, a coronet crest and a `face`
+    colour. Every default is the old drawing, so the generator reproduced
+    all 259 shipped parts unchanged before the four were added. The wing
+    takes `blur`. Two new families: `plume`, a fanned train of eyespots,
+    and `patagium`, a gliding flap that meets its pair under the belly.
+  * **Four combos**, so every animal is in the discovery layer: Speed Limit,
+    Cleanup Crew, Lawn Patrol and Night Shift.
+  * **The roster is 41 animals: 17 Ground, 12 Water, 12 Air.** The part
+    pool's class spread went from 1.32x to 1.07x (46 / 44 / 47).
+
+  **The gates the roster feeds, each moved by what the four add:**
+  * **Flight.** All four fly on a Scamper and on nothing heavier. The
+    hummingbird needed bulk 0.3, the dragonfly's: at 0.2 the chassis
+    outweighed its lift (35 against 31).
+  * **The viewBox.** The needle bill angles down and the train is 75 long,
+    so both fit a Rumbler. `tools/bounds.js` reads a path's numbers as x,y
+    pairs, so the train's rim is drawn as points, not an SVG arc.
+  * **The genome code.** `flying_squirrel_forelimbs` took the worst code to
+    150 characters of 140. The gate's own note says a long name is the
+    defect, so the id is `squirrel`.
+  * **First paint, 1155 -> 1178 KB**, measured at 1169 against 1151 on the
+    commit before. 18 KB, all content: 12.3 for 24 parts, 3.8 for four
+    species, 1.9 for four combos, 0.1 for the unlocks.
+  * **Height.** `dex:roster` 3150 -> 3332, one row of three. The Vault's
+    worst case 3300 -> 3586, four bays. `dex:combos` open 3400 -> 3768, the
+    four new rows measured row by row (the reshuffle of which old combos the
+    walk discovers came to -30px). Words 400 -> 428, 600 -> 639, 660 -> 750.
+  * **The vet census.** Seed 99 now ends on Doc. Across 22 campaigns, Nurse
+    Gauze is the vet at day 180 on one (seed 91), which is R196's one in
+    twenty, so her price stands and the diet gate reads seed 91.
+  * **R148's chassis rule, split** (break 537). Fliers keep their flight on a
+    Scamper and lose it on a Rumbler, so the roster-wide grind number was
+    measuring flight as well as bulk. It went 2.2 -> 1.1 because fliers went
+    from 10 of 39 bodies to 14 of 43. The four read like the ten (-8.4
+    against -7.9). A new assertion asks it of the 29 bodies a Rumbler does
+    not ground: +5.7 before R205 and after, floor 4. The roster-wide floor
+    moved by the same 1.1, 1.5 -> 0.4.
+  * **The combo-by-grade count** 480 -> 544 (34 combos x 16).
+  * **The suite's battle budget, 1,110,000 -> 1,255,000** (floor 910,000 ->
+    1,030,000). Both trees were counted per call site. The four animals and
+    four combos add 61,513 battles, 47,616 of them as eight more builds in
+    every balance pool; all of it is catalogue, none of it sampling. The
+    tree before R205 already flew 1,081,205, so content since R118 had
+    spent most of the headroom. Breaks 261, 262 and 300 still go red.
+
+  **Done when, checked.** The balance gate's 24 pools are clean at every
+  grade. The day-180 walk wears all four fliers at some point and ends
+  wearing the vulture and the peacock, and every one of 22 campaigns wears
+  at least three of them. Reach routes all 48 species. A chimera wearing a
+  part from each renders at 380px, and so do the Dex, the Vault and the
+  Theater with them in.
+
+- **R206 — Four animals nature spliced first.** Some real animals already
+  look like a geneticist's weekend, and the game has never said so. Four,
+  three of them bringing a body part nothing in the county has:
+  * **Elephant** — Ground, Rumbler frame, Tank. A `trunk` head with fan ears;
+    nothing in the county has a trunk. Its trumpet is Sonic.
+  * **Platypus** — Water. A duck `bill` on the otter's paddle feet and its
+    rudder tail, widened. Aquatic and Electric (it hunts by
+    electroreception), which makes it the second Electric animal, and
+    Venomous for the spur on its hind legs. "Arrived pre-spliced. Nobody will
+    say by whom."
+  * **Mantis Shrimp** — Water, Striker. `club` forelimbs, built to throw the
+    hardest punch in the county, and a rainbow palette.
+  * **Cuttlefish** — Water, the second Camo animal and the fourth on the
+    Kite frame. Tentacle arms and a `mantle` hide whose colours shift
+    slowly.
+  The roster ends at Ground 18, Water 15, Air 12. *Done when: four species ship
+  as data on four new shape families (trunk, bill, club, mantle), each family
+  drawn in the part gallery and in a spliced chimera; Electric and Camo are
+  each carried by two animals and the Kite frame by four; the gates R205
+  names pass or are re-derived; and the cuttlefish's shimmer stops under
+  reduced motion.*
+
+- **R207 — The Hexapod: Theater Tier III and a third pair of limbs.** Every
+  chimera has at most two pairs of limbs, and on a day-180 save there is
+  nothing left to buy. Surgery Theater Tier III sells a fifth frame with a
+  third limb pair. Its `midlimb_near` and `midlimb_far` sockets take either a
+  forelimb or a hindlimb part, so one creature can carry scythes, eagle wings
+  and goat legs. The extra pair costs what any limb costs (mass, so speed) and
+  votes in the class tally like any other limb. The frame and the tier are
+  data (`frames.json`, `facility.json`); the engine learns once that a socket
+  may take two kinds of part, as R5 taught it `organ2`. *Done when: buying
+  Theater Tier III unlocks the Hexapod; a six-limbed chimera splices, renders
+  all six limbs at 380px, fights, and survives a save and a reload, and older
+  saves load untouched; the balance gate passes at every grade with Hexapod
+  builds in the pool; the physiology panel explains the third pair; and the
+  day-180 walk buys the tier and builds one.*
+
+- **R208 — The Surgery Theater you can see.** Three changes:
+  * **Parts you can see.** A `partThumbnail` in the renderer draws one part on
+    a faint ghost chassis. Every picker row and every filled socket carries
+    one.
+  * **The slab responds.** A chosen part slides onto the preview creature in
+    its socket.
+  * **"IT'S ALIVE."** Pressing Splice plays a ceremony: lightning, stitches
+    zipping shut, the eyes opening, a stinger from the synth. It can be
+    skipped, and it is one still frame under reduced motion.
+  It loads with the Theater, so the first paint does not grow. *Done when:
+  every part in every socket picker and every filled socket shows its drawn
+  part; the ceremony plays on a real splice and can be skipped; reduced
+  motion replaces it with a still frame; picker rows still clear 40px and the
+  contrast floor; and the boot budget does not move.*
+
+- **R209 — Battles you can feel.**
+  * **Effects by tag, from data:** a bolt for Electric, a splash for Aquatic, a
+    gust for Airborne, bubbles for Venomous, rings for Sonic, a cloud for Gas,
+    cracks for Ground and a slash for a plain hit. A crit shakes the stage.
+  * **A backdrop per region, drawn procedurally:** Greenfield's fences and
+    hay, Kestrel Reach's cliffs, the Drowned Quarter's harbour, the Foundry
+    Belt's furnaces, the Compliance Spire's open-plan office, and a hangar for
+    the Gauntlet.
+  * **Knockouts as written.** Each enemy unit gets an exit from a small drawn
+    set, named in `enemies.json` beside the line it already has: a parachute,
+    a loud retirement in smoke, a slow deflation, a sink, a hoist. A chimera
+    curls up for a nap.
+  *Done when: every move tag has an effect; every region and the Gauntlet
+  fight on their own backdrop; every enemy unit leaves the arena the way its
+  line says, by an exit named in data, and a chimera naps; all of it fits the
+  arena at 380px and on a 640px-tall phone; reduced motion stills it; a new
+  tag's effect is a JSON row; and the battle engine stays DOM-free (the
+  effects read the beat stream R2 built).*
+
+- **R210 — The ranch through the window.** The header already paints the sky
+  for the hour and the weather (R105), and under it the Ranch is rows of
+  text. The header becomes the pasture: a fence, the barn, a trough, and the
+  player's own animals drawn small, grazing and wandering. Eggs glow in the
+  incubator's window, the calendar's weather (drizzle, downpour, fog,
+  swelter) falls on the pasture, the season shows in the grass, and lamps
+  come on at night. Tapping an animal opens its card, and caring for one
+  shows in the pasture (fed, it munches; groomed, it shines). *Done when: the
+  Ranch shows the player's stock in the pasture, capped and saying how many
+  more there are, each animal opening its own card; season, weather and hour
+  change the scene; a fresh save shows the founding lab's animals; reduced
+  motion stills it; it is drawn after the first paint, so the boot budget does
+  not move; and the Ranch's height and chrome budgets are re-derived for it,
+  with the reason.*
+
+- **R211 — The county on a map.** The War Room opens on its map tab, and the
+  map is five region cards with a row of text per node. Nothing on screen
+  says where anything is. It becomes a drawn county: region outlines, node
+  positions and roads, all data in `regions.json`. Held nodes fly the
+  player's flag, a contested node shows its clock, and locked ones are
+  greyed. The lab sits in the middle, with the task force's vans at its gate
+  while a raid is open. An expedition's party is drawn in its region, and
+  escaped specimens, which belong to no node, wander the open country.
+  Tapping a node opens the card that is there today. *Done when: the map tab
+  opens on the drawn county with every node placed from data; state is shown
+  by shape and label as well as colour; every node can be reached by tap and
+  by keyboard and opens its card; a node added to `regions.json` appears
+  without an engine edit; and the a11y, height and wide gates pass.*
+
+- **R212 — Commissions.** A heist already likes a creature that fits (Camo
+  for the petting zoo, Armored for the fair's livestock tent), but a fit only
+  improves the odds, and no one in the county asks for a creature built a
+  particular way. A commissions board: shady clients ask for a creature by
+  its anatomy ("wings and a venom organ", "Water class with an Electric
+  move", "under 60 mass on the Scamper Frame", "three species, one of them a
+  frog"), on a real-time deadline, for money, notoriety or a part for the
+  Vault. Showing them a chimera that fits fulfils it, and the creature stays
+  home. Requests are generated from content and seeded, so new species and
+  frames make new commissions without new data. *Done when: the board offers
+  commissions generated from content, every one satisfiable by a chimera the
+  player could build (a gate proves it across the census); fulfilling one
+  pays and closes it; deadlines are timestamps settled on load; the board
+  shows on the Ranch's agenda and in the War Room; SAVE_VERSION moves with a
+  migration and a fixture; and the 180-day walk fulfils commissions.*
+
+- **R213 — The County Fair.** The calendar turns four 28-day seasons. Each
+  one nudges decay, incubation or the odds of a variant, but the turn itself
+  passes unmarked: there is nothing to enter and nothing to win. The jobs
+  board has robbed the fair's livestock tent since R11. Now the fair comes to
+  town for a few days at each turn:
+  * **The race.** A drawn track that entered chimeras run across. The result
+    is seeded from speed, stamina, frame and the course's terrain against each
+    runner's class.
+  * **Best in Show.** Judged on presentation: grade, set bonus and species
+    variety, with scars counting against.
+  * **Ribbons.** Drawn rosettes stay on a winner and show on its portrait. The
+    prizes are money and parts.
+  *Done when: a fair runs at every season's turn; entries and results are
+  seeded and replay the same; the race animates at 380px and is a results
+  card under reduced motion; ribbons persist (SAVE_VERSION, a migration and a
+  fixture) and show wherever the chimera is drawn; and the walk enters
+  fairs.*
+
+- **R214 — Dress for villainy.** Two chimeras built from the same parts are
+  identical, and nothing a player owns says "mine". Cosmetics, as data in
+  `data/cosmetics.json`:
+  * **Dyes** re-tint a chimera's palette. A species' palette becomes a dye the
+    first time an animal of that species graduates.
+  * **Accessories** are drawn in procedural SVG at the head's anchor: a top
+    hat, a monocle, lab goggles, a cape, an eyepatch, a bow tie, and a crown
+    for an S grade.
+  Fair ribbons, commissions, notoriety and the Gauntlet unlock them. They never
+  carry a stat. *Done when: a chimera can be dyed and accessorised from the
+  Pens; the look shows in the arena and the Pens at 380px; a new accessory is
+  a JSON row; the balance harness proves cosmetics change no number; and
+  SAVE_VERSION moves with a migration and a fixture.*
 
 ### 9.31 A vault full of treasure has no exit (R182) — found closing R116
 

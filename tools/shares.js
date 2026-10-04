@@ -153,7 +153,32 @@ export function shareProblems(jobs, want = SHARE, band = SHARE_BAND) {
 // the same count R170 read — so break 262, which quadruples it, lands at
 // 1,010,051 + 3 x 404,736 = 2,224,259, twice the new ceiling. Sampling moves
 // in multiples; a milestone's worth of content does not.
-export const BATTLE_BUDGET = 1_110_000;
+//
+// R205 — 1,110,000 -> 1,255,000, AND THE HEADROOM DID ITS JOB AND RAN OUT.
+// The tree before R205 flew 1,081,205: R179 to R204 had spent 71,000 of
+// R118's 100,000 on content, which is what it was for. R205 flies 1,142,718,
+// and the 61,513 it adds were counted per call site on both trees, the way
+// R118 counted its own, rather than guessed at:
+//
+//   the balance sweep           +47,616   sampleBuilds takes one build per
+//                                         purebred and one per combo, so
+//                                         4 animals + 4 combos = 8 builds,
+//                                         x 31 encounters x 8 seeds x 24 pools
+//   the smoke runSim benches     +6,696   the same 8 builds at their samples
+//   R148's chassis block         +2,496   4 bodies x 3 frames x 26 x 8
+//   the tier and turn censuses   +4,992   2,496 each, one cell per animal
+//   everything else                -287   other sites, both signs
+//
+// All of it is the catalogue growing and none of it is a sample. R205's first
+// draft of its own R148 split re-flew 3,248 fights the chassis loop had
+// already flown; it reads the loop's tally now, so that is not in here.
+//
+// 1,255,000 is 1,142,718 plus 10%, R118's band on R118's reasoning. The three
+// breaks that guard it, measured on this tree: 262 quadruples the sweep, now
+// 488,064, and lands at 1,142,718 + 3 x 488,064 = 2,606,910, twice the
+// ceiling; 261 runs all of smoke in every shard, about four times the suite;
+// and 300 loses the sweep from the count, 654,654, under the floor below.
+export const BATTLE_BUDGET = 1_255_000;
 
 // AND A FLOOR, which matters more than the ceiling and exists because R170
 // shipped the defect it catches. `tools/pool.js` ends the balance sweep with
@@ -166,7 +191,10 @@ export const BATTLE_BUDGET = 1_110_000;
 // is the same failure R168's share rule had and R170's first draft repeated:
 // a rule that can only ever pass. 910,000 is 1,010,051 minus 10%; losing the
 // sweep alone MEASURES 605,315 on this tree, two thirds of the floor.
-export const BATTLE_FLOOR = 910_000;
+// R205 — 910,000 -> 1,030,000, which is 1,142,718 minus 10%, for the same
+// reason the ceiling moved. Losing the sweep now reads 654,654, under two
+// thirds of it.
+export const BATTLE_FLOOR = 1_030_000;
 
 export function battleProblem(byJob, budget = BATTLE_BUDGET, floor = BATTLE_FLOOR) {
   const counted = [...byJob].filter(([name]) => name !== 'walks');

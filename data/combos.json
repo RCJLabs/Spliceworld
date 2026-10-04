@@ -620,6 +620,88 @@
           "regen": 0.05
         }
       }
+    },
+    {
+      "id": "speed_limit",
+      "name": "Speed Limit",
+      "parts": [
+        "hummingbird_forelimbs",
+        "falcon_organ"
+      ],
+      "keyword": "Multi-Hit",
+      "desc": "The smallest bird in the county, running on the fastest bird’s reflexes. Three hits, every one of them a rumour.",
+      "move": {
+        "power": 20,
+        "cost": 28,
+        "acc": 92,
+        "tags": [
+          "Airborne"
+        ],
+        "keywords": {
+          "multiHit": 3
+        }
+      }
+    },
+    {
+      "id": "cleanup_crew",
+      "name": "Cleanup Crew",
+      "parts": [
+        "vulture_head",
+        "goat_organ"
+      ],
+      "keyword": "Frenzy",
+      "desc": "A bald head and a stomach that has eaten a fence post. The less there is left of the other side, the more interested it gets.",
+      "move": {
+        "power": 56,
+        "cost": 28,
+        "acc": 92,
+        "tags": [],
+        "keywords": {
+          "frenzy": true
+        }
+      }
+    },
+    {
+      "id": "lawn_patrol",
+      "name": "Lawn Patrol",
+      "parts": [
+        "peacock_hindlimbs",
+        "goose_organ"
+      ],
+      "keyword": "Taunt",
+      "desc": "A peacock’s strut on a goose’s grudge. It walks straight at the problem, screaming, and the problem has to answer.",
+      "move": {
+        "power": 52,
+        "cost": 26,
+        "acc": 98,
+        "tags": [
+          "Sonic"
+        ],
+        "keywords": {
+          "taunt": true
+        }
+      }
+    },
+    {
+      "id": "night_shift",
+      "name": "Night Shift",
+      "parts": [
+        "squirrel_tail",
+        "owl_head"
+      ],
+      "keyword": "Accuracy Up",
+      "desc": "Two things that come out after dark: one glides, one listens. Between them they always know where you are.",
+      "move": {
+        "power": 56,
+        "cost": 24,
+        "acc": 96,
+        "tags": [
+          "Airborne"
+        ],
+        "keywords": {
+          "accUp": 1
+        }
+      }
     }
   ]
 }

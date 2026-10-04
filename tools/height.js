@@ -297,7 +297,13 @@ const BUDGET = {
   // species (349 parts) where R186's held 41 (345). Two bays at 81px predict
   // +162 over R186's 4,353 and the screen grew 154. Raised by exactly two
   // bays, keeping R186's headroom. The shut half is a bound and did not move.
-  vault:          { folded: 3300,  tallest: 4600, opens: 20 },
+  // R205 — 3300 -> 3586 shut, the mechanism above doing what it was built
+  // for: four species shipped and the worst case went red. 44 bays to 48,
+  // 3,265px to 3,551 (level 4, full, no spares): 286px, or 71.5 a bay against
+  // R187's 81, because a bay is as tall as its species' name wraps. Raised by
+  // exactly that, so the slack stays R187's 35. The day-180 walk's own shelf
+  // went DOWN (2,870 -> 2,317 shut), because it is a different campaign now.
+  vault:          { folded: 3586,  tallest: 4600, opens: 20 },
   // R204 — 3100 -> 3150, and the first reading since R104 of the roster a
   // player sees. R89 set 3100 against a fully drawn grid. R104 then held 28
   // of its portraits back until scrolled to, and this walk does not scroll,
@@ -311,7 +317,11 @@ const BUDGET = {
   // part count, not a line), so this is a bound, not a campaign reading:
   // 43px of slack, under the smallest row (152), so a species that adds a row
   // goes red here on purpose and its milestone raises this by one row.
-  'dex:roster':   { folded: 3150,  tallest: 3150 },
+  // R205 — that milestone: 3150 -> 3332. Four fliers took the Air section
+  // from eight cells to twelve, which is a fourth row of three, and the
+  // roster went 3,107 -> 3,289px: +182, one 174px row and its 8px gap.
+  // Raised by exactly that row, so the slack is still R204's 43.
+  'dex:roster':   { folded: 3332,  tallest: 3332 },
   // R117 — 1100 -> 1150, and `dex:genes` below by the same 50, which is the
   // SHARED CHROME rather than the tab: the Dex's six-tab bar goes to two
   // rows of three under 430px, because `1fr` is `minmax(auto, 1fr)` and the
@@ -398,7 +408,14 @@ const BUDGET = {
   // twice: a real row is a real row, 67px each. It is NOT R136's case, and
   // R136's instruction still stands for anything that is not a new row: the
   // tab is thirty rows now, and paging it is the answer to fixture drift.
-  'dex:combos':   { folded: 550,   tallest: 3400, opens: 2 },
+  // R205 — 3400 -> 3768 open, measured at 3,655 against 3,297 on the tree
+  // before it, and split row by row so the two causes are not one number.
+  // The four new combos are 368px: Speed Limit and Cleanup Crew discovered
+  // (103 each), Lawn Patrol and Night Shift as hints (81 each). The rest is
+  // the walk discovering a different 22 of the old combos, which came to
+  // -30px, and 20px of band summary. Raised by exactly the four rows; the
+  // drift went the other way this time, and R136's instruction stands.
+  'dex:combos':   { folded: 550,   tallest: 3768, opens: 2 },
   // R129 FOLDS IT, WHICH BRINGS THE SHUT HALF DOWN AND BUDGETS THE FOLD:
   // 1100/1100 -> 400 shut (measured 291) and 1250 open (measured 1185).
   // Twelve genes could only be learned by breeding for them, so this tab
@@ -537,8 +554,11 @@ const WORDS = {
   // see the height note above. The old budget plus exactly that card.
   // R187: 440 -> 600, the same bound in words: the worst case reads 582
   // (level 4, full, no spares). Slack 18, under one bay's summary line.
-  vault:          { folded: 600,  open: 5000 },
-  'dex:roster':   { folded: 400,  open: 400 },
+  // R205: 600 -> 639, the same four bays in words: 582 -> 621 at 48 bays.
+  vault:          { folded: 639,  open: 5000 },
+  // R205: 400 -> 428, measured 375 -> 403 — seven words a cell (a name, a
+  // role, its tags and a parts count) for the four new fliers.
+  'dex:roster':   { folded: 428,  open: 428 },
   'dex:variants': { folded: 200,  open: 200 },
   // R136: 550/550 -> 150 shut (measured 78) and 600 open (measured 532).
   // R95 left the shut budget at 550 against a 527-word screen because the
@@ -555,7 +575,10 @@ const WORDS = {
   // standing instruction, which this honours rather than spends.
   // R186: 630 -> 660 open, measured at 651 against `main`'s 627 — the two
   // new combo rows at 12 words each. See the height note above.
-  'dex:combos':   { folded: 150,  open: 660 },
+  // R205: 660 -> 750 open, measured 646 -> 736. The four new rows are the
+  // ninety: two discovered combos print their whole description (about 28
+  // words each) and two hints name both halves (about 17).
+  'dex:combos':   { folded: 150,  open: 750 },
   // R129: 200/200 -> 100 shut (measured 50) and 250 open (measured 221).
   // See the height note above — the words are the twelve descriptions, and
   // they are now behind the fold that holds them.
