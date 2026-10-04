@@ -469,7 +469,15 @@ const REPORT = process.argv.includes('--report');
 // them in the discovery layer, and 0.1 the four catalog unlocks in
 // `data/regions.json`. It stays in CORE for R180's and R186's reason. Nine
 // kilobytes of slack again.
-const FIRST_PAINT_KB = 1178;
+// R206 — 1178 -> 1197, measured at 1188 against 1169 on `main` (R205's own
+// reading, so no drift this time). Nineteen kilobytes, itemised the same way:
+// 12.2 KB is 23 new parts (four animals at six, less the cuttlefish's
+// hindlimbs, which the Kite has no socket for), 3.9 the four species, 2.0
+// the four combos, 0.1 the unlocks; and the first non-data cost in three
+// raises, 0.7 KB of `style.css` for the mantle's shimmer and its
+// reduced-motion off-switch and 0.1 of `render/renderer.js` to pass `anim`
+// through. Nine kilobytes of slack again.
+const FIRST_PAINT_KB = 1197;
 
 // R169 — AND IT STAYS AT 1034, measured at 1016. Every previous milestone
 // either raised this number or brought it down to sit just above the

@@ -6232,6 +6232,671 @@
       }
     },
     {
+      "id": "elephant_head",
+      "species": "elephant",
+      "slot": "head",
+      "name": "Elephant Trunk",
+      "ability": "Trumpet Blast",
+      "stats": {
+        "power": 7,
+        "hp": 16
+      },
+      "phys": {
+        "mass": 30,
+        "draw": 3
+      },
+      "tags": [
+        "Armored",
+        "Sonic"
+      ],
+      "classAffinity": "ground",
+      "move": {
+        "power": 52,
+        "cost": 26,
+        "acc": 95,
+        "tags": [
+          "Sonic"
+        ],
+        "keywords": {
+          "powerDown": 1
+        }
+      }
+    },
+    {
+      "id": "elephant_forelimbs",
+      "species": "elephant",
+      "slot": "forelimbs",
+      "name": "Elephant Arms",
+      "ability": "Elephant Swipe",
+      "stats": {
+        "power": 6,
+        "hp": 12
+      },
+      "phys": {
+        "mass": 28,
+        "draw": 3
+      },
+      "tags": [
+        "Armored",
+        "Sonic"
+      ],
+      "classAffinity": "ground",
+      "move": {
+        "power": 52,
+        "cost": 24,
+        "acc": 92,
+        "tags": [],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "elephant_hindlimbs",
+      "species": "elephant",
+      "slot": "hindlimbs",
+      "name": "Elephant Haunches",
+      "ability": "Elephant Kick",
+      "stats": {
+        "power": 4,
+        "speed": 2,
+        "hp": 14
+      },
+      "phys": {
+        "mass": 28,
+        "draw": 3
+      },
+      "tags": [
+        "Armored",
+        "Sonic"
+      ],
+      "classAffinity": "ground",
+      "move": {
+        "power": 44,
+        "cost": 20,
+        "acc": 95,
+        "tags": [
+          "Ground"
+        ],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "elephant_tail",
+      "species": "elephant",
+      "slot": "tail",
+      "name": "Elephant Flicker",
+      "ability": "Happy Flick",
+      "stats": {
+        "speed": 2,
+        "hp": 7
+      },
+      "phys": {
+        "mass": 4,
+        "draw": 1
+      },
+      "tags": [
+        "Armored",
+        "Sonic"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      }
+    },
+    {
+      "id": "elephant_hide",
+      "species": "elephant",
+      "slot": "hide",
+      "name": "Elephant Slick Hide",
+      "ability": "Elephant Bristles",
+      "stats": {
+        "armor": 9,
+        "hp": 26
+      },
+      "phys": {
+        "mass": 16,
+        "draw": 1
+      },
+      "tags": [
+        "Armored",
+        "Sonic"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      }
+    },
+    {
+      "id": "elephant_organ",
+      "species": "elephant",
+      "slot": "organ",
+      "name": "Herd Memory",
+      "ability": "Remember This",
+      "stats": {
+        "stamina": 10,
+        "regen": 4,
+        "hp": 9
+      },
+      "phys": {
+        "mass": 10,
+        "draw": 3
+      },
+      "tags": [
+        "Armored",
+        "Sonic"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 12,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "accUp": 1
+        }
+      }
+    },
+    {
+      "id": "platypus_head",
+      "species": "platypus",
+      "slot": "head",
+      "name": "Duck Bill",
+      "ability": "Electrosense",
+      "stats": {
+        "power": 11,
+        "hp": 12
+      },
+      "phys": {
+        "mass": 5,
+        "draw": 3
+      },
+      "tags": [
+        "Aquatic",
+        "Electric",
+        "Venomous"
+      ],
+      "classAffinity": "water",
+      "move": {
+        "power": 48,
+        "cost": 24,
+        "acc": 96,
+        "tags": [
+          "Electric"
+        ],
+        "keywords": {
+          "ignoreEvasion": true
+        }
+      }
+    },
+    {
+      "id": "platypus_forelimbs",
+      "species": "platypus",
+      "slot": "forelimbs",
+      "name": "Platypus Paddles",
+      "ability": "Platypus Paddle Slap",
+      "stats": {
+        "power": 10,
+        "hp": 9
+      },
+      "phys": {
+        "mass": 5,
+        "draw": 3
+      },
+      "tags": [
+        "Aquatic",
+        "Electric",
+        "Venomous"
+      ],
+      "classAffinity": "water",
+      "move": {
+        "power": 52,
+        "cost": 24,
+        "acc": 92,
+        "tags": [],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "platypus_hindlimbs",
+      "species": "platypus",
+      "slot": "hindlimbs",
+      "name": "Platypus Webbed Feet",
+      "ability": "Ankle Spur",
+      "stats": {
+        "power": 6,
+        "speed": 3,
+        "hp": 11
+      },
+      "phys": {
+        "mass": 5,
+        "draw": 3
+      },
+      "tags": [
+        "Aquatic",
+        "Electric",
+        "Venomous"
+      ],
+      "classAffinity": "water",
+      "move": {
+        "power": 38,
+        "cost": 20,
+        "acc": 95,
+        "tags": [
+          "Venomous"
+        ],
+        "keywords": {
+          "venom": 1
+        }
+      }
+    },
+    {
+      "id": "platypus_tail",
+      "species": "platypus",
+      "slot": "tail",
+      "name": "Platypus Rudder Tail",
+      "ability": "Tail Larder",
+      "stats": {
+        "speed": 3,
+        "hp": 5
+      },
+      "phys": {
+        "mass": 2,
+        "draw": 1
+      },
+      "tags": [
+        "Aquatic",
+        "Electric",
+        "Venomous"
+      ],
+      "classAffinity": "water",
+      "move": {
+        "power": 0,
+        "cost": 8,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "staminaRestore": 12
+        }
+      }
+    },
+    {
+      "id": "platypus_hide",
+      "species": "platypus",
+      "slot": "hide",
+      "name": "Platypus Slick Hide",
+      "ability": "Platypus Slipskin",
+      "stats": {
+        "armor": 6,
+        "hp": 20
+      },
+      "phys": {
+        "mass": 4,
+        "draw": 1
+      },
+      "tags": [
+        "Aquatic",
+        "Electric",
+        "Venomous"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      }
+    },
+    {
+      "id": "platypus_organ",
+      "species": "platypus",
+      "slot": "organ",
+      "name": "Electroreceptors",
+      "ability": "Burrow Rest",
+      "stats": {
+        "stamina": 10,
+        "regen": 4,
+        "hp": 7
+      },
+      "phys": {
+        "mass": 2,
+        "draw": 3
+      },
+      "tags": [
+        "Aquatic",
+        "Electric",
+        "Venomous"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 18,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "regen": 0.09
+        }
+      }
+    },
+    {
+      "id": "mantis_shrimp_head",
+      "species": "mantis_shrimp",
+      "slot": "head",
+      "name": "Mantis Shrimp Head",
+      "ability": "Mantis Shrimp Mandible Snap",
+      "stats": {
+        "power": 13,
+        "hp": 12
+      },
+      "phys": {
+        "mass": 3,
+        "draw": 3
+      },
+      "tags": [
+        "Aquatic",
+        "Armored"
+      ],
+      "move": {
+        "power": 46,
+        "cost": 22,
+        "acc": 95,
+        "tags": [],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "mantis_shrimp_forelimbs",
+      "species": "mantis_shrimp",
+      "slot": "forelimbs",
+      "name": "Mantis Shrimp Clubs",
+      "ability": "Cavitation Strike",
+      "stats": {
+        "power": 11,
+        "hp": 9
+      },
+      "phys": {
+        "mass": 5,
+        "draw": 3
+      },
+      "tags": [
+        "Aquatic",
+        "Armored"
+      ],
+      "classAffinity": "water",
+      "move": {
+        "power": 46,
+        "cost": 34,
+        "acc": 92,
+        "tags": [],
+        "keywords": {
+          "multiHit": 2
+        }
+      }
+    },
+    {
+      "id": "mantis_shrimp_hindlimbs",
+      "species": "mantis_shrimp",
+      "slot": "hindlimbs",
+      "name": "Mantis Shrimp Hindfins",
+      "ability": "Mantis Shrimp Fin Thrust",
+      "stats": {
+        "power": 6,
+        "speed": 4,
+        "hp": 11
+      },
+      "phys": {
+        "mass": 4,
+        "draw": 3
+      },
+      "tags": [
+        "Aquatic",
+        "Armored"
+      ],
+      "classAffinity": "water",
+      "move": {
+        "power": 44,
+        "cost": 20,
+        "acc": 95,
+        "tags": [],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "mantis_shrimp_tail",
+      "species": "mantis_shrimp",
+      "slot": "tail",
+      "name": "Mantis Shrimp Tail Fin",
+      "ability": "Tail Drive",
+      "stats": {
+        "speed": 4,
+        "hp": 5
+      },
+      "phys": {
+        "mass": 2,
+        "draw": 1
+      },
+      "tags": [
+        "Aquatic",
+        "Armored"
+      ],
+      "classAffinity": "water",
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      }
+    },
+    {
+      "id": "mantis_shrimp_hide",
+      "species": "mantis_shrimp",
+      "slot": "hide",
+      "name": "Mantis Shrimp Chitin",
+      "ability": "Mantis Shrimp Bristles",
+      "stats": {
+        "armor": 5,
+        "hp": 20
+      },
+      "phys": {
+        "mass": 3,
+        "draw": 1
+      },
+      "tags": [
+        "Aquatic",
+        "Armored"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "thorns": 0.45
+        }
+      }
+    },
+    {
+      "id": "mantis_shrimp_organ",
+      "species": "mantis_shrimp",
+      "slot": "organ",
+      "name": "Sixteen Cones",
+      "ability": "See Everything",
+      "stats": {
+        "stamina": 10,
+        "regen": 4,
+        "hp": 7
+      },
+      "phys": {
+        "mass": 2,
+        "draw": 3
+      },
+      "tags": [
+        "Aquatic",
+        "Armored"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 12,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "accUp": 1
+        }
+      }
+    },
+    {
+      "id": "cuttlefish_head",
+      "species": "cuttlefish",
+      "slot": "head",
+      "name": "Cuttlefish Head",
+      "ability": "Cuttlefish Beak",
+      "stats": {
+        "power": 9,
+        "hp": 12
+      },
+      "phys": {
+        "mass": 5,
+        "draw": 3
+      },
+      "tags": [
+        "Aquatic",
+        "Camo"
+      ],
+      "classAffinity": "water",
+      "move": {
+        "power": 46,
+        "cost": 22,
+        "acc": 95,
+        "tags": [],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "cuttlefish_forelimbs",
+      "species": "cuttlefish",
+      "slot": "forelimbs",
+      "name": "Cuttlefish Tentacles",
+      "ability": "Cuttlefish Tentacle Lash",
+      "stats": {
+        "power": 8,
+        "hp": 9
+      },
+      "phys": {
+        "mass": 6,
+        "draw": 3
+      },
+      "tags": [
+        "Aquatic",
+        "Camo"
+      ],
+      "classAffinity": "water",
+      "move": {
+        "power": 52,
+        "cost": 24,
+        "acc": 92,
+        "tags": [],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "cuttlefish_tail",
+      "species": "cuttlefish",
+      "slot": "tail",
+      "name": "Cuttlefish Tail Fin",
+      "ability": "Tail Drive",
+      "stats": {
+        "speed": 4,
+        "hp": 5
+      },
+      "phys": {
+        "mass": 3,
+        "draw": 1
+      },
+      "tags": [
+        "Aquatic",
+        "Camo"
+      ],
+      "classAffinity": "water",
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      }
+    },
+    {
+      "id": "cuttlefish_hide",
+      "species": "cuttlefish",
+      "slot": "hide",
+      "name": "Cuttlefish Mantle",
+      "ability": "Passing Cloud",
+      "stats": {
+        "armor": 5,
+        "hp": 20
+      },
+      "phys": {
+        "mass": 2,
+        "draw": 1
+      },
+      "tags": [
+        "Aquatic",
+        "Camo"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 18,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "accDown": 1,
+          "evasionUp": 1
+        }
+      }
+    },
+    {
+      "id": "cuttlefish_organ",
+      "species": "cuttlefish",
+      "slot": "organ",
+      "name": "Three Hearts",
+      "ability": "Third Heartbeat",
+      "stats": {
+        "stamina": 10,
+        "regen": 4,
+        "hp": 7
+      },
+      "phys": {
+        "mass": 3,
+        "draw": 3
+      },
+      "tags": [
+        "Aquatic",
+        "Camo"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 18,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "regen": 0.09
+        }
+      }
+    },
+    {
       "id": "alpine_ram_head",
       "species": "alpine_ram",
       "slot": "head",

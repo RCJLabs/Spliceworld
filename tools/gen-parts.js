@@ -106,6 +106,14 @@ const BUILD = {
   vulture:      B(['bird',{beak:'hook',crest:false,bald:true,eyeR:10}], ['wing',{span:134}], ['talon',{len:46}], ['fan',{spread:12}], 'feather', '#d9c08a', 'eye'),
   peacock:      B(['bird',{beak:'straight',crest:'coronet',face:'@primary',eyeR:10}], ['wing',{span:104}], ['stilt',{len:60}], ['plume',{len:75,eyes:7}], 'feather', '#4fd1c5', 'howl'),
   squirrel:     B(['mammal',{snout:14,ear:'round',skull:24,eyeR:15,teeth:true}], ['patagium',{len:46}], ['patagium',{len:48,rear:true}], ['bushy',{len:54}], 'fur', '#c8b48a', 'zzz'),
+  // R206 — four animals nature spliced first. Three bring a body part
+  // nothing in the county had: a trunk, a duck's bill and a mantis shrimp's
+  // club; the fourth brings a coat that changes colour. The cuttlefish rides
+  // the Kite like the cobra and the manta, so it has no hindlimbs to lose.
+  elephant:     B(['trunk',{tusks:true}], ['paw',{mass:26,len:58,claws:0}], ['paw',{mass:27,len:60,claws:0}], ['flick',{}], 'slick', '#d9c9b0', 'howl'),
+  platypus:     B(['bill',{}], ['paddle',{len:36}], ['paddle',{len:38}], ['rudder',{len:50,width:1.7}], 'slick', '#8fd8ff', 'bolt'),
+  mantis_shrimp: B(['bug',{eyeR:15,mandibles:false}], ['club',{len:42}], ['fin',{len:40}], ['finTail',{len:48}], 'chitin', '#ff6bd5', 'spark'),
+  cuttlefish:   B(['blob',{eyeR:15}], ['tentacle',{len:56}], null, ['finTail',{len:46}], 'mantle', '#e6d8ff', 'eye'),
 };
 
 // Signature abilities from ROADMAP §4.1: [slot, part name, ability, move].
@@ -171,6 +179,18 @@ const SIGNATURE = {
   // A glide that lands on somebody and moves them out of the way: the only
   // Airborne knockback.
   squirrel:     ['forelimbs', 'Patagium', 'Drop In', M(46, 22, 95, ['Airborne'], { knockback: true })],
+  // R206 — the trumpet is Sonic, which is what goes through armour, and it
+  // takes the fight out of whatever hears it.
+  elephant:     ['head', 'Elephant Trunk', 'Trumpet Blast', M(52, 26, 95, ['Sonic'], { powerDown: 1 })],
+  // Electroreception: it finds what is hiding, which is why the bill ignores
+  // evasion. The county's second Electric animal, and its first Electric head.
+  platypus:     ['head', 'Duck Bill', 'Electrosense', M(48, 24, 96, ['Electric'], { ignoreEvasion: true })],
+  // The club, and then the bubble it leaves collapsing: two hits, every time.
+  // 46 a hit, armour on each, so it is the hardest punch against soft targets
+  // and the most honest about plate.
+  mantis_shrimp: ['forelimbs', 'Mantis Shrimp Clubs', 'Cavitation Strike', M(46, 34, 92, [], { multiHit: 2 })],
+  // A display, not a blow: it blinds and it hides in one press.
+  cuttlefish:   ['hide', 'Cuttlefish Mantle', 'Passing Cloud', M(0, 18, 100, [], { accDown: 1, evasionUp: 1 })],
 };
 
 // Slot stat/phys bases, scaled by the species' role bias.
@@ -211,10 +231,10 @@ const SLOT_BASE = {
 // still failing the moment you bolt somebody else's skull to it — and it is
 // why a moth gets airborne on nothing while a swan needs a runway.
 const DENSITY = {
-  head: { horned: 1.4, reptile: 1.15, mammal: 1, fish: 0.95, amphib: 0.8, bug: 0.7, blob: 0.7, bird: 0.5, moth: 0.35, bell: 0.3 },
-  limb: { paw: 1.15, hoof: 1.1, hop: 1.05, scythe: 0.85, fin: 0.85, paddle: 0.85, tentacle: 0.8, talon: 0.6, stilt: 0.55, bugleg: 0.55, wing: 0.45, membrane: 0.4, hindwing: 0.35, patagium: 0.5 },
+  head: { horned: 1.4, trunk: 1.3, reptile: 1.15, mammal: 1, fish: 0.95, bill: 0.9, amphib: 0.8, bug: 0.7, blob: 0.7, bird: 0.5, moth: 0.35, bell: 0.3 },
+  limb: { paw: 1.15, hoof: 1.1, hop: 1.05, scythe: 0.85, fin: 0.85, paddle: 0.85, tentacle: 0.8, talon: 0.6, stilt: 0.55, bugleg: 0.55, wing: 0.45, membrane: 0.4, hindwing: 0.35, patagium: 0.5, club: 1 },
   tail: { scute: 1.3, coil: 1.15, finTail: 1, rudder: 0.95, sting: 0.9, whip: 0.85, bushy: 0.7, nub: 0.5, drift: 0.5, flick: 0.45, fan: 0.45, streamer: 0.35, plume: 0.4 },
-  hide: { plate: 1.8, band: 1.45, scale: 1.15, quill: 1.1, spine: 1.05, fur: 1, stripes: 1, camo: 0.9, chitin: 0.85, slick: 0.85, feather: 0.45, down: 0.35, jelly: 0.3 },
+  hide: { plate: 1.8, band: 1.45, scale: 1.15, quill: 1.1, spine: 1.05, fur: 1, stripes: 1, camo: 0.9, chitin: 0.85, slick: 0.85, feather: 0.45, down: 0.35, jelly: 0.3, mantle: 0.4 },
 };
 function bulkFor(sp, byId) {
   return sp.bulk ?? (sp.variantOf ? byId[sp.variantOf]?.bulk : undefined) ?? 1;
@@ -250,15 +270,16 @@ const SLOT_NAMES = {
   scythe: { forelimbs: 'Scythes' }, talon: { hindlimbs: 'Talons' }, hop: { forelimbs: 'Forelimbs', hindlimbs: 'Springlegs' },
   paddle: { forelimbs: 'Paddles', hindlimbs: 'Webbed Feet' }, hindwing: { hindlimbs: 'Hindwings' }, stilt: { hindlimbs: 'Stilts' },
   patagium: { forelimbs: 'Patagium', hindlimbs: 'Gliding Legs' },
+  club: { forelimbs: 'Clubs', hindlimbs: 'Club Legs' },
 };
 const TAIL_NAMES = { bushy: 'Brush Tail', nub: 'Nub', whip: 'Whip Tail', finTail: 'Tail Fin', fan: 'Tailfan', sting: 'Sting', coil: 'Coil', flick: 'Flicker',
   rudder: 'Rudder Tail', streamer: 'Wing Streamers', drift: 'Stinging Threads', scute: 'Banded Tail', plume: 'Train' };
 const HIDE_NAMES = { fur: 'Pelt', stripes: 'Striped Coat', feather: 'Plumage', scale: 'Scales', plate: 'Plating', quill: 'Quill Coat', chitin: 'Chitin', slick: 'Slick Hide', camo: 'Camo Hide',
-  down: 'Down', spine: 'Spine Coat', band: 'Banded Shell', jelly: 'Jelly Mantle' };
+  down: 'Down', spine: 'Spine Coat', band: 'Banded Shell', jelly: 'Jelly Mantle', mantle: 'Mantle' };
 const TAIL_ABIL = { bushy: 'Counterbalance', nub: 'Nub Wiggle', whip: 'Whip Crack', finTail: 'Tail Drive', fan: 'Tail Rudder', sting: 'Sting', coil: 'Constrict', flick: 'Happy Flick',
   rudder: 'Course Correction', streamer: 'Streamer Flutter', drift: 'Drift Net', scute: 'Armoured Sweep', plume: 'Fan Display' };
 const HIDE_ABIL = { fur: 'Thick Fur', stripes: 'Broken Outline', feather: 'Preened Feathers', scale: 'Molted Slip', plate: 'Plate Armour', quill: 'Quill Coat', chitin: 'Chitin Guard', slick: 'Slick Coat', camo: 'Camouflage',
-  down: 'Muffling Down', spine: 'Spine Coat', band: 'Banded Shell', jelly: 'Pass-Through' };
+  down: 'Muffling Down', spine: 'Spine Coat', band: 'Banded Shell', jelly: 'Pass-Through', mantle: 'Colour Shift' };
 const ORGAN_NAMES = {
   bear: ['Hibernation Gland', 'Deep Snooze'], tiger: ['Predator Eye', 'Target Lock'], wolf: ['Howl Bladder', 'Rally Howl'],
   crocodile: ['Cold Heart', 'Slow Metabolism'], gorilla: ['Barrel Lungs', 'Second Wind'], rhino: ['Charge Gland', 'Wind-Up'],
@@ -278,6 +299,8 @@ const ORGAN_NAMES = {
   lamprey: ['Oral Gland', 'Anticoagulant'], clinker: ['Furnace Heart', 'Stoke the Furnace'],
   hummingbird: ['Sugar Furnace', 'Sugar Rush'], vulture: ['Acid Crop', 'Strong Stomach'],
   peacock: ['Vanity Gland', 'Strut'], squirrel: ['Cheek Cache', 'Hidden Stash'],
+  elephant: ['Herd Memory', 'Remember This'], platypus: ['Electroreceptors', 'Burrow Rest'],
+  mantis_shrimp: ['Sixteen Cones', 'See Everything'], cuttlefish: ['Three Hearts', 'Third Heartbeat'],
 };
 
 // R20 wired the dead keywords onto specific parts by hand, straight into
@@ -317,6 +340,9 @@ const KEYWORD_MOVES = {
   // R205 — a wing too fast to see lands three times, softly: under the
   // bat's 20 a hit, because the hummingbird also strikes first.
   hummingbird_forelimbs: M(16, 22, 92, [], { multiHit: 3 }),
+  // R206 — the spur on a male platypus's hind ankle, which is venomous, which
+  // is the part of this animal nobody believes until it happens to them.
+  platypus_hindlimbs:  M(38, 20, 95, ['Venomous'], { venom: 1 }),
   // R205 — Sonic from a bird you can hear three fields away. Priced under
   // the goose's 48 for the reason A5 gave: ignoring armour is worth power.
   peacock_head:        M(40, 20, 95, ['Sonic'], {}),
@@ -389,6 +415,9 @@ const HAND_TUNED = {
   hummingbird_tail: { ability: 'Hover Lock', move: M(0, 10, 100, [], { accUp: 1 }) },
   vulture_tail: { ability: 'Ride the Thermal', move: M(0, 8, 100, [], { staminaRestore: 12 }) },
   squirrel_tail: { ability: 'Scold', move: M(0, 10, 100, [], { taunt: true }) },
+  // R206 — a rudder gives `evasionUp: 1`, which the platypus's slick hide
+  // already does. A platypus keeps its fat in its tail, so the tail feeds it.
+  platypus_tail: { ability: 'Tail Larder', move: M(0, 8, 100, [], { staminaRestore: 12 }) },
   // --- head ---
   // R186 — what the unique GIVES UP, which R179's rule asks every expedition
   // animal to show on at least one part: she is forty years in a furnace and
@@ -435,6 +464,7 @@ const KEYWORD_ABILITY = {
   moth_forelimbs: 'Scale Storm',
   hummingbird_forelimbs: 'Blur of Wings',
   peacock_head: 'Dawn Scream',
+  platypus_hindlimbs: 'Ankle Spur',
 };
 const ACTIVE_ABILITY = {
   goat_organ: 'Second Stomach', tortoise_organ: 'Shell Rebuild', frog_organ: 'Cutaneous Mend',
@@ -444,6 +474,8 @@ const ACTIVE_ABILITY = {
   clinker_hide: 'Clinker Crust',
   hummingbird_organ: 'Sugar Rush', vulture_organ: 'Strong Stomach',
   peacock_organ: 'Strut', squirrel_organ: 'Hidden Stash',
+  elephant_organ: 'Remember This', platypus_organ: 'Burrow Rest',
+  mantis_shrimp_organ: 'See Everything', cuttlefish_organ: 'Third Heartbeat',
 };
 // [hide kind, organ kind]; null where the species' signature covers the slot.
 const ACTIVES = {
@@ -471,6 +503,9 @@ const ACTIVES = {
   // R205
   hummingbird:  ['slipskin', 'gut'],       vulture:      ['slipskin', 'slowMend'],
   peacock:      ['slipskin', 'spike'],     squirrel:     ['slipskin', 'gut'],
+  // R206 — the cuttlefish's hide is its signature, so it names no hide kind.
+  elephant:     ['bristles', 'focus'],     platypus:     ['slipskin', 'slowMend'],
+  mantis_shrimp: ['bristles', 'focus'],    cuttlefish:   [null, 'slowMend'],
   // Variants pick their own — a Thunderhead's organ rallies where its base's
   // merely focuses, and its hide is a different hide.
   alpine_ram:   ['bristles', 'slowMend'],  abyssal_shark: ['slipskin', 'knit'],
@@ -533,6 +568,7 @@ function shapesFor(slot, sp) {
 const AFFINITY_FAMILY = {
   wing: 'air', membrane: 'air', fan: 'air', talon: 'air', hindwing: 'air', streamer: 'air',
   patagium: 'air', plume: 'air',
+  club: 'water',
   fin: 'water', finTail: 'water', hop: 'water', paddle: 'water', rudder: 'water', drift: 'water',
   tentacle: 'water',
   paw: 'ground', hoof: 'ground', bugleg: 'ground', scythe: 'ground', stilt: 'ground', scute: 'ground',
@@ -542,7 +578,9 @@ const AFFINITY_FAMILY = {
 // heads do not vote at all: gills breathe water and a bell swims in it, a
 // beak on a hollow skull is flight kit, and a horned skull is a thing you
 // brace against the ground and shove with.
-const HEAD_AFFINITY = { fish: 'water', bell: 'water', blob: 'water', bird: 'air', moth: 'air', horned: 'ground' };
+// R206 — a duck's bill dabbles, so it votes Water; a trunk is a horned
+// skull's cousin, a thing you shove the world about with.
+const HEAD_AFFINITY = { fish: 'water', bell: 'water', blob: 'water', bill: 'water', bird: 'air', moth: 'air', horned: 'ground', trunk: 'ground' };
 // Flight SURFACES grant lift; a talon votes Air but does not hold anything up.
 // R205 — a patagium glides rather than flies, so it lifts less than a wing
 // and more than a hindwing.
@@ -598,12 +636,13 @@ const LIMB_VERB = {
   tentacle: { forelimbs: 'Tentacle Lash', hindlimbs: 'Arm Wrap' },
   bugleg: { forelimbs: 'Foreclaw Jab', hindlimbs: 'Leg Sweep' },
   patagium: { forelimbs: 'Glide Slap', hindlimbs: 'Touchdown' },
+  club: { forelimbs: 'Club Punch', hindlimbs: 'Club Kick' },
 };
 const limbVerb = (family, slot) => {
   const v = LIMB_VERB[family];
   return typeof v === 'string' ? v : v?.[slot];
 };
-const HEAD_VERB = { bird: 'Peck', moth: 'Proboscis Jab', bug: 'Mandible Snap', bell: 'Sting', blob: 'Beak', horned: 'Headbutt' };
+const HEAD_VERB = { bird: 'Peck', moth: 'Proboscis Jab', bug: 'Mandible Snap', bell: 'Sting', blob: 'Beak', horned: 'Headbutt', trunk: 'Trunk Slap', bill: 'Bill Snap' };
 const SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
 
 const parts = [];

@@ -1612,6 +1612,184 @@
       "flavor": "Does not fly. Falls with great confidence and excellent posture."
     },
     {
+      "id": "elephant",
+      "name": "Elephant",
+      "role": "Tank",
+      "rarity": "common",
+      "tags": [
+        "Armored",
+        "Sonic"
+      ],
+      "palette": {
+        "primary": "#8e9098",
+        "secondary": "#c4c6cc",
+        "accent": "#5d5f66"
+      },
+      "frame": "L",
+      "bulk": 1.9,
+      "class": "ground",
+      "archetype": "proboscidean",
+      "diet": "An entire hedge, politely",
+      "feedCost": 12,
+      "upkeepPerDay": 13,
+      "mailOrderPrice": 360,
+      "growthHours": {
+        "adult": 12,
+        "prime": 34,
+        "elder": 120
+      },
+      "thermal": [
+        5,
+        40
+      ],
+      "incubationMinutes": 56,
+      "setBonus": {
+        "name": "Never Forgets",
+        "desc": "+15% HP and +10% Armor",
+        "effect": {
+          "stats": {
+            "hp": 1.15,
+            "armor": 1.1
+          }
+        }
+      },
+      "flavor": "Never forgets a face, a slight, or where the good hay is kept."
+    },
+    {
+      "id": "platypus",
+      "name": "Platypus",
+      "role": "Hybrid",
+      "rarity": "common",
+      "tags": [
+        "Aquatic",
+        "Electric",
+        "Venomous"
+      ],
+      "palette": {
+        "primary": "#7d5a3e",
+        "secondary": "#c9a984",
+        "accent": "#3d3f47"
+      },
+      "frame": "S",
+      "bulk": 0.45,
+      "class": "water",
+      "archetype": "monotreme",
+      "diet": "Riverbed grubs, found by feel",
+      "feedCost": 4,
+      "upkeepPerDay": 5,
+      "mailOrderPrice": 180,
+      "growthHours": {
+        "adult": 5,
+        "prime": 16,
+        "elder": 64
+      },
+      "thermal": [
+        0,
+        30
+      ],
+      "incubationMinutes": 28,
+      "setBonus": {
+        "name": "Spurred",
+        "desc": "Venom stacks half again, and +15% Stamina",
+        "effect": {
+          "stats": {
+            "stamina": 1.15
+          },
+          "keywords": {
+            "venom": 1.5
+          }
+        }
+      },
+      "flavor": "Arrived pre-spliced. Nobody will say by whom."
+    },
+    {
+      "id": "mantis_shrimp",
+      "name": "Mantis Shrimp",
+      "role": "Striker",
+      "rarity": "common",
+      "tags": [
+        "Aquatic",
+        "Armored"
+      ],
+      "palette": {
+        "primary": "#22a99a",
+        "secondary": "#f27a3d",
+        "accent": "#c94ad8"
+      },
+      "frame": "S",
+      "bulk": 0.4,
+      "class": "water",
+      "archetype": "stomatopod",
+      "diet": "Anything with a shell, opened by force",
+      "feedCost": 4,
+      "upkeepPerDay": 5,
+      "mailOrderPrice": 210,
+      "growthHours": {
+        "adult": 5,
+        "prime": 15,
+        "elder": 60
+      },
+      "thermal": [
+        12,
+        32
+      ],
+      "incubationMinutes": 26,
+      "setBonus": {
+        "name": "Spring-Loaded",
+        "desc": "+10% Power and +10% Speed",
+        "effect": {
+          "stats": {
+            "power": 1.1,
+            "speed": 1.1
+          }
+        }
+      },
+      "flavor": "Punches at the speed of a bullet. Sees colours nobody has told you about."
+    },
+    {
+      "id": "cuttlefish",
+      "name": "Cuttlefish",
+      "role": "Ghost",
+      "rarity": "common",
+      "tags": [
+        "Aquatic",
+        "Camo"
+      ],
+      "palette": {
+        "primary": "#c8a27c",
+        "secondary": "#6a4e8c",
+        "accent": "#f2e9ff"
+      },
+      "frame": "A",
+      "bulk": 0.55,
+      "class": "water",
+      "archetype": "cephalopod",
+      "diet": "Crabs, hypnotised first",
+      "feedCost": 5,
+      "upkeepPerDay": 6,
+      "mailOrderPrice": 190,
+      "growthHours": {
+        "adult": 6,
+        "prime": 17,
+        "elder": 66
+      },
+      "thermal": [
+        6,
+        26
+      ],
+      "incubationMinutes": 32,
+      "setBonus": {
+        "name": "Hypnotic Display",
+        "desc": "Accuracy drops land half again as hard",
+        "effect": {
+          "keywords": {
+            "accDown": 1.5
+          }
+        }
+      },
+      "flavor": "Changes colour to match its mood. Its mood is usually \"scheming\"."
+    },
+    {
       "id": "salvage",
       "name": "Enemy Tech",
       "role": "Salvage",

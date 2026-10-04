@@ -17,10 +17,14 @@
   <h1>Part gallery — renderer QA, not a game screen</h1>
   <div class="grid" id="grid"></div>
   <script type="module">
-    import { loadContent } from '../data/loader.js';
+    import { loadContent, loadShapes } from '../data/loader.js';
     import { renderCreatureSVG, renderUnitSVG, SLOTS } from '../render/renderer.js';
 
     const content = await loadContent('..');
+    // R206 — the geometry has lived in its own file since R81 and only
+    // `loadShapes` merges it, so until this line every purebred here was a
+    // bare chassis with no parts on it.
+    await loadShapes(content, '..');
     const grid = document.getElementById('grid');
     let n = 0;
 

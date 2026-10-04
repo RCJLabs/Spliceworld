@@ -389,6 +389,8 @@ function shapeToSVG(shape, palette) {
   }
   if (shape.opacity != null) attrs.push(`opacity="${esc(shape.opacity)}"`);
   if (shape.transform) attrs.push(`transform="${esc(shape.transform)}"`);
+  // R206 — `anim`: see data/notes/parts-shapes.md.
+  if (shape.anim) attrs.push(`class="${esc(shape.anim)}"`);
   const a = attrs.join(' ');
 
   switch (shape.type) {

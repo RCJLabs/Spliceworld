@@ -5443,12 +5443,12 @@ const BREAKS = [
     // moved it again for R182's least-missed card. R187 bounded the SHUT half
     // on the worst case; the open half is still a reading, and session 216's
     // faster table moved it by two species bays (4440 -> 4600), and R205's
-    // four species moved the shut bound by four (3300 -> 3586). What the
-    // break aims at is `opens`, which is untouched.
+    // and R206's four species each moved the shut bound by four (3300 ->
+    // 3586 -> 3816). What the break aims at is `opens`, which is untouched.
     n: 199, gate: HEIGHT, name: 'the height gate stops asking whether a folding screen still opens',
     file: 'tools/height.js',
-    anchor: '  vault:          { folded: 3586,  tallest: 4600, opens: 20 },',
-    to: '  vault:          { folded: 3586,  tallest: 4600 },',
+    anchor: '  vault:          { folded: 3816,  tallest: 4600, opens: 20 },',
+    to: '  vault:          { folded: 3816,  tallest: 4600 },',
   },
   {
     // R137 — the five rows that point at the Ranch go back to navigating to
@@ -7671,6 +7671,43 @@ const BREAKS = [
     anchor: '        "stamina": 52,\n        "regen": 11,',
     to: '        "stamina": 52,\n        "regen": 10,',
     expect: 'for the bodies a Rumbler does not ground',
+  },
+  {
+    // R206 — THE CUTTLEFISH KEEPS SHIMMERING WHEN ASKED NOT TO. The mantle's
+    // three layers lose their reduced-motion off-switch, and a player who has
+    // asked their OS to stop moving things gets a coat that never holds still.
+    // The keyboard gate's source rule is the one that has to see it: every
+    // selector that starts an animation needs an off-switch.
+    // BLIND AGAIN IF the mantle's animation moves to an inline style, which
+    // that rule does not read.
+    n: 538, gate: A11Y, name: "the cuttlefish's mantle keeps changing colour under reduced motion",
+    file: 'style.css',
+    anchor: '  .shift-a, .shift-b, .shift-c { animation: none; }\n',
+    to: '',
+    expect: 'block turns it off',
+  },
+  {
+    // R206 — THE RENDERER DROPS `anim`. Every part still draws, at its still
+    // frame, and nothing on any screen says the mantle stopped moving.
+    // BLIND AGAIN IF the smoke rule stops rendering the part it reads.
+    n: 539, gate: SHARD_A, name: "the renderer stops writing a part's anim, and the mantle stands still for everybody",
+    file: 'render/renderer.js',
+    anchor: '  if (shape.anim) attrs.push(`class="${esc(shape.anim)}"`);',
+    to: '',
+    expect: "the renderer writes a part's anim as its class",
+  },
+  {
+    // R206 — DATA NAMES A CLASS NOBODY STYLED. One layer's animation goes, so
+    // `shift-c` is a class with no rule: the patches it marks hold still while
+    // the other two move, and no gate that starts from the stylesheet can see
+    // a class the stylesheet does not mention.
+    // BLIND AGAIN IF the smoke rule reads the classes from style.css instead
+    // of from the parts.
+    n: 540, gate: SHARD_A, name: 'a part names an animation the stylesheet never defines',
+    file: 'style.css',
+    anchor: '.shift-c { animation: mantle-shift 6s ease-in-out -4s infinite; }\n',
+    to: '',
+    expect: 'a part that moves has a stylesheet that moves it',
   },
 ];
 

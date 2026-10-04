@@ -291,7 +291,8 @@
           "blurb": "They have wired the whole yard to the water. On purpose. Bring boots.",
           "unlocksFauna": [
             "electric_eel",
-            "anglerfish"
+            "anglerfish",
+            "cuttlefish"
           ],
           "benchTeam": 2
         },
@@ -304,7 +305,8 @@
           "blurb": "The Harbormaster has a whistle, a grudge, and a crane the size of a church.",
           "boss": true,
           "unlocksFauna": [
-            "tortoise"
+            "tortoise",
+            "platypus"
           ],
           "benchTeam": 3
         }
@@ -394,7 +396,8 @@
           "blurb": "Everything in here is either red hot or armour-plated. Frequently both.",
           "benchTeam": 2,
           "unlocksFauna": [
-            "cobra"
+            "cobra",
+            "elephant"
           ]
         },
         {
@@ -540,7 +543,10 @@
           "notoriety": 85,
           "threatGen": 4,
           "blurb": "Where the new hardware learns your habits. Attendance, as ever, mandatory.",
-          "benchTeam": 3
+          "benchTeam": 3,
+          "unlocksFauna": [
+            "mantis_shrimp"
+          ]
         }
       ],
       "benchGrade": "apex",

@@ -131,13 +131,13 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
      engine at test time, never typed twice. If you change content, this
      block is what tells you the prose above it has gone stale. -->
 
-- species: 48
-- parts: 283
+- species: 52
+- parts: 306
 - frames: 4
 - regions: 5
 - nodes: 23
 - keywords: 30
-- combos: 34
+- combos: 38
 - grades: 4
 - grade multipliers: 1/1.2/1.4/1.65
 - grade move bonus percent: 12
@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**9 entries queued.** R206, R207, R208, R209, R210, R211, R212, R213, R214.
+**8 entries queued.** R207, R208, R209, R210, R211, R212, R213, R214.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -7974,8 +7974,9 @@ written so that it has something on screen when it ships.
   part from each renders at 380px, and so do the Dex, the Vault and the
   Theater with them in.
 
-- **R206 — Four animals nature spliced first.** Some real animals already
-  look like a geneticist's weekend, and the game has never said so. Four,
+- **R206 — Four animals nature spliced first.** ✅
+  Some real animals already
+  look like a geneticist's weekend, and the game had never said so. Four,
   three of them bringing a body part nothing in the county has:
   * **Elephant** — Ground, Rumbler frame, Tank. A `trunk` head with fan ears;
     nothing in the county has a trunk. Its trumpet is Sonic.
@@ -7995,6 +7996,72 @@ written so that it has something on screen when it ships.
   each carried by two animals and the Kite frame by four; the gates R205
   names pass or are re-derived; and the cuttlefish's shimmer stops under
   reduced motion.*
+
+  **Shipped: four more animals, three new body parts, and a coat that moves.**
+  * **The animals** (`data/species.json`, `tools/gen-parts.js`):
+
+    | Animal | Class, frame, role | Signature | Unlocked at |
+    |---|---|---|---|
+    | Elephant | Ground, Rumbler, Tank | Trumpet Blast (Sonic `powerDown`) | the Rolling Mill |
+    | Platypus | Water, Scamper, Hybrid | Electrosense (Electric `ignoreEvasion`) | the Harbor Rig |
+    | Mantis Shrimp | Water, Scamper, Striker | Cavitation Strike (`multiHit: 2`) | the Proving Range |
+    | Cuttlefish | Water, Kite, Ghost | Passing Cloud (`accDown` and `evasionUp`) | the Dredge Yard |
+
+    The platypus is Aquatic, Electric and Venomous; its venom is an ankle
+    spur on the hind legs. Each animal has a set bonus and a combo: Stampede;
+    Duck, Allegedly; Mistaken Identity; and Colour Theory.
+  * **Four shape families** (`tools/shapes.js`):
+    - `trunk`: a domed skull, a fan ear, a curled trunk and tusks.
+    - `bill`: a flat duck's bill on a round furred head.
+    - `club`: a raptorial arm held cocked, with a heavy ridged heel out front.
+    - `mantle`: zebra bands and three layers of colour patches.
+
+    The otter's `rudder` also takes a `width`, for the platypus. Every
+    default draws what it drew, so the 283 shipped parts were unchanged
+    before the species went in.
+  * **The shimmer.** A shape may carry `anim`. The renderer writes it as a
+    class, `style.css` animates it, and the reduced-motion block turns it
+    off. The mantle's three patch layers fade on one six-second clock,
+    started two seconds apart. A new smoke rule checks the chain from the
+    data end: every `anim` is animated, stops under reduced motion and is
+    written by the renderer. The a11y gate already checked the stylesheet
+    end. The reasoning is in `data/notes/parts-shapes.md`.
+  * **The roster is 45 animals: 18 Ground, 15 Water, 12 Air.** Electric is
+    carried by two animals (the eel and the platypus) and Camo by two (the
+    chameleon and the cuttlefish). The Kite carries four: cobra, manta,
+    lamprey and cuttlefish.
+
+  **The gates the roster feeds:**
+  * **Set bonuses must be unique.** The first drafts of the elephant's and
+    mantis shrimp's copied the bear's and the rhino's.
+  * **First paint, 1178 -> 1197 KB.** Measured at 1188 against 1169 on
+    `main`. The 19.5 KB is itemised; 0.8 KB of it is the shimmer's CSS and
+    renderer line.
+  * **Height bounds, each by exactly what was added:**
+    - `dex:roster` +1 row (3527): Water's fifth row; Ground filled its sixth.
+    - The Vault's worst case +4 bays (3816).
+    - `dex:combos` open +4 rows, measured row by row (4151).
+  * **The Vault's worst-case builder**, fixed where its own check said it had
+    stopped measuring. At 52 species the tight level-1 shelf holds 51 parts,
+    so vials now go first to the species the parts missed. The `spares`
+    shelf now opens on one duplicate, so it still has a spare.
+  * **The combo-by-grade count** 544 -> 608.
+  * **Breaks 538-540**: the mantle's off-switch, the renderer's class, and a
+    data class nobody styled.
+  * **The part gallery draws parts again** (`tools/gallery.html`). It had
+    never called `loadShapes`, so since R81 split the geometry into its own
+    file, every purebred there was a bare chassis.
+
+  **Done when, checked.**
+  * **The four shape families:** all drawn in the part gallery's purebreds.
+    The Theater spliced two chimeras at 380px: one with the trunk, the clubs
+    and the mantle, and one with the bill, on the Kite. Both survive a reload.
+  * **The roster facts:** Electric is carried by the eel and the platypus,
+    Camo by the chameleon and the cuttlefish, and the Kite by four animals.
+  * **The shimmer:** measured in a browser. All six mantle layers run
+    `mantle-shift`, and every one reads `none` with reduced motion on.
+  * **The gates:** the suite is green. The balance pools are clean at every
+    grade, and the part pool's class spread is 1.15x (49 / 54 / 47).
 
 - **R207 — The Hexapod: Theater Tier III and a third pair of limbs.** Every
   chimera has at most two pairs of limbs, and on a day-180 save there is
