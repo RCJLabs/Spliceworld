@@ -1645,10 +1645,11 @@
       "incubationMinutes": 56,
       "setBonus": {
         "name": "Never Forgets",
-        "desc": "+20% HP",
+        "desc": "+15% HP and +10% Armor",
         "effect": {
           "stats": {
-            "hp": 1.2
+            "hp": 1.15,
+            "armor": 1.1
           }
         }
       },
@@ -1735,10 +1736,11 @@
       "incubationMinutes": 26,
       "setBonus": {
         "name": "Spring-Loaded",
-        "desc": "+15% Power",
+        "desc": "+10% Power and +10% Speed",
         "effect": {
           "stats": {
-            "power": 1.15
+            "power": 1.1,
+            "speed": 1.1
           }
         }
       },

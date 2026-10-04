@@ -303,7 +303,13 @@ const BUDGET = {
   // R187's 81, because a bay is as tall as its species' name wraps. Raised by
   // exactly that, so the slack stays R187's 35. The day-180 walk's own shelf
   // went DOWN (2,870 -> 2,317 shut), because it is a different campaign now.
-  vault:          { folded: 3586,  tallest: 4600, opens: 20 },
+  // R206 — 3586 -> 3816, four bays again: 48 -> 52, 3,551 -> 3,781px at
+  // level 4, full, no spares, 57.5 a bay. Raised by exactly that; the slack
+  // is still 35. The builder needed two fixes first, both found by its own
+  // reached-every-state check: at 52 species the tight level-1 shelf holds
+  // 51 parts, so the vials now go first to the species the parts missed,
+  // and the `spares` shelf opens on one duplicate so it still has a spare.
+  vault:          { folded: 3816,  tallest: 4600, opens: 20 },
   // R204 — 3100 -> 3150, and the first reading since R104 of the roster a
   // player sees. R89 set 3100 against a fully drawn grid. R104 then held 28
   // of its portraits back until scrolled to, and this walk does not scroll,
@@ -321,7 +327,10 @@ const BUDGET = {
   // from eight cells to twelve, which is a fourth row of three, and the
   // roster went 3,107 -> 3,289px: +182, one 174px row and its 8px gap.
   // Raised by exactly that row, so the slack is still R204's 43.
-  'dex:roster':   { folded: 3332,  tallest: 3332 },
+  // R206 — 3332 -> 3527, the Water section's turn: twelve cells to fifteen
+  // is a fifth row, 3,289 -> 3,484px, +195. The Ground section went to
+  // eighteen, which is six full rows, and added none.
+  'dex:roster':   { folded: 3527,  tallest: 3527 },
   // R117 — 1100 -> 1150, and `dex:genes` below by the same 50, which is the
   // SHARED CHROME rather than the tab: the Dex's six-tab bar goes to two
   // rows of three under 430px, because `1fr` is `minmax(auto, 1fr)` and the
@@ -415,7 +424,12 @@ const BUDGET = {
   // the walk discovering a different 22 of the old combos, which came to
   // -30px, and 20px of band summary. Raised by exactly the four rows; the
   // drift went the other way this time, and R136's instruction stands.
-  'dex:combos':   { folded: 550,   tallest: 3768, opens: 2 },
+  // R206 — 3768 -> 4151, the same split: 3,655 -> 3,986px, of which the four
+  // new rows are 383 (Mistaken Identity 118 and Colour Theory 103
+  // discovered, Stampede and Duck, Allegedly 81 each as hints), the old
+  // combos' reshuffle -72 and the band summaries +20. Raised by the four
+  // rows. Thirty-eight rows: R136's paging is closer to owed than it was.
+  'dex:combos':   { folded: 550,   tallest: 4151, opens: 2 },
   // R129 FOLDS IT, WHICH BRINGS THE SHUT HALF DOWN AND BUDGETS THE FOLD:
   // 1100/1100 -> 400 shut (measured 291) and 1250 open (measured 1185).
   // Twelve genes could only be learned by breeding for them, so this tab
@@ -555,10 +569,12 @@ const WORDS = {
   // R187: 440 -> 600, the same bound in words: the worst case reads 582
   // (level 4, full, no spares). Slack 18, under one bay's summary line.
   // R205: 600 -> 639, the same four bays in words: 582 -> 621 at 48 bays.
-  vault:          { folded: 639,  open: 5000 },
+  // R206: 639 -> 677, four more: 621 -> 659 at 52.
+  vault:          { folded: 677,  open: 5000 },
   // R205: 400 -> 428, measured 375 -> 403 — seven words a cell (a name, a
   // role, its tags and a parts count) for the four new fliers.
-  'dex:roster':   { folded: 428,  open: 428 },
+  // R206: 428 -> 458, measured 403 -> 433, the next four cells.
+  'dex:roster':   { folded: 458,  open: 458 },
   'dex:variants': { folded: 200,  open: 200 },
   // R136: 550/550 -> 150 shut (measured 78) and 600 open (measured 532).
   // R95 left the shut budget at 550 against a 527-word screen because the
@@ -578,7 +594,8 @@ const WORDS = {
   // R205: 660 -> 750 open, measured 646 -> 736. The four new rows are the
   // ninety: two discovered combos print their whole description (about 28
   // words each) and two hints name both halves (about 17).
-  'dex:combos':   { folded: 150,  open: 750 },
+  // R206: 750 -> 836 open, measured 736 -> 822, the four new rows.
+  'dex:combos':   { folded: 150,  open: 836 },
   // R129: 200/200 -> 100 shut (measured 50) and 250 open (measured 221).
   // See the height note above — the words are the twelve descriptions, and
   // they are now behind the fold that holds them.
@@ -1249,14 +1266,24 @@ try {
           // One of each species first, so the smallest shelf still shows every
           // bay; then every other anatomy once (or, for `spares`, duplicates).
           const firsts = partSpecies.map((sp) => partIds.find((id) => simContent.parts[id].species === sp));
-          const order = shelf === 'none' ? [...firsts, ...partIds.filter((id) => !firsts.includes(id))] : firsts;
+          // R206 — and `spares` opens on one duplicate, so a shelf too small to
+          // hold a part of every species (level 1, tight, at 52) still holds a
+          // spare for the render-duplicates row to offer; the vials below
+          // reach the bays the parts then miss.
+          const order = shelf === 'none' ? [...firsts, ...partIds.filter((id) => !firsts.includes(id))] : [firsts[0], ...firsts];
           const parts = [];
           for (let i = 0; parts.length < want; i++) {
             const partId = order[i % order.length];
             parts.push({ id: `wp${i}`, partId, grade: top, traits: shelf === 'none' ? [trait] : [],
               donor: donor(simContent.parts[partId].species) });
           }
-          const vials = Array.from({ length: cap.vials }, (_, i) => vialOf(species[i % species.length], i));
+          // R206 — THE VIALS GO FIRST TO THE SPECIES THE PARTS DID NOT REACH.
+          // At 52 species the tight level-1 shelf holds 51 parts, so one part
+          // per species ran a bay short, and the check below said the case had
+          // stopped measuring every bay. A vial makes a bay as surely as a part.
+          const shelved = new Set(parts.map((p) => simContent.parts[p.partId].species));
+          const vialOrder = [...species.filter((sp) => !shelved.has(sp)), ...species.filter((sp) => shelved.has(sp))];
+          const vials = Array.from({ length: cap.vials }, (_, i) => vialOf(vialOrder[i % vialOrder.length], i));
           w.inventory = { ...(w.inventory ?? {}), parts, vials };
           const run = startResequence(w, vials[vials.length - 1].id, simContent, PINNED_NOW);
           if (!run.ok) problems.push(`the worst-case Vault (level ${level}, ${fill}, ${shelf}) could not start a resequence: ${run.msg}`);

@@ -2940,6 +2940,34 @@ assert.ok(capLab.dex.parts.includes('v8_heart'), 'salvage records dex parts');
   assert.deepEqual(bad, [], `parts cropped by the viewBox: ${bad.map((b) => `${b.part}@${b.frame}+${b.over}`).join(', ')}`);
 }
 
+// --- R206: a part that moves says so in data, and the stylesheet answers.
+// --- `anim` on a shape is a class the renderer writes and style.css
+// --- animates; the cuttlefish's mantle is the first part to carry one. Three
+// --- things have to stay true for it to move, and to stop when asked:
+// --- the renderer writes the class, the stylesheet animates it, and a
+// --- reduced-motion block turns it off. The last is also tools/a11y.js's
+// --- rule for every animation; this is the half that starts from the DATA,
+// --- so a part naming a class nobody styled cannot ship as a still frame.
+{
+  const css = readFileSync(join(root, 'style.css'), 'utf8');
+  const shapeFile = JSON.parse(readFileSync(join(root, 'data/parts-shapes.json'), 'utf8')).shapes;
+  const anims = new Map();
+  for (const [id, list] of Object.entries(shapeFile)) {
+    for (const sh of list) if (sh.anim) anims.set(sh.anim, [...(anims.get(sh.anim) ?? []), id]);
+  }
+  assert.ok(anims.size >= 1, 'some part moves — the cuttlefish mantle carries three layers');
+  const reduce = [...css.matchAll(/@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]).join('\n');
+  for (const [cls, ids] of anims) {
+    assert.ok(new RegExp(`\\.${cls}\\s*\\{[^}]*\\banimation\\s*:\\s*(?!none\\b)[a-z]`).test(css),
+      `a part that moves has a stylesheet that moves it (${cls}, on ${ids[0]})`);
+    assert.ok(new RegExp(`\\.${cls}\\b[^{}]*\\{[^}]*\\banimation\\s*:\\s*none`).test(reduce),
+      `and it holds still under reduced motion (${cls}, on ${ids[0]})`);
+    const owner = content.parts[ids[0]];
+    const svg = renderCreatureSVG({ frame: content.species[owner.species].frame, parts: { head: `${owner.species}_head`, [owner.slot]: owner.id } }, content, { idPrefix: 'anim' });
+    assert.ok(svg.includes(`class="${cls}"`), `the renderer writes a part's anim as its class (${cls}, on ${ids[0]})`);
+  }
+}
+
 // --- A3: forty animals, and Air anatomy you can build a creature out of
 //
 // The audit measured the pool and found 36 Ground-affinity parts, 25 Water
