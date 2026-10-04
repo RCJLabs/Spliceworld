@@ -66,7 +66,8 @@ a 22-seed census puts at least three of them on a chimera.**
 - **`npm test`.** The first run was cold and went red twice: smoke:b on the
   combo-by-grade count, and diet on the vet. Both are fixed above. Shards a,
   b, c and d, diet and reach were each green on their own afterwards. The
-  final run is FINALRUN.
+  final run is green: 11 of 11 jobs, 1,094 CPU-seconds of 1,425, 287s
+  wall on a warm cache, 1,142,718 battles against the new 1,255,000.
 - **Battery.** `--anchors` reads 528 of 528. First `--only 519,537`: the
   baseline was green, 519 was caught, and 537 was ELSEWHERE. At regen 8 the
   spread rule saw it first, so 537 was re-aimed at one point of regen.
