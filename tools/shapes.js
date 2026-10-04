@@ -201,6 +201,32 @@ const HEADS = {
             ...eye(48, -28, eyeR * 0.7),
             ...eye(16, -26, eyeR)];
   },
+  // R206 — an elephant's head: the first head in the county that reaches for
+  // things. A domed skull, a fan ear laid over the side of it, and a trunk
+  // that hangs from the face and curls at the tip, ringed with wrinkles.
+  // Tusks are optional. The trunk stops at x 84 because tools/bounds.js caps
+  // a head at about 87 on a Rumbler, which is the chassis this animal rides.
+  trunk({ eyeR = 9, tusks = true }) {
+    const s = [ci(26, -26, 34, P), sheen(12, -44, 16, 9, 0.16)];
+    s.push(pa('M 2 -40 C -16 -40 -24 -14 -16 8 C -10 24 6 26 14 14 C 22 0 22 -30 2 -40 Z', S, { strokeWidth: 4 }),
+           pa('M 2 -32 C -8 -30 -14 -12 -9 4 C -5 14 4 14 8 6 C 12 -4 12 -24 2 -32 Z', A, { stroke: 'none', opacity: 0.35 }));
+    s.push(pa('M 48 -22 C 72 -20 84 2 82 28 C 81 44 72 56 60 56 C 52 56 50 48 56 46 C 64 44 68 36 66 24 C 64 8 56 0 44 0 Z', P, { strokeWidth: 4.5 }),
+           li('M 60 -6 q 8 4 12 12 M 66 10 q 6 4 8 10 M 66 28 q 6 2 8 6', O, 2.5, { opacity: 0.4 }));
+    if (tusks) s.push(pa('M 44 4 C 56 14 70 16 80 10 C 72 22 54 22 42 12 Z', W, { strokeWidth: 3.5 }));
+    s.push(...eye(44, -30, eyeR));
+    return s;
+  },
+  // R206 — a platypus's bill: a flat, rubbery duck's bill on a round furred
+  // head, with two nostrils near the tip and eyes set high and small. It
+  // finds its food by electricity, which is why it votes Water and swings
+  // Electric.
+  bill({ eyeR = 9 }) {
+    return [el(20, -14, 30, 24, P), sheen(8, -28, 14, 8, 0.14),
+            pa('M 38 -20 C 60 -26 79 -18 83 -8 C 85 0 79 6 66 6 C 56 6 44 4 36 2 Z', A, { strokeWidth: 4 }),
+            li('M 40 -8 C 56 -10 70 -8 81 -6', O, 2.5, { opacity: 0.35 }),
+            el(74, -14, 2.4, 1.6, O, { stroke: 'none' }), el(68, -15, 2.4, 1.6, O, { stroke: 'none' }),
+            ...eye(30, -26, eyeR)];
+  },
 };
 
 // ------------------------------------------------------------- LIMBS
@@ -367,6 +393,21 @@ const LIMBS = {
       el(3, len + 2, 9, 6.5, S),
     ];
   },
+  // R206 — a mantis shrimp's raptorial club, held the way it is used: the
+  // upper arm drops to the elbow, the forearm folds back up and forward, and
+  // the heavy rounded heel sits out in front of the body like a cocked fist.
+  // Hanging it at the end of a leg, the first draft, made it read as a foot
+  // wearing a ball. Ridged so it reads as hammer, not paw.
+  club({ len = 42 }) {
+    const ey = len * 0.62;
+    return [el(0, 2, 12, 12, P),
+            pa(`M -6 2 L 2 ${ey} L 13 ${ey} L 7 0 Z`, P, { strokeWidth: 4 }),
+            ci(7, ey, 8, P),
+            pa(`M 2 ${ey - 3} L 26 ${len * 0.18} L 35 ${len * 0.3} L 12 ${ey + 5} Z`, S, { strokeWidth: 3.5 }),
+            el(38, len * 0.14, 15, 13, A, { strokeWidth: 4.5 }),
+            li(`M 29 ${len * 0.14 - 6} q 9 5 18 0 M 29 ${len * 0.14 + 3} q 9 5 18 0`, O, 2.5, { opacity: 0.45 }),
+            sheen(34, len * 0.14 - 5, 6, 4, 0.24)];
+  },
   hop({ len = 50 }) {
     return [el(0, 8, 22, 24, P), sheen(-7, 0, 11, 12, 0.14),
             pa(`M -10 22 q 12 10 22 0 l 0 10 q -12 10 -22 0 z`, P, { strokeWidth: 4 }),
@@ -402,8 +443,10 @@ const TAILS = {
     li('M -10 0 C -32 -2 -50 -1 -64 2', O, 3, { opacity: 0.4 }),
   ],
   // Otter rudder: thick at the base, flattened, steers rather than balances.
-  rudder: ({ len = 58 }) => [
-    pa(`M 2 -12 C ${-len * 0.4} -19 ${-len} -13 ${-len - 9} -2 C ${-len} 11 ${-len * 0.4} 17 2 12 Z`, P, { strokeWidth: 4.5 }),
+  // R206 — `width` broadens it into a platypus's flat fat-store of a tail;
+  // at 1 it is exactly the otter's.
+  rudder: ({ len = 58, width = 1 }) => [
+    pa(`M 2 -12 C ${-len * 0.4} ${-19 * width} ${-len} ${-13 * width} ${-len - 9} -2 C ${-len} ${11 * width} ${-len * 0.4} ${17 * width} 2 12 Z`, P, { strokeWidth: 4.5 }),
     li(`M -8 -3 C ${-len * 0.5} -8 ${-len + 4} -7 ${-len - 3} -2`, S, 5, { opacity: 0.7 }),
     sheen(-20, -6, 13, 5, 0.13),
   ],
@@ -568,6 +611,22 @@ const HIDES = {
     pa('M 6 -34 q 22 -12 34 4 q 6 16 -12 18 q -24 0 -22 -22 z', S, { stroke: 'none', opacity: 0.4 }),
     pa('M -26 14 q 20 -8 32 6 q 4 14 -14 14 q -20 -2 -18 -20 z', A, { stroke: 'none', opacity: 0.35 }),
     pa('M 34 18 q 16 -6 22 8 q 0 10 -12 10 q -14 -2 -10 -18 z', A, { stroke: 'none', opacity: 0.3 }),
+  ],
+  // R206 — a cuttlefish's mantle, the only hide that moves. Zebra bands in
+  // the secondary colour, and three layers of patches that fade in and out
+  // on staggered clocks (`anim`, a class the renderer passes through and
+  // style.css animates), so the coat passes through its palette slowly. The
+  // opacity written here is what it holds still at, which is all a player
+  // who has asked for reduced motion sees.
+  mantle: () => [
+    li('M -62 -26 q 8 14 2 30 M -40 -34 q 8 18 2 38 M -16 -38 q 8 20 2 42 M 8 -38 q 8 20 2 42 M 32 -34 q 8 18 2 38 M 54 -26 q 7 14 1 30', S, 6, { opacity: 0.55 }),
+    el(-38, -10, 20, 12, A, { stroke: 'none', opacity: 0.3, anim: 'shift-a' }),
+    el(22, 14, 22, 12, A, { stroke: 'none', opacity: 0.3, anim: 'shift-a' }),
+    el(-6, -24, 18, 10, S, { stroke: 'none', opacity: 0.3, anim: 'shift-b' }),
+    el(-30, 22, 18, 10, S, { stroke: 'none', opacity: 0.3, anim: 'shift-b' }),
+    el(40, -14, 16, 10, W, { stroke: 'none', opacity: 0.2, anim: 'shift-c' }),
+    el(4, 6, 16, 9, W, { stroke: 'none', opacity: 0.2, anim: 'shift-c' }),
+    li('M -66 34 q 11 8 22 0 q 11 8 22 0 q 11 8 22 0 q 11 8 22 0 q 11 8 22 0 q 11 8 22 0', A, 3, { opacity: 0.5 }),
   ],
 };
 

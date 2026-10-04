@@ -2193,7 +2193,8 @@ for (const combo of Object.values(content.combos)) {
   }
 }
 // R205 — 34 combos x 16 grade pairs; the four fliers brought four combos.
-assert.equal(gradeAssignmentsChecked, 544, 'every combo × grade assignment was actually checked');
+// R206 — 38 x 16; four more animals, four more combos.
+assert.equal(gradeAssignmentsChecked, 608, 'every combo × grade assignment was actually checked');
 // Grades are the power curve: each tier opens the boss further.
 //
 // Measured on the MEAN across builds, not the max. A max over a couple of
@@ -9547,6 +9548,12 @@ if (inShard('frames')) {
     vulture: [7, 20, 80, 36],
     peacock: [6, 18, 72, 34],
     squirrel: [5, 15, 60, 26],
+    // R206 — four more. The elephant is the slowest animal in the county to
+    // grow and the longest-lived, which is the least surprising fact in it.
+    elephant: [12, 34, 120, 56],
+    platypus: [5, 16, 64, 28],
+    mantis_shrimp: [5, 15, 60, 26],
+    cuttlefish: [6, 17, 66, 32],
     // R179 — the forty-second animal, and the first one no catalog sells.
     // Fast to adult for its bulk and slow to elder: a glider that is useful
     // early and worth keeping, which is what an expedition prize should be.

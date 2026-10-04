@@ -1191,6 +1191,14 @@ body.in-battle .ticker { font-size: 0.75rem; }
   50% { transform: scale(1.014) translateY(-3px); }
 }
 .sw-idle { animation: sw-breathe 4.4s ease-in-out infinite; transform-origin: 50% 78%; transform-box: fill-box; }
+/* R206 — a hide whose colours shift: the cuttlefish's mantle. Its patches
+   carry `anim` in data, the renderer writes it as a class, and the three
+   layers fade on staggered clocks so the coat moves through its palette.
+   Off under reduced motion, where each patch holds its own opacity. */
+@keyframes mantle-shift { 0%, 100% { opacity: 0.1; } 50% { opacity: 0.8; } }
+.shift-a { animation: mantle-shift 6s ease-in-out infinite; }
+.shift-b { animation: mantle-shift 6s ease-in-out -2s infinite; }
+.shift-c { animation: mantle-shift 6s ease-in-out -4s infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   .meter-fill { transition: none; }
@@ -1208,6 +1216,8 @@ body.in-battle .ticker { font-size: 0.75rem; }
   /* R96 — a creature that breathes holds its breath when asked to. Safe:
      nothing waits on `animationend` to show a portrait. */
   .sw-idle { animation: none; }
+  /* R206 — and a cuttlefish's coat stops changing colour. */
+  .shift-a, .shift-b, .shift-c { animation: none; }
 }
 
 /* Taller phones get a roomier field; short ones keep the menu reachable. */

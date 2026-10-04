@@ -702,6 +702,87 @@
           "accUp": 1
         }
       }
+    },
+    {
+      "id": "stampede",
+      "name": "Stampede",
+      "parts": [
+        "elephant_hindlimbs",
+        "rhino_organ"
+      ],
+      "keyword": "Knockback",
+      "desc": "Five tonnes of memory, wound up by a rhino’s charge gland. Whatever is in front of it has somewhere else to be.",
+      "move": {
+        "power": 64,
+        "cost": 30,
+        "acc": 92,
+        "tags": [
+          "Ground"
+        ],
+        "keywords": {
+          "knockback": true
+        }
+      }
+    },
+    {
+      "id": "duck_allegedly",
+      "name": "Duck, Allegedly",
+      "parts": [
+        "platypus_head",
+        "goose_hindlimbs"
+      ],
+      "keyword": "Electric",
+      "desc": "A duck’s bill on a duck’s feet, which is the story the platypus has been telling for years. The bill still finds you by your heartbeat.",
+      "move": {
+        "power": 58,
+        "cost": 26,
+        "acc": 96,
+        "tags": [
+          "Electric"
+        ],
+        "keywords": {
+          "ignoreEvasion": true
+        }
+      }
+    },
+    {
+      "id": "mistaken_identity",
+      "name": "Mistaken Identity",
+      "parts": [
+        "mantis_shrimp_forelimbs",
+        "mantis_organ"
+      ],
+      "keyword": "Stun",
+      "desc": "The mantis and the mantis shrimp are not related, and they settle it the old way. One clean hit, and the other side forgets what it was doing.",
+      "move": {
+        "power": 58,
+        "cost": 30,
+        "acc": 92,
+        "tags": [],
+        "keywords": {
+          "stun": 0.25
+        }
+      }
+    },
+    {
+      "id": "colour_theory",
+      "name": "Colour Theory",
+      "parts": [
+        "cuttlefish_hide",
+        "chameleon_organ"
+      ],
+      "keyword": "Camouflage",
+      "desc": "The two best liars in the county compare notes. It hits, and by the time the other side looks back it is somewhere else.",
+      "move": {
+        "power": 44,
+        "cost": 24,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1,
+          "accDown": 1
+        }
+      }
     }
   ]
 }

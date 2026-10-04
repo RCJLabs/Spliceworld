@@ -389,6 +389,11 @@ function shapeToSVG(shape, palette) {
   }
   if (shape.opacity != null) attrs.push(`opacity="${esc(shape.opacity)}"`);
   if (shape.transform) attrs.push(`transform="${esc(shape.transform)}"`);
+  // R206 — a part may move: `anim` names a class style.css animates, and
+  // the reduced-motion block turns off. Data says WHICH layer moves; the
+  // stylesheet says how, so a new animated part is a JSON field and a CSS
+  // rule, never an engine edit. The shape's own opacity is the still frame.
+  if (shape.anim) attrs.push(`class="${esc(shape.anim)}"`);
   const a = attrs.join(' ');
 
   switch (shape.type) {
