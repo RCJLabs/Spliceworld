@@ -22647,16 +22647,26 @@ if (inShard('bulk')) {
   // again over them, which is the same 24,000 battles twice; R90's rule is
   // that the suite stays under three minutes, and this block is the biggest
   // single thing in its shard.
+  // R205 — the bodies a Rumbler does not ground (a purebred that cannot fly
+  // even on the Scamper), tallied in the SAME loop: rule 2's first half reads
+  // fights this block already flies, so it costs the suite no battles.
+  const tkPrime = (partId) => ({ id: `bulk-${partId}`, partId, grade: 'prime' });
+  const grounded = new Set(purebred.filter((sp) =>
+    !analyze('S', BAYS.map((bay) => tkPrime(`${sp}_${bay}`)), content).flight.capable));
   const cell = {};
+  const groundCell = {};
   for (const frame of SIX) {
     cell[frame] = {};
+    groundCell[frame] = {};
     for (const sp of purebred) {
       const c = mkBulk(frame, BAYS.map((bay) => `${sp}_${bay}`), 'prime', content);
       for (const id of Object.keys(content.encounters)) {
         const acc = (cell[frame][id] ??= { wins: 0, turns: 0, n: 0 });
+        const gacc = (groundCell[frame][id] ??= { wins: 0, n: 0 });
         for (let i = 0; i < SEEDS; i++) {
           const r = bulkFight(c, content.encounters[id], content, 60000 + i, 3);
           acc.n++; acc.turns += r.turns; if (r.outcome === 'win') acc.wins++;
+          if (grounded.has(sp)) { gacc.n++; if (r.outcome === 'win') gacc.wins++; }
         }
       }
     }
@@ -22701,24 +22711,17 @@ if (inShard('bulk')) {
   //    -8.4 after). Bodies that stay on the ground either way are the honest
   //    measure of what the bulk buys, and R205's four fliers did not move
   //    them: +5.7pp on the tree before it and +5.7 after. Floor 4.
-  const tkPrime = (partId) => ({ id: `bulk-${partId}`, partId, grade: 'prime' });
-  const grounded = purebred.filter((sp) => !analyze('S', BAYS.map((bay) => tkPrime(`${sp}_${bay}`)), content).flight.capable);
   const groundedOver = (frame) => {
     let wins = 0; let n = 0;
-    for (const sp of grounded) {
-      const c = mkBulk(frame, BAYS.map((bay) => `${sp}_${bay}`), 'prime', content);
-      for (const id of long) for (let i = 0; i < SEEDS; i++) {
-        n++; if (bulkFight(c, content.encounters[id], content, 60000 + i, 3).outcome === 'win') wins++;
-      }
-    }
+    for (const id of long) { wins += groundCell[frame][id].wins; n += groundCell[frame][id].n; }
     return (wins / n) * 100;
   };
   const groundedGrind = groundedOver('L') - groundedOver('S');
-  assert.ok(grounded.length >= 20 && grounded.length < purebred.length,
-    `the bodies a Rumbler does not ground are most of the roster, and not all of it (${grounded.length} of ${purebred.length})`);
+  assert.ok(grounded.size >= 20 && grounded.size < purebred.length,
+    `the bodies a Rumbler does not ground are most of the roster, and not all of it (${grounded.size} of ${purebred.length})`);
   assert.ok(groundedGrind >= 4,
     `for the bodies a Rumbler does not ground, bulk is worth the frame against a long one `
-    + `(${groundedGrind >= 0 ? '+' : ''}${groundedGrind.toFixed(1)}pp over ${long.length} grinding fights and ${grounded.length} bodies, floor 4, measured +5.7)`);
+    + `(${groundedGrind >= 0 ? '+' : ''}${groundedGrind.toFixed(1)}pp over ${long.length} grinding fights and ${grounded.size} bodies, floor 4, measured +5.7)`);
   //    ...AND ACROSS THE WHOLE ROSTER, fliers included. Measured +2.6pp at
   //    R148 and +2.2 on the tree before R205, with ten fliers in 39 bodies.
   //    R205 brought four more (14 of 43), and they read like the ten (-8.4
@@ -22740,7 +22743,7 @@ if (inShard('bulk')) {
     + `${dash >= 0 ? '+' : ''}${dash.toFixed(1)}pp, ceiling 1, measured -1.3 since R205)`);
 
   console.log(`   R148 chassis: ${table} over ${live.length} live fights (${spread.toFixed(1)}pp apart) — `
-    + `the Rumbler ${grind >= 0 ? '+' : ''}${grind.toFixed(1)}pp in a grind (${groundedGrind >= 0 ? '+' : ''}${groundedGrind.toFixed(1)} on the ${grounded.length} bodies it does not ground), `
+    + `the Rumbler ${grind >= 0 ? '+' : ''}${grind.toFixed(1)}pp in a grind (${groundedGrind >= 0 ? '+' : ''}${groundedGrind.toFixed(1)} on the ${grounded.size} bodies it does not ground), `
     + `${dash >= 0 ? '+' : ''}${dash.toFixed(1)}pp in a dash`);
 }
 

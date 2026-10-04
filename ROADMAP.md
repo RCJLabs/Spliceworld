@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**10 entries queued.** R205, R206, R207, R208, R209, R210, R211, R212, R213, R214.
+**9 entries queued.** R206, R207, R208, R209, R210, R211, R212, R213, R214.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -7886,8 +7886,9 @@ R209-R211 draw the places the game happens. R212-R214 give the creatures
 somewhere to go and something to wear. Each phase is one session and is
 written so that it has something on screen when it ships.
 
-- **R205 — Four new fliers.** Air is eight of the 37 animals, and its section
-  is the shortest in the Dex. Four fliers, each drawn from the generator
+- **R205 — Four new fliers.** ✅
+  Air was eight of the 37 animals, and its section
+  was the shortest in the Dex. Four fliers, each drawn from the generator
   (`tools/gen-parts.js`) with the new shape code it needs in
   `tools/shapes.js`:
   * **Hummingbird** — Speedster, Scamper frame. A `needle` beak and wings
@@ -7908,6 +7909,64 @@ written so that it has something on screen when it ships.
   class spread holds; the gates the roster feeds (reach, diet, tiers, the Dex
   and Vault height bounds) are re-derived by exactly what four animals add;
   and the day-180 walk splices at least one of them.*
+
+  **Shipped: four fliers, drawn, in the data, and in every campaign.**
+  * **The animals** (`data/species.json`, `tools/gen-parts.js`). Ruby
+    Hummingbird (Speedster), Griffon Vulture (Finisher), Peacock (Taunter,
+    Airborne and Sonic) and Flying Squirrel (Glider; its id is `squirrel`,
+    see below). Each has six parts, a palette, a set bonus, a catalog price
+    and a node that unlocks it: the Aerodrome, the Crucible Floor, the
+    Records Annex and the Checkpoint, four nodes that sold two animals or
+    fewer. The signatures use keywords the engine already reads:
+    Hover Jab (`priority`), Patient Circling (an Airborne `frenzy`, the
+    only one), Full Display (`accDown: 2`, no damage) and Drop In (an
+    Airborne `knockback`, the only one).
+  * **The shapes** (`tools/shapes.js`). The bird head takes a needle bill, a
+    ruby gorget, a bald head with a ruff, a coronet crest and a `face`
+    colour. Every default is the old drawing, so the generator reproduced
+    all 259 shipped parts unchanged before the four were added. The wing
+    takes `blur`. Two new families: `plume`, a fanned train of eyespots,
+    and `patagium`, a gliding flap that meets its pair under the belly.
+  * **Four combos**, so every animal is in the discovery layer: Speed Limit,
+    Cleanup Crew, Lawn Patrol and Night Shift.
+  * **The roster is 41 animals: 17 Ground, 12 Water, 12 Air.** The part
+    pool's class spread went from 1.32x to 1.07x (46 / 44 / 47).
+
+  **The gates the roster feeds, each moved by what the four add:**
+  * **Flight.** All four fly on a Scamper and on nothing heavier. The
+    hummingbird needed bulk 0.3, the dragonfly's: at 0.2 the chassis
+    outweighed its lift (35 against 31).
+  * **The viewBox.** The needle bill angles down and the train is 75 long,
+    so both fit a Rumbler. `tools/bounds.js` reads a path's numbers as x,y
+    pairs, so the train's rim is drawn as points, not an SVG arc.
+  * **The genome code.** `flying_squirrel_forelimbs` took the worst code to
+    150 characters of 140. The gate's own note says a long name is the
+    defect, so the id is `squirrel`.
+  * **First paint, 1155 -> 1178 KB**, measured at 1169 against 1151 on the
+    commit before. 18 KB, all content: 12.3 for 24 parts, 3.8 for four
+    species, 1.9 for four combos, 0.1 for the unlocks.
+  * **Height.** `dex:roster` 3150 -> 3332, one row of three. The Vault's
+    worst case 3300 -> 3586, four bays. `dex:combos` open 3400 -> 3768, the
+    four new rows measured row by row (the reshuffle of which old combos the
+    walk discovers came to -30px). Words 400 -> 428, 600 -> 639, 660 -> 750.
+  * **The vet census.** Seed 99 now ends on Doc. Across 22 campaigns, Nurse
+    Gauze is the vet at day 180 on one (seed 91), which is R196's one in
+    twenty, so her price stands and the diet gate reads seed 91.
+  * **R148's chassis rule, split** (break 537). Fliers keep their flight on a
+    Scamper and lose it on a Rumbler, so the roster-wide grind number was
+    measuring flight as well as bulk. It went 2.2 -> 1.1 because fliers went
+    from 10 of 39 bodies to 14 of 43. The four read like the ten (-8.4
+    against -7.9). A new assertion asks it of the 29 bodies a Rumbler does
+    not ground: +5.7 before R205 and after, floor 4. The roster-wide floor
+    moved by the same 1.1, 1.5 -> 0.4.
+  * **The combo-by-grade count** 480 -> 544 (34 combos x 16).
+
+  **Done when, checked.** The balance gate's 24 pools are clean at every
+  grade. The day-180 walk wears all four fliers at some point and ends
+  wearing the vulture and the peacock, and every one of 22 campaigns wears
+  at least three of them. Reach routes all 48 species. A chimera wearing a
+  part from each renders at 380px, and so do the Dex, the Vault and the
+  Theater with them in.
 
 - **R206 — Four animals nature spliced first.** Some real animals already
   look like a geneticist's weekend, and the game has never said so. Four,

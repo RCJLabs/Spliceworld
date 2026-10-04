@@ -1,5 +1,91 @@
 # PROGRESS
 
+## Session 229 — R205: four new fliers ✅
+
+**Ruby Hummingbird, Griffon Vulture, Peacock and Flying Squirrel are in the
+game: drawn from new shape code, with signatures, set bonuses, combos and
+catalog unlocks. The roster is 41 animals, 12 of them Air. Every campaign in
+a 22-seed census puts at least three of them on a chimera.**
+
+### Measured first
+
+- **The roster:** 37 animals, 17 Ground / 12 Water / 8 Air. The part pool's
+  class affinity was 45 / 44 / 34 (1.32x).
+- **First paint on the commit before:** 1,151 KB, against R186's 1,146. Five
+  kilobytes of drift had built up since R186, leaving 4 KB of slack.
+
+### What shipped
+
+- **Four species** in `data/species.json`, each with six generated parts, a
+  signature on an existing keyword, a set bonus, a combo and a node unlock.
+  See ROADMAP R205 for the list.
+- **New shape code** (`tools/shapes.js`): needle bill, gorget, bald head and
+  ruff, coronet crest and `face` on the bird head; `blur` on the wing; two
+  new families, `plume` and `patagium`. All defaults draw what they drew,
+  checked by `gen-parts --check` before the species went in.
+- **Gates re-derived by what the four add:**
+  - first paint 1155 -> 1178;
+  - `dex:roster` +1 row;
+  - the Vault's worst case +4 bays;
+  - `dex:combos` +4 rows;
+  - the combo-by-grade count 480 -> 544;
+  - the growth table;
+  - §4.0's species, parts and combo counts.
+- **The vet census** (diet section 5): 22 campaigns, Gauze kept on one, seed
+  91. It replaces seed 99, which now ends on Doc.
+- **R148's chassis rule, split, with break 537.** It now has a grounded-body
+  half (+5.7pp, floor 4) and a roster-wide half (1.1pp, floor 0.4 from 1.5).
+  The flier share is what moved the roster-wide number.
+
+### Found on the way
+
+- **`tools/bounds.js` cannot read an SVG arc.** It takes a path's numbers as
+  x,y pairs, so an `A` command's radii and flags land in its extents. No
+  shipped part uses one; the plume draws its rim as points. Filed here, not
+  fixed: it is outside R205's criterion.
+- **R148's comment said +2.6pp; the tree before R205 read +2.2.** Drift since
+  R148, still inside the 1.5 floor.
+- **Two log files landed in `/`** (`/diet.log`, `/reach.log`) from a shell
+  variable that was not set in a subshell. The safety check refused to
+  delete files at the root, rightly; they are harmless in this container.
+
+### Verification
+
+- **`npm test`.** The first run was cold and went red twice: smoke:b on the
+  combo-by-grade count, and diet on the vet. Both are fixed above. Shards a,
+  b, c and d, diet and reach were each green on their own afterwards. The
+  final run is FINALRUN.
+- **Battery.** `--anchors` reads 528 of 528. First `--only 519,537`: the
+  baseline was green, 519 was caught, and 537 was ELSEWHERE. At regen 8 the
+  spread rule saw it first, so 537 was re-aimed at one point of regen.
+  Second `--only 219,245,537`: all three were caught, 537 by its own rule.
+  That run's baseline went red once on the offline gate: +431ms of open time
+  at +800ms latency, measured with four smoke lanes sharing the box. It was
+  green in the first baseline and green again run alone, so it is not this
+  milestone's.
+- **The full battery was not run.** R205 split R148's rule: it lowered one
+  floor and added an assertion. All three breaks aimed at that rule were
+  re-run and caught. The battery last ran in full at R202, three milestones
+  ago, so the rot check is close either way.
+- **At 380px** (`scratchpad` probe, real UI):
+  - A fresh browser reaches the founding picker with 0 console errors.
+  - The v63 fixture migrates to v64 with 0 errors and survives a reload.
+  - The day-180 save has 0 errors and no sideways scroll.
+  - The Dex's Air section shows 12 drawn cells.
+  - The Vault has a bay for each flier it holds parts of.
+  - The catalog lists all four with prices.
+  - The Theater offered one part of each, spliced "Snugglor the Devourer"
+    (vulture head, hummingbird wings, squirrel legs, peacock train), and the
+    chimera was still there after a reload, drawn in the Pens.
+- **The day-180 walk** wears all four fliers at some point, and ends wearing
+  the vulture and the peacock. Every one of 22 campaigns wears at least
+  three of the four.
+
+### Next session
+
+R206: four animals nature spliced first. The full battery last ran at R202.
+R205 split one gate (R148's) and added a break, so the rot check is due.
+
 ## Session 228 — Brainstorm: ten phases of something to see (R205–R214)
 
 **Not a milestone. Asked for directly: ten phases of visible additions, more
