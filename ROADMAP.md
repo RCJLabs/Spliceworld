@@ -131,13 +131,13 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
      engine at test time, never typed twice. If you change content, this
      block is what tells you the prose above it has gone stale. -->
 
-- species: 44
-- parts: 259
+- species: 48
+- parts: 283
 - frames: 4
 - regions: 5
 - nodes: 23
 - keywords: 30
-- combos: 30
+- combos: 34
 - grades: 4
 - grade multipliers: 1/1.2/1.4/1.65
 - grade move bonus percent: 12

@@ -96,6 +96,16 @@ const BUILD = {
   // she is declared — something that has lived in a furnace for forty years
   // is not a pond animal any more, whatever her grandmother was.
   clinker:      B(['amphib',{eyeR:10}], ['paw',{mass:16,len:40,claws:2}], ['paw',{mass:17,len:42,claws:2}], ['rudder',{len:62}], 'scale', '#ff7a2f', 'spark'),
+  // R205 — four fliers, because Air was eight of the 37 animals. Three are
+  // birds on the head every bird uses, told apart by the options R205 gave
+  // it (a needle bill, a bald head, a coronet); the fourth glides on a
+  // family of its own. Every one votes Air out of its own body: the squirrel
+  // only by its two flaps, which is why both of its limbs are patagium — a
+  // walking hind paw would tie the vote and leave it Unclassed.
+  hummingbird:  B(['bird',{beak:'needle',crest:false,gorget:true,face:'@primary',eyeR:11}], ['wing',{span:92,blur:true}], ['talon',{len:34}], ['fan',{spread:24}], 'feather', '#ff5c8a', 'spark'),
+  vulture:      B(['bird',{beak:'hook',crest:false,bald:true,eyeR:10}], ['wing',{span:134}], ['talon',{len:46}], ['fan',{spread:12}], 'feather', '#d9c08a', 'eye'),
+  peacock:      B(['bird',{beak:'straight',crest:'coronet',face:'@primary',eyeR:10}], ['wing',{span:104}], ['stilt',{len:60}], ['plume',{len:75,eyes:7}], 'feather', '#4fd1c5', 'howl'),
+  squirrel:     B(['mammal',{snout:14,ear:'round',skull:24,eyeR:15,teeth:true}], ['patagium',{len:46}], ['patagium',{len:48,rear:true}], ['bushy',{len:54}], 'fur', '#c8b48a', 'zzz'),
 };
 
 // Signature abilities from ROADMAP §4.1: [slot, part name, ability, move].
@@ -149,6 +159,18 @@ const SIGNATURE = {
   // R186 — the only organ that mends AND sharpens on one press. Priced as a
   // utility, no damage at all: she is a wall that gets angrier, not a gun.
   clinker:      ['organ', 'Furnace Heart', 'Stoke the Furnace', M(0, 20, 100, [], { regen: 0.08, powerUp: 1 })],
+  // R205 — four signatures, every one on a keyword the engine already
+  // reads, so the four animals are a data edit and never an engine one.
+  // The hummingbird gets there first and hits like what it weighs.
+  hummingbird:  ['head', 'Needle Bill', 'Hover Jab', M(42, 18, 100, [], { priority: true })],
+  // Frenzy from the WINGS, where the shark's is a bite: the only Airborne
+  // move in the county that grows as the target's health falls.
+  vulture:      ['forelimbs', 'Vulture Wings', 'Patient Circling', M(54, 28, 92, ['Airborne'], { frenzy: true })],
+  // No damage at all. Two stages off the foe's aim is the whole move.
+  peacock:      ['tail', 'Peacock Train', 'Full Display', M(0, 16, 100, [], { accDown: 2 })],
+  // A glide that lands on somebody and moves them out of the way: the only
+  // Airborne knockback.
+  squirrel:     ['forelimbs', 'Patagium', 'Drop In', M(46, 22, 95, ['Airborne'], { knockback: true })],
 };
 
 // Slot stat/phys bases, scaled by the species' role bias.
@@ -190,8 +212,8 @@ const SLOT_BASE = {
 // why a moth gets airborne on nothing while a swan needs a runway.
 const DENSITY = {
   head: { horned: 1.4, reptile: 1.15, mammal: 1, fish: 0.95, amphib: 0.8, bug: 0.7, blob: 0.7, bird: 0.5, moth: 0.35, bell: 0.3 },
-  limb: { paw: 1.15, hoof: 1.1, hop: 1.05, scythe: 0.85, fin: 0.85, paddle: 0.85, tentacle: 0.8, talon: 0.6, stilt: 0.55, bugleg: 0.55, wing: 0.45, membrane: 0.4, hindwing: 0.35 },
-  tail: { scute: 1.3, coil: 1.15, finTail: 1, rudder: 0.95, sting: 0.9, whip: 0.85, bushy: 0.7, nub: 0.5, drift: 0.5, flick: 0.45, fan: 0.45, streamer: 0.35 },
+  limb: { paw: 1.15, hoof: 1.1, hop: 1.05, scythe: 0.85, fin: 0.85, paddle: 0.85, tentacle: 0.8, talon: 0.6, stilt: 0.55, bugleg: 0.55, wing: 0.45, membrane: 0.4, hindwing: 0.35, patagium: 0.5 },
+  tail: { scute: 1.3, coil: 1.15, finTail: 1, rudder: 0.95, sting: 0.9, whip: 0.85, bushy: 0.7, nub: 0.5, drift: 0.5, flick: 0.45, fan: 0.45, streamer: 0.35, plume: 0.4 },
   hide: { plate: 1.8, band: 1.45, scale: 1.15, quill: 1.1, spine: 1.05, fur: 1, stripes: 1, camo: 0.9, chitin: 0.85, slick: 0.85, feather: 0.45, down: 0.35, jelly: 0.3 },
 };
 function bulkFor(sp, byId) {
@@ -227,13 +249,14 @@ const SLOT_NAMES = {
   tentacle: { forelimbs: 'Tentacles', hindlimbs: 'Lower Arms' }, bugleg: { forelimbs: 'Foreclaws', hindlimbs: 'Hindlegs' },
   scythe: { forelimbs: 'Scythes' }, talon: { hindlimbs: 'Talons' }, hop: { forelimbs: 'Forelimbs', hindlimbs: 'Springlegs' },
   paddle: { forelimbs: 'Paddles', hindlimbs: 'Webbed Feet' }, hindwing: { hindlimbs: 'Hindwings' }, stilt: { hindlimbs: 'Stilts' },
+  patagium: { forelimbs: 'Patagium', hindlimbs: 'Gliding Legs' },
 };
 const TAIL_NAMES = { bushy: 'Brush Tail', nub: 'Nub', whip: 'Whip Tail', finTail: 'Tail Fin', fan: 'Tailfan', sting: 'Sting', coil: 'Coil', flick: 'Flicker',
-  rudder: 'Rudder Tail', streamer: 'Wing Streamers', drift: 'Stinging Threads', scute: 'Banded Tail' };
+  rudder: 'Rudder Tail', streamer: 'Wing Streamers', drift: 'Stinging Threads', scute: 'Banded Tail', plume: 'Train' };
 const HIDE_NAMES = { fur: 'Pelt', stripes: 'Striped Coat', feather: 'Plumage', scale: 'Scales', plate: 'Plating', quill: 'Quill Coat', chitin: 'Chitin', slick: 'Slick Hide', camo: 'Camo Hide',
   down: 'Down', spine: 'Spine Coat', band: 'Banded Shell', jelly: 'Jelly Mantle' };
 const TAIL_ABIL = { bushy: 'Counterbalance', nub: 'Nub Wiggle', whip: 'Whip Crack', finTail: 'Tail Drive', fan: 'Tail Rudder', sting: 'Sting', coil: 'Constrict', flick: 'Happy Flick',
-  rudder: 'Course Correction', streamer: 'Streamer Flutter', drift: 'Drift Net', scute: 'Armoured Sweep' };
+  rudder: 'Course Correction', streamer: 'Streamer Flutter', drift: 'Drift Net', scute: 'Armoured Sweep', plume: 'Fan Display' };
 const HIDE_ABIL = { fur: 'Thick Fur', stripes: 'Broken Outline', feather: 'Preened Feathers', scale: 'Molted Slip', plate: 'Plate Armour', quill: 'Quill Coat', chitin: 'Chitin Guard', slick: 'Slick Coat', camo: 'Camouflage',
   down: 'Muffling Down', spine: 'Spine Coat', band: 'Banded Shell', jelly: 'Pass-Through' };
 const ORGAN_NAMES = {
@@ -253,6 +276,8 @@ const ORGAN_NAMES = {
   armadillo: ['Scream Bladder', 'Screaming Fit'],
   manta: ['Gill Rake', 'Filter Feed'],
   lamprey: ['Oral Gland', 'Anticoagulant'], clinker: ['Furnace Heart', 'Stoke the Furnace'],
+  hummingbird: ['Sugar Furnace', 'Sugar Rush'], vulture: ['Acid Crop', 'Strong Stomach'],
+  peacock: ['Vanity Gland', 'Strut'], squirrel: ['Cheek Cache', 'Hidden Stash'],
 };
 
 // R20 wired the dead keywords onto specific parts by hand, straight into
@@ -289,6 +314,12 @@ const KEYWORD_MOVES = {
   bat_forelimbs:       M(20, 22, 92, [], { multiHit: 3 }),
   octopus_head:        M(42, 22, 95, [], { staminaDrain: 12 }),
   porcupine_forelimbs: M(44, 24, 92, [], { thorns: 0.25 }),
+  // R205 — a wing too fast to see lands three times, softly: under the
+  // bat's 20 a hit, because the hummingbird also strikes first.
+  hummingbird_forelimbs: M(16, 22, 92, [], { multiHit: 3 }),
+  // R205 — Sonic from a bird you can hear three fields away. Priced under
+  // the goose's 48 for the reason A5 gave: ignoring armour is worth power.
+  peacock_head:        M(40, 20, 95, ['Sonic'], {}),
 };
 
 // R127 — THE FORTY PARTS THAT WERE TUNED IN THE DATA AND NEVER FOLDED BACK.
@@ -351,6 +382,13 @@ const HAND_TUNED = {
   // two a dead button. A lamprey holds on; a salamander grows another one.
   lamprey_tail: { ability: 'Hold Fast', move: M(0, 10, 100, [], { trap: true }) },
   clinker_tail: { ability: 'Spare Tail', move: M(0, 12, 100, [], { heal: 0.15 }) },
+  // R205 — three new tails, for R23's rule again: a fan and a brush tail
+  // give `evasionUp: 1` out of the archetype, which a slipskin hide already
+  // does. A hummingbird holds its line in the air, a vulture rides a thermal
+  // instead of flapping, and a squirrel scolds whatever is below it.
+  hummingbird_tail: { ability: 'Hover Lock', move: M(0, 10, 100, [], { accUp: 1 }) },
+  vulture_tail: { ability: 'Ride the Thermal', move: M(0, 8, 100, [], { staminaRestore: 12 }) },
+  squirrel_tail: { ability: 'Scold', move: M(0, 10, 100, [], { taunt: true }) },
   // --- head ---
   // R186 — what the unique GIVES UP, which R179's rule asks every expedition
   // animal to show on at least one part: she is forty years in a furnace and
@@ -395,6 +433,8 @@ const KEYWORD_ABILITY = {
   armadillo_tail: 'Shell Knock',
   skunk_tail: 'Business End',
   moth_forelimbs: 'Scale Storm',
+  hummingbird_forelimbs: 'Blur of Wings',
+  peacock_head: 'Dawn Scream',
 };
 const ACTIVE_ABILITY = {
   goat_organ: 'Second Stomach', tortoise_organ: 'Shell Rebuild', frog_organ: 'Cutaneous Mend',
@@ -402,6 +442,8 @@ const ACTIVE_ABILITY = {
   goose_organ: 'Hold a Grudge', otter_organ: 'Never Still',
   jellyfish_organ: 'No Central Anything', pufferfish_organ: 'Puff Up',
   clinker_hide: 'Clinker Crust',
+  hummingbird_organ: 'Sugar Rush', vulture_organ: 'Strong Stomach',
+  peacock_organ: 'Strut', squirrel_organ: 'Hidden Stash',
 };
 // [hide kind, organ kind]; null where the species' signature covers the slot.
 const ACTIVES = {
@@ -426,6 +468,9 @@ const ACTIVES = {
   moth:         ['slipskin', null],        otter:        ['slipskin', 'slowMend'],
   jellyfish:    ['vanish', 'slowMend'],    pufferfish:   [null, 'spike'],
   armadillo:    ['bristles', null],
+  // R205
+  hummingbird:  ['slipskin', 'gut'],       vulture:      ['slipskin', 'slowMend'],
+  peacock:      ['slipskin', 'spike'],     squirrel:     ['slipskin', 'gut'],
   // Variants pick their own — a Thunderhead's organ rallies where its base's
   // merely focuses, and its hide is a different hide.
   alpine_ram:   ['bristles', 'slowMend'],  abyssal_shark: ['slipskin', 'knit'],
@@ -487,6 +532,7 @@ function shapesFor(slot, sp) {
 // body cannot vote for is a species the class system does not apply to.
 const AFFINITY_FAMILY = {
   wing: 'air', membrane: 'air', fan: 'air', talon: 'air', hindwing: 'air', streamer: 'air',
+  patagium: 'air', plume: 'air',
   fin: 'water', finTail: 'water', hop: 'water', paddle: 'water', rudder: 'water', drift: 'water',
   tentacle: 'water',
   paw: 'ground', hoof: 'ground', bugleg: 'ground', scythe: 'ground', stilt: 'ground', scute: 'ground',
@@ -498,7 +544,9 @@ const AFFINITY_FAMILY = {
 // brace against the ground and shove with.
 const HEAD_AFFINITY = { fish: 'water', bell: 'water', blob: 'water', bird: 'air', moth: 'air', horned: 'ground' };
 // Flight SURFACES grant lift; a talon votes Air but does not hold anything up.
-const LIFT_FAMILY = { wing: 90, membrane: 90, hindwing: 55 };
+// R205 — a patagium glides rather than flies, so it lifts less than a wing
+// and more than a hindwing.
+const LIFT_FAMILY = { wing: 90, membrane: 90, hindwing: 55, patagium: 70 };
 // Lift follows wing AREA, and area goes as mass^(2/3) — which is why a moth
 // gets off the ground on nothing and a swan needs a runway. Without the
 // exponent, lift scaled linearly with bulk and every flier landed within four
@@ -549,6 +597,7 @@ const LIMB_VERB = {
   paddle: { forelimbs: 'Paddle Slap', hindlimbs: 'Flipper Kick' },
   tentacle: { forelimbs: 'Tentacle Lash', hindlimbs: 'Arm Wrap' },
   bugleg: { forelimbs: 'Foreclaw Jab', hindlimbs: 'Leg Sweep' },
+  patagium: { forelimbs: 'Glide Slap', hindlimbs: 'Touchdown' },
 };
 const limbVerb = (family, slot) => {
   const v = LIMB_VERB[family];

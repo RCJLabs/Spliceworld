@@ -1440,6 +1440,178 @@
       "flavor": "Eats the grubs and the ground they came from."
     },
     {
+      "id": "hummingbird",
+      "name": "Ruby Hummingbird",
+      "role": "Speedster",
+      "rarity": "common",
+      "tags": [
+        "Airborne"
+      ],
+      "palette": {
+        "primary": "#3aa876",
+        "secondary": "#eef3df",
+        "accent": "#e0306a"
+      },
+      "frame": "S",
+      "bulk": 0.3,
+      "class": "air",
+      "archetype": "avian",
+      "diet": "Nectar, at a velocity",
+      "feedCost": 3,
+      "upkeepPerDay": 4,
+      "mailOrderPrice": 150,
+      "growthHours": {
+        "adult": 4,
+        "prime": 12,
+        "elder": 48
+      },
+      "thermal": [
+        10,
+        34
+      ],
+      "incubationMinutes": 22,
+      "setBonus": {
+        "name": "Hover",
+        "desc": "+15% Speed, and +10% evasion on the opening turn",
+        "effect": {
+          "stats": {
+            "speed": 1.15
+          },
+          "perks": {
+            "evasion": 0.1
+          }
+        }
+      },
+      "flavor": "Weighs less than a coin. Has opinions about every flower in the county."
+    },
+    {
+      "id": "vulture",
+      "name": "Griffon Vulture",
+      "role": "Finisher",
+      "rarity": "common",
+      "tags": [
+        "Airborne"
+      ],
+      "palette": {
+        "primary": "#4a3f3c",
+        "secondary": "#e8dccb",
+        "accent": "#e58a78"
+      },
+      "frame": "S",
+      "bulk": 0.7,
+      "class": "air",
+      "archetype": "avian",
+      "diet": "Other people's leftovers",
+      "feedCost": 5,
+      "upkeepPerDay": 6,
+      "mailOrderPrice": 170,
+      "growthHours": {
+        "adult": 7,
+        "prime": 20,
+        "elder": 80
+      },
+      "thermal": [
+        -5,
+        38
+      ],
+      "incubationMinutes": 36,
+      "setBonus": {
+        "name": "Thermal Soaring",
+        "desc": "+20% Stamina. It can wait longer than you can",
+        "effect": {
+          "stats": {
+            "stamina": 1.2
+          }
+        }
+      },
+      "flavor": "Has never once been in a hurry. Has never once missed lunch."
+    },
+    {
+      "id": "peacock",
+      "name": "Peacock",
+      "role": "Taunter",
+      "rarity": "common",
+      "tags": [
+        "Airborne",
+        "Sonic"
+      ],
+      "palette": {
+        "primary": "#2369b3",
+        "secondary": "#2e9c84",
+        "accent": "#e9b53c"
+      },
+      "frame": "S",
+      "bulk": 0.7,
+      "class": "air",
+      "archetype": "avian",
+      "diet": "Seeds, and compliments",
+      "feedCost": 5,
+      "upkeepPerDay": 6,
+      "mailOrderPrice": 200,
+      "growthHours": {
+        "adult": 6,
+        "prime": 18,
+        "elder": 72
+      },
+      "thermal": [
+        2,
+        34
+      ],
+      "incubationMinutes": 34,
+      "setBonus": {
+        "name": "Full Fan",
+        "desc": "+15% HP, for standing there being looked at",
+        "effect": {
+          "stats": {
+            "hp": 1.15
+          }
+        }
+      },
+      "flavor": "Every room it enters is now about the peacock."
+    },
+    {
+      "id": "squirrel",
+      "name": "Flying Squirrel",
+      "role": "Glider",
+      "rarity": "common",
+      "tags": [
+        "Airborne"
+      ],
+      "palette": {
+        "primary": "#9a8670",
+        "secondary": "#f2e8d5",
+        "accent": "#5b4636"
+      },
+      "frame": "S",
+      "bulk": 0.35,
+      "class": "air",
+      "archetype": "rodent",
+      "diet": "Nuts it buried and then forgot",
+      "feedCost": 3,
+      "upkeepPerDay": 4,
+      "mailOrderPrice": 110,
+      "growthHours": {
+        "adult": 5,
+        "prime": 15,
+        "elder": 60
+      },
+      "thermal": [
+        -15,
+        28
+      ],
+      "incubationMinutes": 26,
+      "setBonus": {
+        "name": "Glide Path",
+        "desc": "+12% evasion on the opening turn",
+        "effect": {
+          "perks": {
+            "evasion": 0.12
+          }
+        }
+      },
+      "flavor": "Does not fly. Falls with great confidence and excellent posture."
+    },
+    {
       "id": "salvage",
       "name": "Enemy Tech",
       "role": "Salvage",

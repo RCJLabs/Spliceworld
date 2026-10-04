@@ -5559,6 +5559,679 @@
       }
     },
     {
+      "id": "hummingbird_head",
+      "species": "hummingbird",
+      "slot": "head",
+      "name": "Needle Bill",
+      "ability": "Hover Jab",
+      "stats": {
+        "power": 7,
+        "hp": 8
+      },
+      "phys": {
+        "mass": 2,
+        "draw": 3
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "classAffinity": "air",
+      "move": {
+        "power": 42,
+        "cost": 18,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "priority": true
+        }
+      }
+    },
+    {
+      "id": "hummingbird_forelimbs",
+      "species": "hummingbird",
+      "slot": "forelimbs",
+      "name": "Ruby Hummingbird Wings",
+      "ability": "Blur of Wings",
+      "stats": {
+        "power": 6,
+        "hp": 6
+      },
+      "phys": {
+        "mass": 2,
+        "draw": 3,
+        "lift": 40
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "classAffinity": "air",
+      "move": {
+        "power": 16,
+        "cost": 22,
+        "acc": 92,
+        "tags": [],
+        "keywords": {
+          "multiHit": 3
+        }
+      }
+    },
+    {
+      "id": "hummingbird_hindlimbs",
+      "species": "hummingbird",
+      "slot": "hindlimbs",
+      "name": "Ruby Hummingbird Talons",
+      "ability": "Ruby Hummingbird Talon Rake",
+      "stats": {
+        "power": 4,
+        "speed": 6,
+        "hp": 8
+      },
+      "phys": {
+        "mass": 2,
+        "draw": 3
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "classAffinity": "air",
+      "move": {
+        "power": 44,
+        "cost": 20,
+        "acc": 95,
+        "tags": [],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "hummingbird_tail",
+      "species": "hummingbird",
+      "slot": "tail",
+      "name": "Ruby Hummingbird Tailfan",
+      "ability": "Hover Lock",
+      "stats": {
+        "speed": 6,
+        "hp": 4
+      },
+      "phys": {
+        "mass": 1,
+        "draw": 1
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "classAffinity": "air",
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "accUp": 1
+        }
+      }
+    },
+    {
+      "id": "hummingbird_hide",
+      "species": "hummingbird",
+      "slot": "hide",
+      "name": "Ruby Hummingbird Plumage",
+      "ability": "Ruby Hummingbird Slipskin",
+      "stats": {
+        "armor": 5,
+        "hp": 14
+      },
+      "phys": {
+        "mass": 1,
+        "draw": 1
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      }
+    },
+    {
+      "id": "hummingbird_organ",
+      "species": "hummingbird",
+      "slot": "organ",
+      "name": "Sugar Furnace",
+      "ability": "Sugar Rush",
+      "stats": {
+        "stamina": 10,
+        "regen": 4,
+        "hp": 5
+      },
+      "phys": {
+        "mass": 2,
+        "draw": 3
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "staminaRestore": 18
+        }
+      }
+    },
+    {
+      "id": "vulture_head",
+      "species": "vulture",
+      "slot": "head",
+      "name": "Griffon Vulture Head",
+      "ability": "Griffon Vulture Peck",
+      "stats": {
+        "power": 15,
+        "hp": 12
+      },
+      "phys": {
+        "mass": 4,
+        "draw": 3
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "classAffinity": "air",
+      "move": {
+        "power": 46,
+        "cost": 22,
+        "acc": 95,
+        "tags": [],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "vulture_forelimbs",
+      "species": "vulture",
+      "slot": "forelimbs",
+      "name": "Vulture Wings",
+      "ability": "Patient Circling",
+      "stats": {
+        "power": 13,
+        "hp": 9
+      },
+      "phys": {
+        "mass": 4,
+        "draw": 3,
+        "lift": 71
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "classAffinity": "air",
+      "move": {
+        "power": 54,
+        "cost": 28,
+        "acc": 92,
+        "tags": [
+          "Airborne"
+        ],
+        "keywords": {
+          "frenzy": true
+        }
+      }
+    },
+    {
+      "id": "vulture_hindlimbs",
+      "species": "vulture",
+      "slot": "hindlimbs",
+      "name": "Griffon Vulture Talons",
+      "ability": "Griffon Vulture Talon Rake",
+      "stats": {
+        "power": 7,
+        "speed": 3,
+        "hp": 11
+      },
+      "phys": {
+        "mass": 5,
+        "draw": 3
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "classAffinity": "air",
+      "move": {
+        "power": 44,
+        "cost": 20,
+        "acc": 95,
+        "tags": [],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "vulture_tail",
+      "species": "vulture",
+      "slot": "tail",
+      "name": "Griffon Vulture Tailfan",
+      "ability": "Ride the Thermal",
+      "stats": {
+        "speed": 3,
+        "hp": 5
+      },
+      "phys": {
+        "mass": 2,
+        "draw": 1
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "classAffinity": "air",
+      "move": {
+        "power": 0,
+        "cost": 8,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "staminaRestore": 12
+        }
+      }
+    },
+    {
+      "id": "vulture_hide",
+      "species": "vulture",
+      "slot": "hide",
+      "name": "Griffon Vulture Plumage",
+      "ability": "Griffon Vulture Slipskin",
+      "stats": {
+        "armor": 4,
+        "hp": 20
+      },
+      "phys": {
+        "mass": 3,
+        "draw": 1
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      }
+    },
+    {
+      "id": "vulture_organ",
+      "species": "vulture",
+      "slot": "organ",
+      "name": "Acid Crop",
+      "ability": "Strong Stomach",
+      "stats": {
+        "stamina": 10,
+        "regen": 4,
+        "hp": 7
+      },
+      "phys": {
+        "mass": 4,
+        "draw": 3
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 18,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "regen": 0.09
+        }
+      }
+    },
+    {
+      "id": "peacock_head",
+      "species": "peacock",
+      "slot": "head",
+      "name": "Peacock Head",
+      "ability": "Dawn Scream",
+      "stats": {
+        "power": 8,
+        "hp": 14
+      },
+      "phys": {
+        "mass": 4,
+        "draw": 3
+      },
+      "tags": [
+        "Airborne",
+        "Sonic"
+      ],
+      "classAffinity": "air",
+      "move": {
+        "power": 40,
+        "cost": 20,
+        "acc": 95,
+        "tags": [
+          "Sonic"
+        ],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "peacock_forelimbs",
+      "species": "peacock",
+      "slot": "forelimbs",
+      "name": "Peacock Wings",
+      "ability": "Peacock Wing Beat",
+      "stats": {
+        "power": 7,
+        "hp": 11
+      },
+      "phys": {
+        "mass": 4,
+        "draw": 3,
+        "lift": 71
+      },
+      "tags": [
+        "Airborne",
+        "Sonic"
+      ],
+      "classAffinity": "air",
+      "move": {
+        "power": 52,
+        "cost": 24,
+        "acc": 92,
+        "tags": [],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "peacock_hindlimbs",
+      "species": "peacock",
+      "slot": "hindlimbs",
+      "name": "Peacock Stilts",
+      "ability": "Peacock Stilt Jab",
+      "stats": {
+        "power": 4,
+        "speed": 3,
+        "hp": 13
+      },
+      "phys": {
+        "mass": 5,
+        "draw": 3
+      },
+      "tags": [
+        "Airborne",
+        "Sonic"
+      ],
+      "classAffinity": "ground",
+      "move": {
+        "power": 44,
+        "cost": 20,
+        "acc": 95,
+        "tags": [
+          "Ground"
+        ],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "peacock_tail",
+      "species": "peacock",
+      "slot": "tail",
+      "name": "Peacock Train",
+      "ability": "Full Display",
+      "stats": {
+        "speed": 3,
+        "hp": 6
+      },
+      "phys": {
+        "mass": 1,
+        "draw": 1
+      },
+      "tags": [
+        "Airborne",
+        "Sonic"
+      ],
+      "classAffinity": "air",
+      "move": {
+        "power": 0,
+        "cost": 16,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "accDown": 2
+        }
+      }
+    },
+    {
+      "id": "peacock_hide",
+      "species": "peacock",
+      "slot": "hide",
+      "name": "Peacock Plumage",
+      "ability": "Peacock Slipskin",
+      "stats": {
+        "armor": 5,
+        "hp": 24
+      },
+      "phys": {
+        "mass": 3,
+        "draw": 1
+      },
+      "tags": [
+        "Airborne",
+        "Sonic"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      }
+    },
+    {
+      "id": "peacock_organ",
+      "species": "peacock",
+      "slot": "organ",
+      "name": "Vanity Gland",
+      "ability": "Strut",
+      "stats": {
+        "stamina": 12,
+        "regen": 4,
+        "hp": 8
+      },
+      "phys": {
+        "mass": 4,
+        "draw": 3
+      },
+      "tags": [
+        "Airborne",
+        "Sonic"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 14,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "powerUp": 1
+        }
+      }
+    },
+    {
+      "id": "squirrel_head",
+      "species": "squirrel",
+      "slot": "head",
+      "name": "Flying Squirrel Head",
+      "ability": "Flying Squirrel Bite",
+      "stats": {
+        "power": 10,
+        "hp": 12
+      },
+      "phys": {
+        "mass": 4,
+        "draw": 3
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "move": {
+        "power": 46,
+        "cost": 22,
+        "acc": 95,
+        "tags": [],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "squirrel_forelimbs",
+      "species": "squirrel",
+      "slot": "forelimbs",
+      "name": "Patagium",
+      "ability": "Drop In",
+      "stats": {
+        "power": 9,
+        "hp": 9
+      },
+      "phys": {
+        "mass": 2,
+        "draw": 3,
+        "lift": 35
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "classAffinity": "air",
+      "move": {
+        "power": 46,
+        "cost": 22,
+        "acc": 95,
+        "tags": [
+          "Airborne"
+        ],
+        "keywords": {
+          "knockback": true
+        }
+      }
+    },
+    {
+      "id": "squirrel_hindlimbs",
+      "species": "squirrel",
+      "slot": "hindlimbs",
+      "name": "Flying Squirrel Gliding Legs",
+      "ability": "Flying Squirrel Touchdown",
+      "stats": {
+        "power": 5,
+        "speed": 3,
+        "hp": 11
+      },
+      "phys": {
+        "mass": 2,
+        "draw": 3,
+        "lift": 35
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "classAffinity": "air",
+      "move": {
+        "power": 44,
+        "cost": 20,
+        "acc": 95,
+        "tags": [],
+        "keywords": {}
+      }
+    },
+    {
+      "id": "squirrel_tail",
+      "species": "squirrel",
+      "slot": "tail",
+      "name": "Flying Squirrel Brush Tail",
+      "ability": "Scold",
+      "stats": {
+        "speed": 3,
+        "hp": 5
+      },
+      "phys": {
+        "mass": 1,
+        "draw": 1
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "taunt": true
+        }
+      }
+    },
+    {
+      "id": "squirrel_hide",
+      "species": "squirrel",
+      "slot": "hide",
+      "name": "Flying Squirrel Pelt",
+      "ability": "Flying Squirrel Slipskin",
+      "stats": {
+        "armor": 5,
+        "hp": 20
+      },
+      "phys": {
+        "mass": 4,
+        "draw": 1
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "evasionUp": 1
+        }
+      }
+    },
+    {
+      "id": "squirrel_organ",
+      "species": "squirrel",
+      "slot": "organ",
+      "name": "Cheek Cache",
+      "ability": "Hidden Stash",
+      "stats": {
+        "stamina": 10,
+        "regen": 4,
+        "hp": 7
+      },
+      "phys": {
+        "mass": 2,
+        "draw": 3
+      },
+      "tags": [
+        "Airborne"
+      ],
+      "move": {
+        "power": 0,
+        "cost": 10,
+        "acc": 100,
+        "tags": [],
+        "keywords": {
+          "staminaRestore": 18
+        }
+      }
+    },
+    {
       "id": "alpine_ram_head",
       "species": "alpine_ram",
       "slot": "head",

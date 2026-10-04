@@ -71,7 +71,8 @@
           "blurb": "The county's only exit. The county's only cruiser lives here.",
           "unlocksFauna": [
             "eagle",
-            "bat"
+            "bat",
+            "squirrel"
           ],
           "benchTeam": 2
         },
@@ -197,7 +198,8 @@
           "blurb": "Aeronaut Prime has a scarf, a hangar, and something enormous under a tarp.",
           "boss": true,
           "unlocksFauna": [
-            "scorpion"
+            "scorpion",
+            "hummingbird"
           ],
           "benchTeam": 3
         }
@@ -417,7 +419,9 @@
           "boss": true,
           "threatGen": 3,
           "benchTeam": 2,
-          "unlocksFauna": []
+          "unlocksFauna": [
+            "vulture"
+          ]
         }
       ],
       "benchGrade": "apex",
@@ -488,7 +492,10 @@
           "incomePerDay": 250,
           "notoriety": 35,
           "blurb": "Every unkind thing anyone has written about you, alphabetised.",
-          "benchTeam": 2
+          "benchTeam": 2,
+          "unlocksFauna": [
+            "peacock"
+          ]
         },
         {
           "id": "rooftop_pad",

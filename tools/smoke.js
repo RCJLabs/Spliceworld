@@ -9539,6 +9539,13 @@ if (inShard('frames')) {
     pufferfish: [5, 14, 58, 28],
     otter: [5, 16, 64, 31],
     armadillo: [6, 18, 70, 30],
+    // R205 — four fliers. The hummingbird runs the dragonfly's clocks (it
+    // is the same size and burns hotter); the vulture is slow to grow and
+    // slow to age, which is the whole bird.
+    hummingbird: [4, 12, 48, 22],
+    vulture: [7, 20, 80, 36],
+    peacock: [6, 18, 72, 34],
+    squirrel: [5, 15, 60, 26],
     // R179 — the forty-second animal, and the first one no catalog sells.
     // Fast to adult for its bulk and slow to elder: a glider that is useful
     // early and worth keeping, which is what an expedition prize should be.

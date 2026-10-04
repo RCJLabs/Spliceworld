@@ -459,7 +459,17 @@ const REPORT = process.argv.includes('--report');
 // reason: a part's stats and a species' rarity are what the tick and the
 // table READ, so moving them behind the geometry fetch would be passing this
 // gate by breaking what it measures. Nine kilobytes of slack again.
-const FIRST_PAINT_KB = 1155;
+// R205 — 1155 -> 1178, measured at 1169 against 1151 on the commit before it.
+// The 1151 is itself worth writing down: R186 read 1146, so five kilobytes
+// of drift had built up between R187 and R204 and the slack was down to four.
+// R205's own cost is the other eighteen, all content and none of it code,
+// itemised from the files: 12.3 KB is the 24 new parts in `data/parts.json`
+// (four fliers at six parts each; their geometry is in the deferred shapes
+// file, per R81), 3.8 the four species, 1.9 the four combos that put each of
+// them in the discovery layer, and 0.1 the four catalog unlocks in
+// `data/regions.json`. It stays in CORE for R180's and R186's reason. Nine
+// kilobytes of slack again.
+const FIRST_PAINT_KB = 1178;
 
 // R169 — AND IT STAYS AT 1034, measured at 1016. Every previous milestone
 // either raised this number or brought it down to sit just above the
