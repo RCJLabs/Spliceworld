@@ -6251,6 +6251,11 @@ const BREAKS = [
     anchor: "  { id: 'yearbook', icon: 'book', label: 'Yearbook' },",
     to: "  { id: 'yearbook', icon: 'book', label: 'Yearbook' },\n"
       + "  { id: 'ledger', icon: 'book', label: 'Ledger' },",
+    // R204 — a seventh tab is a third row of tab bar on every Dex tab, and
+    // R204's roster bound (43px of slack) now names that first. The check
+    // this break is for is still in the verdict, ninth of nine; it is named
+    // here so the battery reads it rather than the first line.
+    expect: 'has no height budget',
   },
   {
     // AND THE OTHER DIRECTION — the list goes back to being typed here. This
