@@ -7679,6 +7679,9 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // R210 — the herd drawn in its field. Exempt like the Ranch screen it
     // draws for.
     'ranch/pasture.js': null,
+    // R211 — the county drawn from regions.json. Exempt like the War Room it
+    // draws for: the player meets it as the map, not as a system.
+    'campaign/county.js': null,
     'campaign/matchup.js': null,
     'campaign/monologue.js': null,
     'campaign/identity.js': null,
@@ -15467,6 +15470,121 @@ if (inShard('spar')) {
   const lazySky = mainSrc.indexOf("import('./ui/sky.js')");
   assert.ok(lazySky > 0 && mainSrc.indexOf("import('./ranch/pasture.js')") > lazySky, 'the shell fetches the pasture after the paint, beside the sky');
   console.log(`   R210 pasture: ${p.cap} of a herd in the field, ${seasons.size} seasons and ${weathers.size} weathers on it, lamps by the header's hour`);
+}
+
+// --- R211, THE COUNTY ON A MAP. Pure geometry from regions.json, the map's
+// --- markup, and one stubbed War Room press, so it rides the common path.
+{
+  const { countyScene, countyMarkup } = await import('../campaign/county.js');
+  const { renderWarRoomScreen } = await import('../campaign/ui.js');
+  const { renderIcon } = await import('../ui/icons.js');
+  const { recordingRoot, installDom, memoryStorage } = await import('./domstub.js');
+  const regions = Object.values(content.regions);
+  const pts = (o) => String(o).trim().split(/\s+/).map((p) => p.split(',').map(Number));
+  const inside = ([x, y], poly) => {
+    let c = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i]; const [xj, yj] = poly[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
+    }
+    return c;
+  };
+  // 1. Every region is drawn and every node is placed, from data.
+  for (const r of regions) {
+    assert.ok(pts(r.map?.outline).length >= 3 && Array.isArray(r.map.label) && Array.isArray(r.map.camp) && Array.isArray(r.map.wild),
+      `${r.name} has an outline, a place for its name, a camp and open country on the county`);
+  }
+  assert.ok(regions.some((r) => Array.isArray(r.map.lab)), 'and one of them holds the lab');
+  const corners = regions.flatMap((r) => pts(r.map.outline));
+  const box = { w: Math.max(...corners.map((p) => p[0])), h: Math.max(...corners.map((p) => p[1])) };
+  const nodes = regions.flatMap((r) => r.nodes.map((n) => ({ n, r })));
+  const ids = new Set(nodes.map(({ n }) => n.id));
+  for (const { n, r } of nodes) {
+    assert.ok(Array.isArray(n.at) && n.at.length === 2, `${n.id} has a place on the county`);
+    assert.ok(inside(n.at, pts(r.map.outline)), `${n.id} stands inside its own region (${r.name})`);
+    assert.ok(n.road === 'lab' || ids.has(n.road), `${n.id}'s road comes from somewhere on the map (${n.road})`);
+    let at = n; const walked = new Set();
+    while (at && at.road !== 'lab' && !walked.has(at.id)) { walked.add(at.id); at = nodes.find(({ n: m }) => m.id === at.road)?.n; }
+    assert.ok(at?.road === 'lab', `${n.id}'s roads lead home to the lab`);
+  }
+  // Every node a 48x44px button at a 356px county (a 380px phone), 6px from
+  // every other and inside the map: the a11y gate's floor, with room for the
+  // widest word a node can say.
+  const k = 356 / box.w;
+  const rect = ({ n }) => ({ id: n.id, l: n.at[0] * k - 24, r: n.at[0] * k + 24, t: n.at[1] * k - 22, b: n.at[1] * k + 22 });
+  const rects = nodes.map(rect);
+  for (const a of rects) {
+    assert.ok(a.l >= 0 && a.t >= 0 && a.r <= 356 && a.b <= box.h * k, `${a.id}'s button is inside the county at 380px`);
+    for (const b of rects) {
+      if (a.id >= b.id) continue;
+      assert.ok(Math.max(b.l - a.r, a.l - b.r, b.t - a.b, a.t - b.b) >= 6, `${a.id} and ${b.id} keep 6px apart at 380px`);
+    }
+  }
+
+  // 2. State by shape and word as well as colour, one button per node, in
+  //    the county's own order so Tab walks it region by region.
+  const st = { ...newGameState(), seed: 211 };
+  const order = nodes.map(({ n }) => n.id);
+  const [h, c] = [content.regions.greenfield.nodes[0].id, content.regions.greenfield.nodes[1].id];
+  st.campaign.heldNodes = [h, c];
+  st.campaign.contested = [{ nodeId: c, deadline: t0 + 5 * 3600000 }];
+  const html = countyMarkup(st, content, t0);
+  const buttons = [...html.matchAll(/<button type="button" class="county-node is-(\w+)" data-map-node="([^"]+)"[^>]*aria-label="([^"]+)">([\s\S]*?)<\/button>/g)]
+    .map(([, status, id, label, inner]) => ({ status, id, label, inner }));
+  assert.deepEqual(buttons.map((b) => b.id), order, 'every node is a button on the map, in the county\'s order');
+  const shape = { held: 'flag', contested: 'hourglass', available: 'target', locked: 'lock' };
+  const scene = countyScene(st, content, t0);
+  for (const b of buttons) {
+    assert.ok(b.inner.includes(renderIcon(shape[b.status], { size: 16 })), `${b.id} shows its state by shape (${b.status})`);
+    assert.ok(/<span class="county-word">[^<]+<\/span>/.test(b.inner), `${b.id} says its state in a word`);
+    const n = nodes.find(({ n: m }) => m.id === b.id);
+    assert.ok(b.label.includes(n.n.name) && b.label.includes(n.r.name), `${b.id} is named for a screen reader, with its region`);
+  }
+  assert.deepEqual([...new Set(buttons.map((b) => b.status))].sort(), ['available', 'contested', 'held', 'locked'],
+    'the fixture shows all four states');
+  assert.ok(scene.nodes.find((n) => n.node.id === c).clock > 0 && /\dh</.test(buttons.find((b) => b.id === c).inner),
+    'a contested node shows its clock');
+
+  // 3. The lab, the vans at its gate in a raid, the party in its region, the
+  //    strays in the open country.
+  assert.ok(!html.includes('class="county-van"') && html.includes('class="county-lab"'), 'the lab sits in the middle, with no vans at the gate');
+  const busy = structuredClone(st);
+  busy.campaign.raid = { id: 'r211', deadline: t0 + 3600000 };
+  busy.campaign.expedition = { regionId: 'kestrel', crew: [], startedAt: t0, returnAt: t0 + 3600000 };
+  const looseOne = { id: 'b1', unit: { name: 'Loose', class: null }, sighting: 'by the river' };
+  busy.campaign.loose = [looseOne];
+  const busyScene = countyScene(busy, content, t0);
+  assert.ok(busyScene.raid, 'a raid at the gate is drawn as one');
+  assert.deepEqual(busyScene.party, content.regions.kestrel.map.camp, "an expedition's party camps in its region");
+  assert.equal(busyScene.strays.length, 1, 'a loose specimen wanders the open country');
+  const busyHtml = countyMarkup(busy, content, t0);
+  assert.ok(busyHtml.includes('class="county-van"'), 'a raid parks vans at the gate');
+  assert.ok(busyHtml.includes('class="county-party"'), 'the party is drawn');
+
+  // 4. A node, or a whole region, added to regions.json appears.
+  const grown = structuredClone(content);
+  grown.regions.moor = { id: 'moor', name: 'The Moor', nodes: [{ id: 'bog', name: 'The Bog', encounter: content.regions.greenfield.nodes[0].encounter, at: [420, 300], road: 'lab' }],
+    map: { outline: '400,185 470,185 470,460 400,460', label: [435, 200], camp: [440, 400], wild: [440, 430], tint: '#556b2f' } };
+  const grownHtml = countyMarkup(st, grown, t0);
+  assert.ok(grownHtml.includes('data-map-node="bog"') && grownHtml.includes('The Moor') && grownHtml.includes('viewBox="0 0 470 460"'),
+    'a node and a region added to regions.json appear on a county that grew to hold them');
+
+  // 5. Tapping a node opens the card that is there for it today.
+  const root = recordingRoot();
+  const restore = installDom({ overlay: recordingRoot(), storage: memoryStorage() });
+  try {
+    const ctx = { state: st, content, now: () => t0, save() {}, goto() {}, refreshTicker() {}, pushNews() {}, tick() {}, takeSubtab: () => 'map' };
+    for (const r of regions) st.ui = { ...(st.ui ?? {}), collapsed: { ...(st.ui?.collapsed ?? {}), [`region:${r.id}`]: true } };
+    renderWarRoomScreen(root.host, ctx);
+    const target = content.regions.foundry.nodes[0].id;
+    const hit = root.bound.find((b) => b.el?.dataset?.mapNode === target);
+    assert.ok(hit, 'a node on the map is something you can press');
+    hit.fn({ preventDefault() {}, stopPropagation() {}, target: hit.el, currentTarget: hit.el });
+    assert.equal(st.ui.collapsed['region:foundry'], false, "pressing it opens its region's card");
+  } finally {
+    restore();
+  }
+  console.log(`   R211 county: ${regions.length} regions, ${nodes.length} nodes placed from data, each 6px clear at 380px and on a road home`);
 }
 
 // R71, second half: save slots. Multiple independent labs on one device —

@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**4 entries queued.** R211, R212, R213, R214.
+**3 entries queued.** R212, R213, R214.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -8478,7 +8478,8 @@ written so that it has something on screen when it ships.
     for it beside the sky.
   * **The budgets:** as above, with the reason beside them.
 
-- **R211 — The county on a map.** The War Room opens on its map tab, and the
+- **R211 — The county on a map.** ✅
+  The War Room opens on its map tab, and the
   map is five region cards with a row of text per node. Nothing on screen
   says where anything is. It becomes a drawn county: region outlines, node
   positions and roads, all data in `regions.json`. Held nodes fly the
@@ -8491,6 +8492,91 @@ written so that it has something on screen when it ships.
   by shape and label as well as colour; every node can be reached by tap and
   by keyboard and opens its card; a node added to `regions.json` appears
   without an engine edit; and the a11y, height and wide gates pass.*
+
+  **Shipped: the map tab opens on a drawn county, and every node on it is a
+  button that opens its card.**
+  * **`campaign/county.js`** (pure, lazy with the War Room) draws it above
+    the region cards: five region outlines, the roads between the nodes,
+    and the lab in the middle of Greenfield. Every coordinate is data in
+    `regions.json`:
+    - a node's `at` and `road` (another node, or "lab");
+    - a region's `map`, holding its `outline`, where its name sits, where an
+      expedition camps, a patch of open country for a loose specimen, its
+      tint, and on Greenfield the lab.
+
+    The county's size is the outlines' own extent, so a region drawn
+    further out makes a bigger county with no number to keep in step.
+  * **State by shape and word as well as colour.** A held node flies a flag
+    and says "Held". A contested node shows an hourglass and its clock in
+    one unit ("7h"), with the full time in its name. An open one wears a
+    target, and a locked one a padlock on a dashed border. A region not open
+    yet is drawn faint and dashed.
+  * **What is happening, drawn where it happens:** unmarked vans at the
+    lab's gate while a raid is open, an expedition's tent in its region,
+    and loose specimens wandering the open country (one per region with
+    room for one).
+  * **Tap or Enter on a node** unfolds its region's card, scrolls to the
+    node's row, and moves focus to the row's first live button, or to the
+    card's head when there is none. Every node is a real `<button>`, in the
+    county's own order, named with its region and state for a screen
+    reader.
+  * **Every node is 40px and 6px clear of the next at 380px.** Smoke holds
+    that for a 48x44px box, which leaves room for the widest word, and for
+    every node inside its own region's outline. The region names were
+    placed in the gaps by hand and measured against every node in a
+    browser.
+
+  **The boot budget did not move.** First paint read 1,195 KB before and
+  1,196 after, against an unchanged 1,197. The county data in
+  `regions.json` (2.1 KB, CORE, as the entry asked), its copy and its CSS
+  were paid for by moving eight more comment essays (3.9 KB) from
+  `style.css` to `docs/STYLE.md`. The module is lazy with the War Room.
+  Eager code is unchanged at 337.9 KB and prose at 260.9.
+
+  **Found on the way:**
+  * **The indexer keeps only the `regions.json` fields it names.** A
+    top-level `county` block would have needed eager code the budget does
+    not have, so the lab and the open-country points live on the regions,
+    and the box is derived.
+  * **Region names near the right edge wrapped,** because an absolutely
+    placed label's available width stops at the map's edge. They are one
+    line each, placed for that.
+  * **Locked nodes' muted text failed contrast** (2.12:1). The state is
+    carried by the padlock and the dashed border now, with the normal text
+    colour.
+  * **Focus after a tap went to the page body,** because a held node's only
+    button can be a disabled Spar. Focus now takes the first live button,
+    else the card's head.
+  * **Break 218's anchor** (`"answer": "air"` beside `"requires"`) was split
+    by the new `map` line and re-aimed at the line that follows it now.
+  * **Breaks 585-597:**
+    - a node with no place, in the wrong region, or on a road from nowhere;
+    - state shown by colour alone, or with no word;
+    - a node that opens nothing;
+    - a sixth region that never appears;
+    - the vans, the party or the strays missing;
+    - nodes shrunk under 40px;
+    - the strays moving under reduced motion;
+    - a county wider than the phone.
+
+  **Done when, checked** (at 380px, with zero console errors on a fresh
+  founding, on a v63 save migrated to v64, and on the day-180 save):
+  * **The drawn county, every node placed from data:** all 23 nodes, in
+    five outlines, on roads that smoke walks back to the lab.
+  * **Shape and label as well as colour:** smoke finds each state's own
+    icon and a word on every button, in a fixture showing all four states.
+    In the browser the fresh save shows one open node and 22 padlocks, and
+    the day-180 save flags and clocks.
+  * **Tap and keyboard:** a tap on the Rolling Mill unfolded the Foundry
+    Belt's card with the row on screen, still open after a reload. Enter on
+    the Spire's reception desk unfolded the Spire's card. The a11y gate
+    plays the whole game from the keyboard, now through 23 more buttons.
+  * **A node added to `regions.json` appears:** smoke adds a sixth region
+    with a node to a copy of the content, and the county grows to hold
+    them.
+  * **The a11y, height and wide gates pass:** every control clears 40px
+    and 6px and every word the contrast floor, in every theme, on fresh and
+    day-180 saves. Nothing scrolls sideways at any width.
 
 - **R212 — Commissions.** A heist already likes a creature that fits (Camo
   for the petting zoo, Armored for the fair's livestock tent), but a fit only

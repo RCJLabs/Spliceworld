@@ -39,7 +39,8 @@ import { readCard } from '../splice/card.js';
 import { toggleRow, pickerField, bindPickers, openPicker, openPrompt } from '../ui/picker.js';
 import { creaturePortrait, renderRivalSVG } from '../render/renderer.js';
 import { rivalStatus, rivalEncounter } from './rivals.js';
-import { rescueEncounterFor } from './map.js';
+import { rescueEncounterFor, regionOfNode } from './map.js';
+import { countyMarkup } from './county.js';
 import { renderIcon } from '../ui/icons.js';
 import {
   expTuning, expeditionHours, expeditionRegions, activeExpedition,
@@ -288,7 +289,7 @@ function renderMap(root, ctx) {
               ? `<span class="contested-tag">CONTESTED −${fmtMoney(node.incomePerDay)}/d</span>`
               : `<span class="locked-tag">${(node.threatGen ?? 1) > gen ? `needs Threat Gen ${node.threatGen}` : 'locked'}</span>`;
       return `
-        <div class="encounter node-${status}">
+        <div class="encounter node-${status}" id="node-${node.id}">
           <div><strong>${node.name}</strong>${node.boss ? ` ${renderIcon('crown')}` : ''} <span class="lineage">${encounter.waves.length} waves · ${fmtMoney(encounter.reward)}</span><br>
           <span class="fine-print">${node.blurb}</span></div>
           ${btn}
@@ -500,7 +501,7 @@ function renderMap(root, ctx) {
   const wire = [...state.news].reverse().map((n) => `<p>${renderIcon('satellite')} ${n}</p>`).join('');
 
   const views = {
-    map: regions,
+    map: `${countyMarkup(state, content, t)}${regions}`,
     jobs: `${staffCard(state, ctx, t)}${expeditionCard(state, ctx, t)}${missionCard(state, ctx, t)}${jobsCard(state, ctx, t)}`,
     labs: `
       ${releaseCard}
@@ -686,6 +687,25 @@ function renderMap(root, ctx) {
       if (!row || row.status !== 'open') return;
       draftTarget = { kind: 'gauntlet', stageId: row.stage.id, encounterId: row.stage.id, label: row.stage.name };
       renderWarRoomScreen(root, ctx);
+    })
+  );
+  // R211 — a node on the drawn county opens the card that is there for it
+  // today: its region's, unfolded, scrolled to, with its own row's button
+  // (or, in a region not open yet, the card's head) taking focus.
+  root.querySelectorAll('button[data-map-node]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.mapNode;
+      const region = regionOfNode(content, id);
+      if (!region) return;
+      state.ui ??= {};
+      state.ui.collapsed ??= {};
+      state.ui.collapsed[`region:${region.id}`] = false;
+      ctx.save();
+      renderMap(root, ctx);
+      const row = root.querySelector(`#node-${id}`);
+      const target = row?.querySelector('button:not([disabled])') ?? root.querySelector(`[data-fold="region:${region.id}"]`);
+      (row ?? target)?.scrollIntoView?.({ block: 'center', behavior: 'auto' });
+      target?.focus?.();
     })
   );
   root.querySelectorAll('button[data-spar]').forEach((btn) =>
