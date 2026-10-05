@@ -1,5 +1,81 @@
 # PROGRESS
 
+## Session 233 — R209: battles you can feel ✅
+
+**A fight now looks like the move that was thrown, happens somewhere, and
+ends the way the line says. Every move tag draws its own effect, a crit
+shakes the stage, every region and the Gauntlet fight on their own
+backdrop, and every enemy unit leaves by the exit named beside its line.
+Every chimera naps. All of it is data, and none of it moves under reduced
+motion. The boot budget did not move.**
+
+### What shipped
+
+- **`data/arena.json`** (deferred with the shape files): `motions`,
+  `effects` (eight tags plus `plain`), `backdrops` (five regions plus the
+  hangar) and `exits` (seven).
+- **`battle/stagecraft.js`** (lazy, pure): beat in, markup and keyframes
+  out. `battle/ui.js` plays them through one `play` function that asks
+  about reduced motion first.
+- **The engine's beats** carry the move's `tags` (hit, miss, immune) and
+  `crit` (hit). Nothing else in the engine changed.
+- **`exit` on all 42 units** in `data/enemies.json`, beside `koLine`. The
+  stand-in van has one too.
+- **Positioning CSS only**: the motion is Web Animations from data.
+- **Gates:** an R209 smoke block; wide rule 8 (the scenery stands on the
+  stage's floor at every play view); a11y's scenery check at 380x640 and its
+  count of Web Animations in a reduced-motion round. `data/notes/arena.md`.
+- **Breaks 561-573.**
+
+### Found on the way
+
+- **The handlers gate refused four `data-*` markers** (`scene`, `fx`, `exit`,
+  `ref`): that namespace is for controls. The markers are classes now, and
+  the sprite's ref is set through `dataset` after the render, as before.
+- **An apostrophe in a `sw.js` comment** broke the release gate's parse of
+  the precache list.
+- **A tall stage cropped Kestrel Reach to its middle third.** The scenery
+  now stands on the floor at most two-thirds as tall as the stage is wide.
+- **The entry's five exits could not say twelve of the lines honestly**
+  (the Fire Brigade goes back to its pancake breakfast), so there is an
+  `exeunt`, and a `nap` for the Tranq Team, who dart themselves.
+
+### Verification
+
+- **`npm test`, run alone:** 11 of 11 jobs green. 1,490 CPU-seconds of
+  1,641 (the engine changed, so the walks rebuilt and the allowance
+  applied), 487s wall.
+- **Battery:**
+  - `--anchors`: 564 of 564.
+  - `--only` over breaks 561-573 and the nineteen aimed near R209's code and
+    the gates it edited (the wide gate's rules, the a11y arena walk, the
+    loader, the beat table): 32 of 32 caught, behind a 41-of-41 green
+    baseline, in 24 minutes. The first attempt's baseline went red on the
+    handlers gate (the `data-*` markers above), and was stopped and re-run
+    after the fix.
+- **Boot:** first paint 1,195 KB (1,193 before) against an unchanged 1,197.
+  Eager code is 337.7 KB against an unchanged 338, prose is unchanged at
+  260.8, and there are still 51 eager modules.
+- **a11y, wide, handlers, scope and release gates green.**
+- **At 380px** (scratchpad probe, real UI):
+  - zero console errors on a fresh founding, on a v63 save migrated to v64,
+    and on the day-180 save through a whole fight;
+  - all six backdrops filling their stage at 380x780 and 380x640, nothing
+    scrolling;
+  - every effect drawn on both sides of the stage, and every exit played on
+    both;
+  - a fight in Kestrel Reach played by clicks: its slashes landed, a
+    knockback punted the Mast Climber out of formation, and the Falconry
+    Unit that replaced it was knocked out and left by its exeunt;
+  - the scene and the turn survive a reload mid-fight, and a creature down
+    and waiting survives one asleep;
+  - under reduced motion a round started 0 animations and drew no effect.
+
+### Next session
+
+R210: the ranch through the window. The next full battery is due around
+R212.
+
 ## Session 232 — R208: the Surgery Theater you can see ✅
 
 **Every part in the Theater's pickers and filled sockets is drawn, on a
