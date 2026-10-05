@@ -276,7 +276,11 @@ export function sampleBuilds(content, n, seed) {
   const limbs = [...(bySlot.forelimbs ?? []), ...(bySlot.hindlimbs ?? [])];
   const dressed = (frame, partIds) => {
     const ids = [...partIds];
-    return frameHasSocket(content.frames[frame], 'midlimbs') ? [...ids, pick(rng, limbs.filter((id) => !ids.includes(id)))] : ids;
+    if (!frameHasSocket(content.frames[frame], 'midlimbs')) return ids;
+    for (const slot of ['forelimbs', 'hindlimbs']) {
+      if (!ids.some((id) => content.parts[id]?.slot === slot)) ids.push(pick(rng, bySlot[slot]));
+    }
+    return [...ids, pick(rng, limbs.filter((id) => !ids.includes(id)))];
   };
   const builds = [];
   const seen = new Set();

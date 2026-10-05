@@ -442,7 +442,8 @@
       "S": 3,
       "M": 5,
       "L": 9,
-      "A": 4
+      "A": 4,
+      "H": 6
     },
     "frameFallback": 5,
     "gradeCost": {

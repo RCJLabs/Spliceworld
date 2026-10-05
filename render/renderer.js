@@ -18,14 +18,13 @@ export const SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ']
 // Surgery Theater Tier II opens `organ2` (ROADMAP §3.4: "Organ ×1, ×2 at
 // Theater Tier 2"). Keeping socket ids string-keyed means every genome ever
 // saved is still a valid genome: old saves simply never mention organ2.
-// R207 — `midlimbs` last; see data/notes/frames.md, "sockets".
 export const SOCKETS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ', 'organ2', 'midlimbs'];
 
 export function slotOfSocket(socketId) {
   return socketId.replace(/\d+$/, '');
 }
 
-// R207 — the part types a socket takes; the one place it is said.
+// R207 — data/notes/frames.md, frames[].sockets.
 const SOCKET_SLOTS = { midlimbs: ['forelimbs', 'hindlimbs'] };
 export function slotsOfSocket(socketId) {
   return SOCKET_SLOTS[socketId] ?? [slotOfSocket(socketId)];
@@ -58,7 +57,6 @@ const LAYERS = [
   ['head', 'head'],
 ];
 
-// R207 — a frame takes a socket where it has every position LAYERS draws it into.
 export function frameHasSocket(frame, socketId) {
   return LAYERS.filter(([s, at]) => s === socketId && at).every(([, at]) => !!frame?.sockets?.[at]);
 }
