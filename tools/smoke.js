@@ -6,7 +6,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { indexContent, renderCreatureSVG, creaturePortrait, validateGenome, drawableGenome, SLOTS, SOCKETS, slotOfSocket } from '../render/renderer.js';
+import { indexContent, renderCreatureSVG, creaturePortrait, validateGenome, drawableGenome, SLOTS, SOCKETS, slotOfSocket, slotsOfSocket } from '../render/renderer.js';
 import { renderIcon, iconIds } from '../ui/icons.js';
 import { walkSurfaces, shellScreenMap } from './handlers.js';
 import { checkTree, runSelfTests, runLinkTests, moduleFiles, SELF_TESTS, LINK_TESTS } from './scopecheck.js';
@@ -324,10 +324,12 @@ for (const frame of Object.values(content.frames)) {
   }
   // ...and nothing drawn that the frame says it does not have, or the
   // renderer puts a part somewhere the Theater would never let you bolt one.
+  // R207 — a position names a genome socket, and the Hexapod's middle pair
+  // takes either kind of limb, so it is supported when either kind is.
   for (const name of Object.keys(frame.sockets)) {
-    const slot = name.replace(/_(near|far)$/, 's').replace(/\d+$/, '');
-    assert.ok(supported.includes(slot),
-      `frame ${frame.id} draws a ${name} socket but does not support ${slot}`);
+    const socket = name.replace(/_(near|far)$/, 's');
+    assert.ok(slotsOfSocket(socket).some((slot) => supported.includes(slot)),
+      `frame ${frame.id} draws a ${name} socket but supports none of ${slotsOfSocket(socket).join(', ')}`);
   }
   assert.ok(frame.sockets.head, `frame ${frame.id}: a head is mandatory, company policy`);
 }
@@ -4415,7 +4417,7 @@ if (inShard('team')) {
   assert.ok(SOCKETS.includes('organ2'), 'the second organ bay exists as a socket');
   assert.equal(slotOfSocket('organ2'), 'organ', 'and an organ part is what fits it');
   for (const socketId of SOCKETS) {
-    assert.ok(SLOTS.includes(slotOfSocket(socketId)), `${socketId} resolves to a real slot type`);
+    assert.ok(slotsOfSocket(socketId).every((slot) => SLOTS.includes(slot)), `${socketId} resolves to real slot types`);
   }
   for (const frame of Object.values(content.frames)) {
     assert.ok(frame.sockets.organ2, `${frame.id} carries the organ2 bay — geometry is not the gate`);
@@ -4443,7 +4445,8 @@ if (inShard('team')) {
   assert.ok(bought.ok, bought.msg);
   assert.equal(fresh.funds, 5, 'and it charges you');
   assert.equal(facilityLevel(fresh, 'theater'), 2);
-  assert.equal(nextUpgrade(fresh, content, 'theater'), null, 'Tier II is the top of the track for now');
+  assert.ok(nextUpgrade(fresh, content, 'theater').blockers.some((b) => b.kind === 'node'),
+    'Tier III is bought with territory as well as money (R207)');
 
   const tier2 = theaterGrants(fresh, content);
   assert.ok(tier2.frames.includes('L'), 'Tier II buys the Rumbler chassis');
@@ -4501,6 +4504,56 @@ if (inShard('team')) {
   assert.equal(new Set(names).size, names.length, 'no duplicated move buttons');
   const single = combatantFromChimera({ ...twins, tokens: { head: tk('gorilla_head'), organ: tk('wolf_organ') } }, content, 1);
   assert.ok(cb.staminaMax > single.staminaMax, 'but the stats still stack');
+
+  // R207 — TIER III SELLS THE HEXAPOD, whose middle pair takes either kind of
+  // limb. Everything below is derived from the grant, never from the letter H.
+  assert.ok(!tier2.sockets.includes('midlimbs'), 'Tier II sells no middle pair');
+  const lv3 = levelData(content, 'theater', 3);
+  fresh.campaign.heldNodes = [...fresh.campaign.heldNodes, ...(lv3.requiresNodes ?? [])];
+  fresh.funds = lv3.cost;
+  const third = buyUpgrade(fresh, content, 'theater');
+  assert.ok(third.ok, third.msg);
+  assert.equal(nextUpgrade(fresh, content, 'theater'), null, 'Tier III is the top of the track for now');
+  const tier3 = theaterGrants(fresh, content);
+  const added = tier3.frames.filter((f) => !tier2.frames.includes(f));
+  assert.equal(added.length, 1, `Tier III unlocks one frame (${added.join(', ')})`);
+  const hexId = added[0];
+  assert.ok(tier3.sockets.includes('midlimbs'), 'and the middle pair');
+  for (const f of tier3.frames) {
+    assert.equal(theaterGrants(fresh, content, f).sockets.includes('midlimbs'), f === hexId,
+      `${f}: only the frame with positions for it is offered the middle pair`);
+  }
+  const hexStock = { ...newGameState(), seed: 207, facility: { theater: 3 } };
+  hexStock.inventory.parts = ['wolf_head', 'wolf_forelimbs', 'wolf_hindlimbs', 'eagle_forelimbs', 'goat_hindlimbs', 'wolf_tail']
+    .map((partId, i) => ({ id: `h${i}`, partId, grade: 'standard', donor: { name: 'Doris', species: partId.split('_')[0], stars: 3, extractedAt: 0 } }));
+  const sixLimbs = { head: 'h0', forelimbs: 'h1', hindlimbs: 'h2', midlimbs: 'h3', tail: 'h5' };
+  assert.deepEqual(validateSplice(hexStock, hexId, sixLimbs, content), [], 'a forelimb fits the middle pair');
+  assert.deepEqual(validateSplice(hexStock, hexId, { ...sixLimbs, midlimbs: 'h4' }, content), [], 'and so does a hindlimb');
+  assert.ok(validateSplice(hexStock, hexId, { head: 'h0', midlimbs: 'h5' }, content).some((e) => e.includes('does not fit')),
+    'and a tail does not');
+  assert.ok(validateSplice(hexStock, 'M', sixLimbs, content).some((e) => e.includes(`${content.frames.M.name} has no midlimbs`)),
+    'a frame without the positions refuses it, and says which reason');
+  const six = spliceChimera(clearTable(hexStock), hexId, sixLimbs, content, t0);
+  assert.ok(six.ok, six.msg);
+  assert.equal(six.chimera.tokens.midlimbs.partId, 'eagle_forelimbs', 'the third pair is stored under its own socket');
+  const hexGenome = chimeraGenome(six.chimera, content);
+  assert.deepEqual(validateGenome(hexGenome, content), []);
+  const hexSvg = renderCreatureSVG(hexGenome, content);
+  const at = (pos) => `translate(${content.frames[hexId].sockets[pos].x} ${content.frames[hexId].sockets[pos].y})`;
+  for (const pos of ['forelimb_near', 'forelimb_far', 'midlimb_near', 'midlimb_far', 'hindlimb_near', 'hindlimb_far']) {
+    assert.ok(hexSvg.includes(at(pos)), `all six limbs draw: ${pos}`);
+  }
+  const hexRows = analyze(hexId, Object.values(six.chimera.tokens), content, theaterGrants(hexStock, content, hexId).sockets.length).rows;
+  const pair = hexRows.find((r) => r.label === copy(content, 'theater.third_pair_label'));
+  assert.ok(pair && pair.value === copy(content, 'theater.third_pair_full'), 'the panel explains the third pair');
+  assert.ok(!analyze('M', Object.values(six.chimera.tokens).slice(0, 3), content).rows.some((r) => r.label === pair.label),
+    'and only on a frame that has one');
+  const four = { ...six.chimera, tokens: { ...six.chimera.tokens } };
+  delete four.tokens.midlimbs;
+  assert.ok(combatantFromChimera(six.chimera, content, 1).maxHp > combatantFromChimera(four, content, 1).maxHp,
+    'the third pair is more creature');
+  const bout = scriptedBattle(six.chimera, 'patrol_1', content, 207);
+  assert.ok(['win', 'loss'].includes(bout.outcome) && bout.turns > 0, `and it fights (${bout.outcome} in ${bout.turns})`);
 }
 
 // --- AI Director (§3.7): the world studies you and answers. The tracking
@@ -18926,7 +18979,11 @@ if (inShard('contest')) {
     assert.equal(routine.length, Object.keys(content.frames).length - 1,
       `exactly one chassis trades a bay away, or the exemption above covers more than it says `
       + `(full-socket frames: ${routine.join(', ')} of ${Object.keys(content.frames).join(', ')})`);
-    for (const id of routine) {
+    // R207 — of the chassis these walks BOUGHT. They halt at dominion, and
+    // Tier III sells the Hexapod after it; tools/diet.js asks the day-180 walk.
+    const { theaterGrants: soldBy } = await import('../splice/facility.js');
+    const sold = new Set(shapes.flatMap((w) => soldBy(w.save, content).frames));
+    for (const id of routine.filter((f) => sold.has(f))) {
       assert.ok(shapes.some((w) => (w.framesBuilt[id] ?? 0) > 0),
         `every full-socket chassis the Theater sells gets worn by somebody — ${content.frames[id].name} never was (${frames})`);
     }

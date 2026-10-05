@@ -219,5 +219,13 @@
     "full_last": "The shelves are full, and as big as the building gets. Render a part down to make room.",
     "spare_none": "Nothing here is a spare any more. These are what the shelf would miss least — the Dex keeps the anatomy either way.",
     "render_one": "Render {part} down for {price}"
+  },
+  "theater": {
+    "midlimbs_sub": "Arms or legs, your call. Every limb is mass, and the frame pays for it in speed.",
+    "third_pair_label": "Third pair",
+    "third_pair_full": "Six limbs",
+    "third_pair_some": "{limbs} of 6 limbs",
+    "third_pair_full_note": "Arms or legs, the middle pair takes either. All three pairs weigh {mass} (the Speed row charges for it) and cast {votes} of the class votes. Shoe budget: tripled.",
+    "third_pair_open_note": "The {frame} has a middle pair to fill with arms or legs. Each pair adds its mass, which costs speed, and a vote for the class."
   }
 }

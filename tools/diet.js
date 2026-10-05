@@ -332,10 +332,14 @@ sockets across ${bodies} kept chimeras: `
 // where a majority is two campaigns.
 {
   const { stableRoom } = await import('../splice/facility.js');
-  const grant = Math.max(...(content.facility.theater.levels ?? []).map((l) => l.grants?.stable ?? 0));
+  // R207 — each campaign against the grant IT bought, since Tier III adds
+  // stalls and three of fourteen campaigns never buy it.
+  const saves = COMBO_SEEDS.map((seed) => (seed === 2026 ? walk.save : walkedSave({ seed, days: 180 })));
+  const grants = saves.map((save) => theaterGrants(save, content).stable);
+  const grant = theaterGrants(walk.save, content).stable;
   const cap = stableRoom(walk.save, content).cap;
-  const rosters = COMBO_SEEDS.map((seed) => (seed === 2026 ? walk.save : walkedSave({ seed, days: 180 })).chimeras?.length ?? 0);
-  const over = rosters.filter((n) => n > grant).length;
+  const rosters = saves.map((save) => save.chimeras?.length ?? 0);
+  const over = rosters.filter((n, i) => n > grants[i]).length;
   if (REPORT) {
     console.log(`\n  stable: Theater grants ${grant}, paddock took it to ${cap};`
       + ` rosters ${COMBO_SEEDS.map((s, i) => `${s}: ${rosters[i]}`).join(', ')} — ${over} of ${COMBO_SEEDS.length} over`);
@@ -349,7 +353,30 @@ sockets across ${bodies} kept chimeras: `
   // feature shipping as a number on a screen.
   if (over * 2 <= COMBO_SEEDS.length) {
     fails.push(`the stable grew to ${cap} and ${over} of ${COMBO_SEEDS.length} campaigns finished over`
-      + ` the Theater's own ${grant} (${rosters.join(', ')}) — so the stalls a paddock bought went unused`);
+      + ` the Theater's own ${grants.join('/')} (${rosters.join(', ')}) — so the stalls a paddock bought went unused`);
+  }
+}
+
+// ---- 4b. R207: the day-180 walk buys the top of the Theater and builds what it adds
+//
+// Tier III exists because a day-180 save had nothing left to buy. The walk
+// buys it on day 118.75 and splices three Hexapods into the stalls it adds;
+// a walker that never buys it, or buys it and never builds one, has made the
+// tier decoration. The frames the top tier ADDS are the claim, read from the
+// track, so the Kite (rare by design, see smoke R150) is not asked.
+{
+  const levels = content.facility?.theater?.levels ?? [];
+  const level = walk.save.facility?.theater ?? 1;
+  const added = (levels.at(-1)?.grants?.frames ?? []).filter((f) => !(levels.at(-2)?.grants?.frames ?? []).includes(f));
+  const unbuilt = added.filter((f) => !((walk.framesBuilt ?? {})[f] > 0));
+  if (REPORT) {
+    console.log(`\n  theater: the day-180 walk ends at tier ${level} of ${levels.length}; frames built `
+      + Object.entries(walk.framesBuilt ?? {}).map(([f, n]) => `${f} ${n}`).join(', '));
+  }
+  if (level < levels.length) {
+    fails.push(`theater: the day-180 walk ends at tier ${level} of ${levels.length} — the top of the Theater is a purchase nobody makes`);
+  } else if (unbuilt.length) {
+    fails.push(`theater: the day-180 walk bought tier ${level} and never built ${unbuilt.map((f) => content.frames[f]?.name ?? f).join(', ')}`);
   }
 }
 

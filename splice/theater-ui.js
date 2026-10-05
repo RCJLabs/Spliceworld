@@ -257,7 +257,7 @@ export function renderTheaterScreen(root, ctx) {
         : socketId === 'organ2'
           ? 'The second bay. More metabolism, or a second ability — if the frame can carry the mass.'
           : socketId === 'midlimbs'
-            ? 'Arms or legs, your call. Every limb is mass, and the frame pays for it in speed.'
+            ? copy(content, 'theater.midlimbs_sub')
             : 'Leave it empty if you like living dangerously.',
       selectedId: draft.slots[socketId] ?? '',
       groups: [{ label: null, options: [{ id: '', label: 'Empty socket', sub: 'Nothing installed' }] }, ...groups],
