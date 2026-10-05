@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**6 entries queued.** R209, R210, R211, R212, R213, R214.
+**5 entries queued.** R210, R211, R212, R213, R214.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -8257,7 +8257,7 @@ written so that it has something on screen when it ships.
     floor, in every theme.
   * **The boot budget:** as above.
 
-- **R209 — Battles you can feel.**
+- **R209 — Battles you can feel.** ✅
   * **Effects by tag, from data:** a bolt for Electric, a splash for Aquatic, a
     gust for Airborne, bubbles for Venomous, rings for Sonic, a cloud for Gas,
     cracks for Ground and a slash for a plain hit. A crit shakes the stage.
@@ -8275,6 +8275,103 @@ written so that it has something on screen when it ships.
   arena at 380px and on a 640px-tall phone; reduced motion stills it; a new
   tag's effect is a JSON row; and the battle engine stays DOM-free (the
   effects read the beat stream R2 built).*
+
+  **Shipped: a fight now looks like the move that was thrown, happens
+  somewhere, and ends the way the line says.**
+  * **`data/arena.json`** holds all of it as rows, and rides the deferred
+    geometry round with the shape files, so the first paint never waits on
+    it. It has four tables:
+    - `motions`: keyframes in a small vocabulary (x/y in percent, dx/dy in
+      pixels, r, s, o);
+    - `effects`: one per move tag, plus `plain`;
+    - `backdrops`: one per region id, plus the hangar;
+    - `exits`: seven, each with a prop that either rides with the fighter or
+      stays where it fell.
+  * **`battle/stagecraft.js`** (lazy, pure) turns a beat into markup and
+    keyframes, and never touches the page; `battle/ui.js` plays them. The
+    engine's own change is two fields on the beats it already emitted: a
+    move's `tags` on its hit, miss and immune beats, and `crit` on the hit.
+  * **Effects by tag:** a slash for a plain hit, a bolt for Electric, a
+    splash for Aquatic, a gust for Airborne, bubbles for Venomous, rings for
+    Sonic, a cloud for Gas, cracks for Ground, and a crosshair for Aimed, the
+    one tag the entry did not name. A move with two tags draws both. A hit
+    the target was immune to is drawn faint; a miss goes wide. Each is drawn
+    arriving from the attacker's side. A crit shakes the stage: the engine's
+    own (a cornered Brave creature) and any hit at better than even odds,
+    which the floating number has called a crit since M2.
+  * **A backdrop per region:** Greenfield's hills, fence and hay bales;
+    Kestrel Reach's cliffs, windsock and birds; the Drowned Quarter's water,
+    pier, lighthouse and half-sunk street sign; the Foundry Belt's
+    smokestacks and furnaces; the Compliance Spire's windows, cubicles, water
+    cooler and poster; and a hangar for the Gauntlet. A fight's node picks
+    its region; a fight with no node (a raid, a rival, a breakout) is held at
+    home. The scenery stands on the stage's floor, at most two-thirds as tall
+    as the stage is wide, so a tall phone gets sky above it rather than
+    losing its edges.
+  * **Knockouts as written.** Every one of the 42 units names its `exit`
+    beside its `koLine`: a parachute (3), a loud retirement in smoke (8), a
+    slow deflation (9), a sink (6), a hoist (3), a nap (the Tranq Team, who
+    dart themselves) and an exeunt (12) for everyone whose line has them
+    walk, taxi, float or clock out. The entry's list of five could not say
+    those lines honestly. Every chimera naps, whoever raised it, and one still
+    down when the arena redraws for its replacement is drawn asleep.
+
+  **Reduced motion stills it twice over.** These are Web Animations rather
+  than CSS, so the stylesheet's off-switch cannot reach them. A round under
+  reduced motion is flushed in one frame and builds none of it, and the one
+  function that plays any of it asks the preference itself. Smoke refuses
+  any `.animate(` call in the game that is not behind that check. The a11y
+  gate counts the Web Animations a reduced-motion round starts, and it must
+  be none.
+
+  **The boot budget did not move.** First paint read 1,193 KB before and
+  1,195 after, against an unchanged 1,197: 0.9 KB of `exit` fields in
+  `enemies.json` (CORE, beside the lines they act out, as the entry asked)
+  and 0.8 KB of positioning rules in `style.css`. Eager code is 337.7 KB
+  against an unchanged 338, prose is unchanged at 260.8, and the eager graph
+  is still 51 modules. The arena file (46 KB) and the module are lazy and
+  precached.
+
+  **Found on the way:**
+  * **A comment broke the release gate.** An apostrophe in a `sw.js` comment
+    ended the gate's quoted-name parse early, and it reported 26 missing
+    files. The comment was reworded.
+  * **The first layout sliced the scenery to the whole stage.** A tall stage
+    cropped Kestrel Reach to its middle third, cliffs and all. The cap on its
+    height fixed it.
+  * **Breaks 561-573:**
+    - a tag with no effect;
+    - a region or the Gauntlet on the wrong ground;
+    - a unit with no exit, or one its line contradicts;
+    - a rival's chimera not napping;
+    - a beat without its tags;
+    - an arena that only knows the tags it was told about;
+    - effects played without asking about reduced motion;
+    - the nap lost on a redraw;
+    - scenery that floats off the floor at 380px or vanishes at 640px;
+    - the arena file pulled into the first paint.
+
+  **Done when, checked** (at 380px, on the day-180 save, with zero console
+  errors on it, on a fresh founding and on a v63 save migrated to v64):
+  * **Every move tag has an effect.** Smoke reads the eight tags off every
+    move in parts, enemies and combos and the tag chart, and draws each.
+    In the browser, a real fight in Kestrel Reach played its slashes and an
+    exeunt by clicks.
+  * **Every region and the Gauntlet:** each node of all five regions routes
+    to its own backdrop, and the Gauntlet to the hangar. All six were drawn
+    at 380x780 and 380x640, filling their stage with nothing scrolling.
+  * **Every unit's exit:** all 42 name an exit the arena draws. Smoke holds
+    each line to its own words, and every exit was played on both sides of
+    the stage. A chimera naps, and still naps after a reload.
+  * **380px and a 640px phone:** the wide gate measures the scenery on its
+    floor at every play view, and the a11y gate at 640. The arena does not
+    scroll at either.
+  * **Reduced motion:** a played round started 0 animations and drew no
+    effect.
+  * **A new tag's effect is a JSON row:** smoke adds a tag, a region and a
+    unit to a copy of the content and the arena draws all three by name.
+  * **The engine stays DOM-free:** the beats carry what the arena draws, and
+    stagecraft is as pure as the engine; scopecheck passes.
 
 - **R210 — The ranch through the window.** The header already paints the sky
   for the hour and the weather (R105), and under it the Ranch is rows of

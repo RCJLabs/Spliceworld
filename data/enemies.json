@@ -13,6 +13,7 @@
         "Organic"
       ],
       "koLine": "The Riot Squad deploys emergency parachutes. Indoors. It works somehow.",
+      "exit": "parachute",
       "moves": [
         {
           "name": "Baton Bonk",
@@ -50,6 +51,7 @@
         "Organic"
       ],
       "koLine": "The Net Trooper is hoisted away by their own net. Poetic.",
+      "exit": "hoist",
       "moves": [
         {
           "name": "Net Toss",
@@ -89,6 +91,7 @@
         "Organic"
       ],
       "koLine": "The Tranq Team accidentally darts itself and naps in a pile.",
+      "exit": "nap",
       "moves": [
         {
           "name": "Tranq Dart",
@@ -129,6 +132,7 @@
         "Armored"
       ],
       "koLine": "The Police Cruiser retires loudly, wheels spinning in protest.",
+      "exit": "smoke",
       "moves": [
         {
           "name": "Ram",
@@ -171,6 +175,7 @@
         "Organic"
       ],
       "koLine": "Captain Clampdown is promoted sideways, effective immediately.",
+      "exit": "exeunt",
       "transformInto": "clampdown_9000",
       "transformLine": "Captain Clampdown slams a big red button: 'ACTIVATE THE 9000!'",
       "moves": [
@@ -223,6 +228,7 @@
         "Armored"
       ],
       "koLine": "The Clampdown 9000 ejects its captain into a conveniently placed bouncy castle, then collapses into spare parts.",
+      "exit": "smoke",
       "moves": [
         {
           "name": "Riot Cannon",
@@ -280,6 +286,7 @@
         "Organic"
       ],
       "koLine": "The Infantry Squad parachutes away in tight formation. Very professional.",
+      "exit": "parachute",
       "moves": [
         {
           "name": "Suppressing Fire",
@@ -320,6 +327,7 @@
         "v8_heart"
       ],
       "koLine": "The Jeep .50 pops all four tires at once and sulks off on the rims.",
+      "exit": "deflate",
       "moves": [
         {
           "name": "Fifty-Cal Rattle",
@@ -364,6 +372,7 @@
         "v8_heart"
       ],
       "koLine": "The Attack Chopper auto-rotates into a haystack. The pilot walks away whistling.",
+      "exit": "sink",
       "moves": [
         {
           "name": "Strafing Run",
@@ -405,6 +414,7 @@
         "v8_heart"
       ],
       "koLine": "The Harbor Skiff springs a leak, sighs, and settles into two feet of water.",
+      "exit": "sink",
       "moves": [
         {
           "name": "Deck Gun",
@@ -446,6 +456,7 @@
         "Camo"
       ],
       "koLine": "The Surveillance Drone lands itself, files a flight report, and powers down in protest.",
+      "exit": "deflate",
       "moves": [
         {
           "name": "Rotor Buzz",
@@ -485,6 +496,7 @@
         "Airborne"
       ],
       "koLine": "The Falconry Unit accepts a glove, a snack, and immediate early retirement.",
+      "exit": "exeunt",
       "moves": [
         {
           "name": "Talon Rake",
@@ -524,6 +536,7 @@
         "Armored"
       ],
       "koLine": "Gunship 80 deploys every parachute it has, including several it did not know about.",
+      "exit": "parachute",
       "moves": [
         {
           "name": "Cluster Kazoo",
@@ -573,6 +586,7 @@
         "Airborne"
       ],
       "koLine": "The Rappel Team abseils gently back up its own rope and files for hazard pay.",
+      "exit": "hoist",
       "moves": [
         {
           "name": "Swing Kick",
@@ -611,6 +625,7 @@
         "Armored"
       ],
       "koLine": "The Water Cannon Truck runs out of water, then out of enthusiasm, and retires loudly.",
+      "exit": "smoke",
       "moves": [
         {
           "name": "Firehose Sweep",
@@ -664,6 +679,7 @@
         "Aquatic"
       ],
       "koLine": "The Harbor Diver surfaces, gives a cheerful thumbs-up, and floats away on the tide.",
+      "exit": "exeunt",
       "moves": [
         {
           "name": "Net Snag",
@@ -705,6 +721,7 @@
         "Armored"
       ],
       "koLine": "The Dredger Barge settles onto a sandbar and retires loudly, with dignity.",
+      "exit": "smoke",
       "moves": [
         {
           "name": "Silt Cannon",
@@ -759,6 +776,7 @@
         "Organic"
       ],
       "koLine": "The Volunteer Fire Brigade coils its hose neatly, waves, and goes back to the pancake breakfast.",
+      "exit": "exeunt",
       "moves": [
         {
           "name": "Hose Blast",
@@ -800,6 +818,7 @@
         "rotor_limbs"
       ],
       "koLine": "The Crop Duster lands in a field it was already spraying and taxis away in disgrace.",
+      "exit": "exeunt",
       "moves": [
         {
           "name": "Dusting Run",
@@ -838,6 +857,7 @@
       ],
       "class": "air",
       "koLine": "The Mast Climber abseils down at speed, waves, and is not seen again this evening.",
+      "exit": "sink",
       "moves": [
         {
           "name": "Cable Whip",
@@ -878,6 +898,7 @@
       ],
       "class": "air",
       "koLine": "The Balloon Relay deflates over four dignified seconds and drapes itself over a barn.",
+      "exit": "deflate",
       "moves": [
         {
           "name": "Signal Boost",
@@ -918,6 +939,7 @@
       "transformInto": "stratofortress",
       "transformLine": "Aeronaut Prime is gone. In its place, the sky fills with something that should have been declared to customs.",
       "koLine": "Aeronaut Prime hurls the goggles to the deck and reaches, theatrically, for a very large lever.",
+      "exit": "exeunt",
       "moves": [
         {
           "name": "Wingover",
@@ -965,6 +987,7 @@
         "standard"
       ],
       "koLine": "The Stratofortress sheds every panel it owns and glides, with enormous dignity, into a reservoir.",
+      "exit": "sink",
       "moves": [
         {
           "name": "Bomb Bay",
@@ -1001,6 +1024,7 @@
       ],
       "class": "water",
       "koLine": "The Sluice Hound is retrieved by its handler, sopping and unrepentant, and taken home for a towel.",
+      "exit": "hoist",
       "moves": [
         {
           "name": "Undertow Bite",
@@ -1044,6 +1068,7 @@
         "hydro_jets"
       ],
       "koLine": "The Hydrofoil Lance beaches itself on a boat ramp and idles there, mortified.",
+      "exit": "deflate",
       "moves": [
         {
           "name": "Foil Ram",
@@ -1089,6 +1114,7 @@
         "foghorn_array"
       ],
       "koLine": "The Eel Generator trips its own breaker, sighs a shower of sparks, and powers down for the night.",
+      "exit": "deflate",
       "moves": [
         {
           "name": "Live Wire",
@@ -1129,6 +1155,7 @@
       "transformInto": "leviathan_dredge",
       "transformLine": "The Harbormaster's whistle is answered at last \u2014 by the harbour. Most of it stands up.",
       "koLine": "The Harbormaster blows a whistle nobody obeys and climbs, grimly, into something much larger.",
+      "exit": "exeunt",
       "moves": [
         {
           "name": "Grapnel Haul",
@@ -1178,6 +1205,7 @@
         "prime"
       ],
       "koLine": "The Leviathan Dredge settles onto a sandbar and becomes, effective immediately, a wildlife sanctuary.",
+      "exit": "sink",
       "moves": [
         {
           "name": "Bucket Chain",
@@ -1223,6 +1251,7 @@
         "blast_shield"
       ],
       "koLine": "The Slag Hauler tips its load in the wrong place and retires, loudly, behind a wall of steam.",
+      "exit": "smoke",
       "moves": [
         {
           "name": "Tipper Dump",
@@ -1264,6 +1293,7 @@
         "arc_coil"
       ],
       "koLine": "The Arc Welder Rig welds itself to the floor and, on reflection, stays there.",
+      "exit": "deflate",
       "moves": [
         {
           "name": "Arc Flash",
@@ -1301,6 +1331,7 @@
       ],
       "class": "ground",
       "koLine": "Foreman Ordnance files a grievance against your entire existence and clocks out early.",
+      "exit": "exeunt",
       "moves": [
         {
           "name": "Clipboard Rally",
@@ -1340,6 +1371,7 @@
       "transformInto": "crucible_9000",
       "transformLine": "The DO NOT button did. Smelter Prime returns wearing the foundry.",
       "koLine": "Smelter Prime slams a very red button labelled DO NOT and steps back with obvious relish.",
+      "exit": "exeunt",
       "moves": [
         {
           "name": "Ingot Toss",
@@ -1386,6 +1418,7 @@
         "prime"
       ],
       "koLine": "CRUCIBLE-9000 vents every drop of coolant it owns and retires in a cloud you can see from the ranch.",
+      "exit": "smoke",
       "moves": [
         {
           "name": "Pour Cycle",
@@ -1425,6 +1458,7 @@
       ],
       "class": "ground",
       "koLine": "The Compliance Marshal serves themself a notice of withdrawal and honours it immediately.",
+      "exit": "exeunt",
       "moves": [
         {
           "name": "Cease And Desist",
@@ -1468,6 +1502,7 @@
         "mandate_horn"
       ],
       "koLine": "The Mandate Swarm runs out of battery mid-sentence and rains gently into a hedge.",
+      "exit": "deflate",
       "moves": [
         {
           "name": "Subpoena Storm",
@@ -1506,6 +1541,7 @@
       ],
       "class": "water",
       "koLine": "The Audit Diver surfaces, gives a thumbs up nobody asked for, and is towed away by a colleague.",
+      "exit": "exeunt",
       "moves": [
         {
           "name": "Forensic Grip",
@@ -1549,6 +1585,7 @@
       "transformInto": "the_compliance_engine",
       "transformLine": "The platform comes back up. Director Prime has been replaced by the agenda item nobody wanted to reach.",
       "koLine": "Director Prime declares the meeting adjourned and descends, on a platform, into the floor.",
+      "exit": "sink",
       "moves": [
         {
           "name": "Executive Order",
@@ -1595,6 +1632,7 @@
         "prime"
       ],
       "koLine": "THE COMPLIANCE ENGINE files for an extension, is denied, and shuts down in alphabetical order.",
+      "exit": "deflate",
       "moves": [
         {
           "name": "Final Notice",
@@ -1637,6 +1675,7 @@
         "blast_shield"
       ],
       "koLine": "The Gantry Crane drops everything it is holding, including its own hook, and parks itself at the far wall.",
+      "exit": "exeunt",
       "moves": [
         {
           "name": "Magnet Drop",
@@ -1681,6 +1720,7 @@
         "arc_coil"
       ],
       "koLine": "The Quench Rig boils itself dry, emits one enormous sigh of steam, and retires behind the cloud.",
+      "exit": "smoke",
       "moves": [
         {
           "name": "Quench Bath",
@@ -1729,6 +1769,7 @@
         "prime"
       ],
       "koLine": "The Siege Tank's turret rotates left, keeps rotating, and declines to stop. It retires very loudly and in a circle.",
+      "exit": "smoke",
       "moves": [
         {
           "name": "Main Gun",
@@ -1788,6 +1829,7 @@
         "standard"
       ],
       "koLine": "Battery 88 fires one final shell straight up, considers the arc, and folds itself into a commemorative lawn ornament.",
+      "exit": "deflate",
       "moves": [
         {
           "name": "Fire Mission",

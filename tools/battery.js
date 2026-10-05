@@ -7925,6 +7925,127 @@ const BREAKS = [
     to: "import './render/thumb.js';\nimport { loadContent, loadShapes } from './data/loader.js';",
     expect: 'modules eagerly, over the cap',
   },
+  {
+    // R209 — A TAG LOSES ITS EFFECT. Electric moves land as nothing at all,
+    // and the only way to find out is to throw one.
+    n: 561, gate: COMMON_PATH, name: 'the Electric effect is missing from the arena file',
+    file: 'data/arena.json',
+    anchor: '    "Electric": {',
+    to: '    "Electrik": {',
+    expect: 'every move tag has an effect',
+  },
+  {
+    // R209 — EVERY FIGHT IS HELD AT HOME. The node stops deciding the
+    // scenery, so the Drowned Quarter's harbour is Greenfield's hay.
+    n: 562, gate: COMMON_PATH, name: "a region's fights are held on somebody else's backdrop",
+    file: 'battle/stagecraft.js',
+    anchor: '    ?? (context.nodeId ? regionOfNode(content, context.nodeId)?.id : null)\n',
+    to: '',
+    expect: 'is held in',
+  },
+  {
+    // R209 — AND THE GAUNTLET IS JUST ANOTHER FIELD.
+    n: 563, gate: COMMON_PATH, name: 'the Gauntlet fights in front of the hay bales',
+    file: 'data/arena.json',
+    anchor: '  "backdropByKind": { "gauntlet": "hangar" },',
+    to: '  "backdropByKind": {},',
+    expect: 'the Gauntlet fights on a backdrop of its own',
+  },
+  {
+    // R209 — A UNIT FORGETS HOW IT LEAVES, and drops back to the flop.
+    n: 564, gate: COMMON_PATH, name: 'the Net Trooper has no exit beside its line',
+    file: 'data/enemies.json',
+    anchor: '      "koLine": "The Net Trooper is hoisted away by their own net. Poetic.",\n      "exit": "hoist",\n',
+    to: '      "koLine": "The Net Trooper is hoisted away by their own net. Poetic.",\n',
+    expect: 'leaves by an exit the arena draws',
+  },
+  {
+    // R209 — AND ONE LEAVES THE WRONG WAY. The line says parachutes; the
+    // arena sends it off in a cloud of smoke.
+    n: 565, gate: COMMON_PATH, name: "the Riot Squad's exit contradicts the line it acts out",
+    file: 'data/enemies.json',
+    anchor: '      "koLine": "The Riot Squad deploys emergency parachutes. Indoors. It works somehow.",\n      "exit": "parachute",',
+    to: '      "koLine": "The Riot Squad deploys emergency parachutes. Indoors. It works somehow.",\n      "exit": "smoke",',
+    expect: 'leaves the way its line says',
+  },
+  {
+    // R209 — A RIVAL'S CHIMERA RETIRES LIKE A POLICE CAR. The genome stops
+    // deciding, so anyone's creature takes whatever its record names.
+    n: 566, gate: COMMON_PATH, name: "an opponent's chimera does not nap",
+    file: 'battle/stagecraft.js',
+    anchor: '    id = unit?.genome ? arena.chimeraExit : unit?.exit;',
+    to: '    id = unit?.exit;',
+    expect: "and so does anyone else's",
+  },
+  {
+    // R209 — THE BEAT FORGETS ITS MOVE'S TAGS, so the arena would have to
+    // re-derive the fight to know what to draw.
+    n: 567, gate: COMMON_PATH, name: "a hit stops carrying its move's tags",
+    file: 'battle/engine.js',
+    anchor: '      tags: move.tags ?? [], // R209: what battle/stagecraft.js draws\n',
+    to: '',
+    expect: 'every beat a move made carries its tags',
+  },
+  {
+    // R209 — A NEW TAG NEEDS CODE. The arena keeps its own list of the tags
+    // it knows, and the next one ships invisible until somebody edits it.
+    n: 568, gate: COMMON_PATH, name: "the arena only draws the tags it was told about",
+    file: 'battle/stagecraft.js',
+    anchor: '  const drawn = beat.tags.filter((t) => rows[t]);',
+    to: "  const drawn = beat.tags.filter((t) => rows[t] && ['Electric', 'Aquatic', 'Airborne', 'Venomous', 'Sonic', 'Gas', 'Ground', 'Aimed'].includes(t));",
+    expect: "a new tag's effect is a JSON row",
+  },
+  {
+    // R209 — THE OFF-SWITCH GOES. Web Animations are out of the stylesheet's
+    // reach, so the guard in `play` is the only thing between a player who
+    // asked for stillness and a stage full of lightning.
+    // BLIND AGAIN IF the arena starts an animation anywhere but `play`
+    // without the source rule looking there too.
+    n: 569, gate: COMMON_PATH, name: 'the arena plays its effects without asking about reduced motion',
+    file: 'battle/ui.js',
+    anchor: "  if (!el || !motion || typeof el.animate !== 'function' || reducedMotion()) return null;",
+    to: "  if (!el || !motion || typeof el.animate !== 'function') return null;",
+    expect: 'every Web Animation is behind the reduced-motion guard',
+  },
+  {
+    // R209 — THE NAP DOES NOT SURVIVE A REDRAW. Your creature goes down, the
+    // round ends, and it is standing again while you pick its replacement.
+    n: 570, gate: COMMON_PATH, name: 'a creature down and waiting is redrawn standing',
+    file: 'battle/ui.js',
+    anchor: "  const napping = me.hp <= 0 ? exitOf('player', null, battle, content) : null;",
+    to: '  const napping = null;',
+    expect: 'is drawn napping',
+  },
+  {
+    // R209 — THE SCENERY KEEPS ITS OWN SIZE. The backdrop stops filling its
+    // box and sits at its natural height, floating off the stage's floor on
+    // a phone. The wide gate measures it at every play view.
+    n: 571, gate: WIDE, name: 'the scenery sizes to itself rather than to the stage',
+    file: 'style.css',
+    anchor: '.scene svg { display: block; width: 100%; height: 100%; }',
+    to: '.scene svg { display: block; }',
+    expect: 'off its edge',
+  },
+  {
+    // R209 — THE SHORTEST PHONE GIVES UP THE SCENERY. 640px is the band where
+    // the arena already gives things up to fit, and hiding the backdrop there
+    // is the obvious next thing to give. The a11y gate is the one that
+    // renders that band.
+    n: 572, gate: A11Y, name: 'a 640px phone fights in front of nothing',
+    file: 'style.css',
+    anchor: '  .stage { min-height: 130px; }\n}',
+    to: '  .stage { min-height: 130px; }\n  .scene { display: none; }\n}',
+    expect: 'battle@640: the scenery is',
+  },
+  {
+    // R209 — THE ARENA'S DRAWING JOINS THE FIRST PAINT. Forty-six kilobytes
+    // of lightning and hay in front of a player who has not opened a fight.
+    n: 573, gate: BOOT, name: "the arena file loads before the game paints",
+    file: 'data/loader.js',
+    anchor: "'missions', 'henchmen'];",
+    to: "'missions', 'henchmen', 'arena'];",
+    expect: 'to reach the screen, over the budget',
+  },
 ];
 
 const pristine = {};

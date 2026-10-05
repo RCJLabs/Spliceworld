@@ -1527,6 +1527,22 @@ async function main() {
     await sleep(700);
     await collect('battle@640');
     await arenaFits('battle@640');
+    // R209 — and the fight is still held somewhere on the smallest phone:
+    // the scenery fills the stage this band shrinks, rather than keeping the
+    // size it had at 780 and losing the floor under the fighters.
+    {
+      const scene = await evaluate(`(() => {
+        const st = document.querySelector('#stage')?.getBoundingClientRect();
+        const sv = document.querySelector('#stage .scene svg')?.getBoundingClientRect();
+        if (!st) return null;
+        if (!sv) return { none: true };
+        return { off: Math.round(Math.max(st.top - sv.top, Math.abs(st.bottom - sv.bottom), Math.abs(st.left - sv.left), Math.abs(st.right - sv.right))),
+                 low: sv.height < st.height * 0.4,
+                 stage: Math.round(st.width) + 'x' + Math.round(st.height), svg: Math.round(sv.width) + 'x' + Math.round(sv.height) };
+      })()`);
+      if (scene?.none) note('battle@640: the arena draws no scenery behind the fight');
+      else if (scene && (scene.off > 2 || scene.low)) note(`battle@640: the scenery is ${scene.svg} on a ${scene.stage} stage, ${scene.off}px off its edge`);
+    }
     await send('Emulation.setDeviceMetricsOverride', { width: VIEWPORT, height: 780, deviceScaleFactor: 1, mobile: true });
     await sleep(300);
 
@@ -1994,10 +2010,18 @@ async function main() {
         if (!onMove) note('no attack in the arena can be reached by Tab');
         else {
           const before = await evaluate(`document.querySelector('.turn-badge')?.textContent ?? ''`);
+          // R209 — the arena's effects and exits are Web Animations played
+          // from data, which the stylesheet's off-switch cannot reach and
+          // STILL above cannot see. So the round is asked directly: with
+          // reduced motion on, it starts none.
+          await evaluate(`(() => { window.__swAnimations = 0; const was = Element.prototype.animate;
+            Element.prototype.animate = function (...a) { window.__swAnimations++; return was.apply(this, a); }; })()`);
           await enter();
           await sleep(1600);
           const badge = await evaluate(`document.querySelector('.turn-badge')?.textContent ?? ''`);
           if (badge === before) note(`pressing Enter on an attack did nothing — the arena is still on "${before}"`);
+          const started = await evaluate('window.__swAnimations ?? 0');
+          if (started) note(`a round played with reduced motion asked for started ${started} animation(s) in the arena`);
         }
       }
     }

@@ -26,6 +26,9 @@ import { resolveBattle } from '../campaign/campaign.js';
 import { openPicker } from '../ui/picker.js';
 import { moveSummary, moveDetail } from './move-text.js';
 import { renderIcon } from '../ui/icons.js';
+import {
+  sceneMarkup, effectsOf, effectMarkup, shakes, exitOf, propMarkup, motionOf, restOf,
+} from './stagecraft.js';
 
 // Move names and keyword sentences are authored content, not player input,
 // but they land in innerHTML and an apostrophe in a name should not be able
@@ -224,9 +227,16 @@ export function renderArena(root, ctx, onDone) {
         ? `What now? <span class="ord-you">⚡ You are faster (${order.playerSpeed} vs ${order.enemySpeed}).</span>`
         : `What now? <span class="ord-them">⚠ They are faster (${order.enemySpeed} vs ${order.playerSpeed}).</span>`;
 
+  // R209 — a creature knocked out and waiting on its replacement is drawn
+  // where its nap left it, rather than standing up again for the redraw.
+  const napping = me.hp <= 0 ? exitOf('player', null, battle, content) : null;
+  const nap = napping ? content.arena.exits[napping] : null;
+  const meProp = nap ? propMarkup(napping, content, -1, restOf(nap.prop?.motion, content, -1)) : '';
+
   root.innerHTML = `
     <section class="arena">
       <div class="stage" id="stage">
+        ${sceneMarkup(battle, content)}
         <div class="stage-bar">
           <span class="turn-badge">TURN ${battle.turn}</span>
           <span class="stage-title">${battle.encounterName}</span>
@@ -237,14 +247,16 @@ export function renderArena(root, ctx, onDone) {
 
         <div class="slot slot-foe kind-${spriteKind('enemy', foe.refId, ctx, battle)}" id="foe-slot">
           <div class="platform"></div>
-          <div class="sprite-zoom"><div class="sprite" id="foe-sprite">${spriteFor('enemy', foe.refId, ctx, battle)}</div></div>
+          <div class="actor"><div class="sprite-zoom"><div class="sprite" id="foe-sprite">${spriteFor('enemy', foe.refId, ctx, battle)}</div></div></div>
           <div class="float-layer"></div>
+          <div class="fx-layer"></div>
         </div>
 
-        <div class="slot slot-me" id="me-slot">
+        <div class="slot slot-me${nap ? ' is-exiting' : ''}" id="me-slot">
           <div class="platform"></div>
-          <div class="sprite-zoom"><div class="sprite" id="me-sprite">${spriteFor('player', me.refId, ctx, battle)}</div></div>
+          <div class="actor"${nap ? ` style="${restOf(nap.motion, content, -1)}"` : ''}><div class="sprite-zoom"><div class="sprite" id="me-sprite">${spriteFor('player', me.refId, ctx, battle)}</div></div>${nap?.prop?.rides ? meProp : ''}</div>
           <div class="float-layer"></div>
+          <div class="fx-layer">${nap && !nap.prop?.rides ? meProp : ''}</div>
         </div>
 
         ${hpBox('me', me, content, `
@@ -267,6 +279,12 @@ export function renderArena(root, ctx, onDone) {
       <div class="cmd" id="cmd">${commandHtml(battle, actions, me, foe, content)}</div>
     </section>`;
 
+  // R209 — each sprite knows who it holds, so a swap redraws only the side
+  // that changed and leaves a napping creature asleep.
+  for (const [sel, who] of [['#foe-sprite', foe], ['#me-sprite', me]]) {
+    const holder = root.querySelector(sel);
+    if (holder) holder.dataset.ref = who.refId;
+  }
   wireCommands(root, ctx, onDone, actions, me, foe);
   if (opening) {
     // R80 — the opening exchange used to advance by CLICKING THE DIV, so a
@@ -523,7 +541,7 @@ function playRound(root, ctx, onDone, events) {
     // Skipping does not cheat: every remaining beat still runs, it just
     // runs now. The HUD ends up exactly where it would have.
     if (skipped || instant) {
-      while (i < events.length) applyBeat(root, ctx, battle, events[i++], msg);
+      while (i < events.length) applyBeat(root, ctx, battle, events[i++], msg, true);
       return finish();
     }
     const e = events[i++];
@@ -533,7 +551,9 @@ function playRound(root, ctx, onDone, events) {
   next();
 }
 
-function applyBeat(root, ctx, battle, e, msg) {
+// `quiet` is a beat being flushed rather than played — a skip, or reduced
+// motion — so it moves the HUD and draws nothing that would only flicker.
+function applyBeat(root, ctx, battle, e, msg, quiet = false) {
   const snap = e.snap;
   const q = (sel) => root.querySelector(sel);
 
@@ -549,6 +569,7 @@ function applyBeat(root, ctx, battle, e, msg) {
       const holder = q(sel);
       const refId = snap[side === 'enemy' ? 'enemy' : 'player']?.refId;
       if (!holder || !refId || holder.dataset.ref === refId) continue;
+      resetActor(holder.closest('.slot'));
       holder.innerHTML = spriteFor(side, refId, ctx, battle);
       holder.dataset.ref = refId;
       holder.closest('.slot')?.classList.remove('kind-unit', 'kind-creature');
@@ -585,6 +606,15 @@ function applyBeat(root, ctx, battle, e, msg) {
     // "toward the other one" for both sides.
     animate(spriteOf(e.actor), 'anim-lunge-fwd');
   }
+  // R209 — what the move looked like, and the stage feeling a crit.
+  const speed = speedOf(ctx.state);
+  if (!quiet) {
+    for (const id of effectsOf(e, ctx.content)) {
+      playEffect(slotOf(e.target), effectMarkup(id, ctx.content, { dir: e.target === 'enemy' ? 1 : -1, kind: e.kind }),
+        motionOf(ctx.content.arena.effects[id].motion, ctx.content, e.target === 'enemy' ? 1 : -1), speed);
+    }
+    if (shakes(e)) play(q('#stage'), motionOf(ctx.content.arena?.shake, ctx.content), speed);
+  }
   if (e.kind === 'damage') {
     animate(spriteOf(e.target), 'anim-hit');
     float(slotOf(e.target), `-${e.amount}`, e.mult > 1.05 ? 'float-crit' : e.mult < 0.95 ? 'float-weak' : 'float-dmg');
@@ -597,7 +627,13 @@ function applyBeat(root, ctx, battle, e, msg) {
     float(slotOf(e.target), e.kind === 'miss' ? 'MISS' : 'NO EFFECT', 'float-miss');
     sfx.play('miss');
   } else if (e.kind === 'ko') {
-    animate(spriteOf(e.target), 'anim-ko');
+    // R209 — and they leave the way their line says: by the exit named
+    // beside it in enemies.json, or curled up asleep if they are a chimera.
+    // The old flop is what a unit with no exit, or a flushed beat, still gets.
+    const exit = quiet ? null : exitOf(e.target, snap, battle, ctx.content);
+    if (!exit || !playExit(slotOf(e.target), exit, ctx.content, e.target === 'enemy' ? 1 : -1, speed)) {
+      animate(spriteOf(e.target), 'anim-ko');
+    }
     sfx.play('ko');
     // R111 — and the creature says so in its own voice. This is the moment
     // the whole milestone is for: a player who knows which of their chimeras
@@ -632,6 +668,54 @@ function paintBox(root, side, c) {
   box.classList.toggle('is-low', c.hp > 0 && c.hp / c.maxHp <= 0.25);
   const slot = root.querySelector(`#${side === 'foe' ? 'foe' : 'me'}-slot`);
   slot?.classList.toggle('is-down', c.hp <= 0);
+}
+
+// R209 — a motion from data/arena.json, played by Web Animations. Nothing
+// here is a CSS animation, so the stylesheet's reduced-motion block cannot
+// switch it off: this guard is the off-switch, and every caller goes through
+// it.
+function play(el, motion, speed = 1) {
+  if (!el || !motion || typeof el.animate !== 'function' || reducedMotion()) return null;
+  return el.animate(motion.frames, { duration: motion.ms / Math.max(speed, 0.25), easing: motion.easing, fill: motion.fill });
+}
+
+function playEffect(slot, markup, motion, speed) {
+  const layer = slot?.querySelector('.fx-layer');
+  if (!layer || !markup || !motion || reducedMotion()) return;
+  layer.insertAdjacentHTML('beforeend', markup);
+  const node = layer.lastElementChild;
+  const run = play(node, motion, speed);
+  if (run) run.onfinish = () => node.remove();
+  else node.remove();
+}
+
+// The actor and its prop move on their own clocks: a canopy pops open while
+// the squad starts to lift, a hook comes down before the trooper goes up.
+// Returns whether anything played, so the caller can fall back to the flop.
+function playExit(slot, id, content, dir, speed) {
+  const row = content.arena?.exits?.[id];
+  const actor = slot?.querySelector('.actor');
+  if (!row || !actor || reducedMotion()) return false;
+  const moved = play(actor, motionOf(row.motion, content, dir), speed);
+  if (!moved) return false;
+  slot.classList.add('is-exiting');
+  const host = row.prop?.rides ? actor : slot.querySelector('.fx-layer');
+  const markup = propMarkup(id, content, dir);
+  if (host && markup) {
+    host.insertAdjacentHTML('beforeend', markup);
+    play(host.lastElementChild, motionOf(row.prop.motion, content, dir), speed);
+  }
+  return true;
+}
+
+// A new fighter takes the slot: whatever the last one left behind goes.
+function resetActor(slot) {
+  if (!slot) return;
+  slot.classList.remove('is-exiting');
+  const actor = slot.querySelector('.actor');
+  for (const a of actor?.getAnimations?.() ?? []) a.cancel();
+  actor?.removeAttribute('style');
+  for (const prop of slot.querySelectorAll('.exit-prop')) prop.remove();
 }
 
 // Restart a CSS animation by removing and re-adding the class.

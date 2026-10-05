@@ -310,7 +310,8 @@ try {
     const fight = JSON.parse(await evaluate(`JSON.stringify((() => { ${rect}
       return { stage: R(document.querySelector('.stage')), me: R(document.querySelector('#me-sprite svg')),
                foe: R(document.querySelector('#foe-sprite svg')), foeHp: R(document.querySelector('.hp-foe')),
-               meHp: R(document.querySelector('.hp-me')) };
+               meHp: R(document.querySelector('.hp-me')), scene: R(document.querySelector('.stage .scene svg')),
+               sceneId: [...(document.querySelector('.stage .scene')?.classList ?? [])].find((c) => c.startsWith('scene-'))?.slice(6) ?? null };
     })())`));
     playRows.push({ w, h, pens, fight });
   }
@@ -450,6 +451,24 @@ for (const p of playRows) {
   }
 }
 
+// 8. R209 — AND IT IS HELD SOMEWHERE. The stage stands its scenery on its
+//    floor and runs it wall to wall at every width, inside the stage: a
+//    backdrop that sizes to its own box rather than the stage's floats off
+//    the floor on a phone or spills past the top on a laptop, and either one
+//    is the fight no longer having a place. A tall stage may show sky above
+//    it (style.css caps its height by the stage's width), so the top is only
+//    held to "not above the stage".
+for (const p of playRows) {
+  const f = p.fight;
+  if (!f.stage) continue;
+  if (!f.scene) { fails.push(`the arena at ${p.w}px draws no scenery behind the fight`); continue; }
+  const off = Math.max(...['l', 'r', 'b'].map((k) => Math.abs(f.scene[k] - f.stage[k])), f.stage.t - f.scene.t);
+  if (off > 2 || f.scene.b - f.scene.t < (f.stage.b - f.stage.t) * 0.4) {
+    fails.push(`at ${p.w}px the ${f.sceneId} scenery is ${f.scene.r - f.scene.l}x${f.scene.b - f.scene.t}`
+      + ` against a ${f.stage.r - f.stage.l}x${f.stage.b - f.stage.t} stage, ${off}px off its edge`);
+  }
+}
+
 if (REPORT) {
   for (const p of playRows) {
     const f = p.fight;
@@ -481,6 +500,6 @@ if (fails.length) {
 const at = rows.find((r) => r.w === LAPTOP) ?? { share: 0, mainW: 0 };
 console.log(`wide ✓  ${SCREENS.length} screens at ${WIDTHS.join('/')}px · `
   + `nothing scrolls sideways on a phone or a laptop · the open pen card sits beside the list `
-  + `at ${LAPTOP}px and up · a fight fits its stage at ${PLAY_VIEWS.map((v) => `${v.w}x${v.h}`).join('/')} · the agenda and the wire are `
+  + `at ${LAPTOP}px and up · a fight fits its stage, on its scenery, at ${PLAY_VIEWS.map((v) => `${v.w}x${v.h}`).join('/')} · the agenda and the wire are `
   + `on screen at ${LAPTOP}px on every one · the game uses ${at.share}% of a ${LAPTOP}px viewport `
   + `(main ${at.mainW}px)`);
