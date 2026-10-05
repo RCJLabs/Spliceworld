@@ -8046,6 +8046,102 @@ const BREAKS = [
     to: "'missions', 'henchmen', 'arena'];",
     expect: 'to reach the screen, over the budget',
   },
+  {
+    // R210 — THE HERD PAST THE CAP GOES UNMENTIONED. Six animals in the field
+    // and twelve more nowhere: the pasture reads as the whole ranch.
+    n: 574, gate: COMMON_PATH, name: 'the pasture stops counting the animals past its cap',
+    file: 'ranch/pasture.js',
+    anchor: "    + (scene.more ? `<p class=\"pasture-more\">${copy(content, 'pasture.more', { n: scene.more })}</p>` : '')\n",
+    to: '',
+    expect: 'and says how many more there are',
+  },
+  {
+    // R210 — AN ANIMAL YOU CANNOT OPEN. It is drawn, it is a button, and the
+    // Ranch's handler has nothing to answer.
+    n: 575, gate: COMMON_PATH, name: 'an animal in the pasture opens no card',
+    file: 'ranch/pasture.js',
+    anchor: ' data-open-fold="ranch-${esc(animal.id)}"`',
+    to: ' data-animal="${esc(animal.id)}"`',
+    expect: 'every animal in the pasture opens its own card',
+  },
+  {
+    // R210 — IT IS ALWAYS SPLICETEMBER. The calendar turns and the grass does not.
+    n: 576, gate: COMMON_PATH, name: 'the pasture ignores the season',
+    file: 'ranch/pasture.js',
+    anchor: '    season: seasons.includes(season) ? season : seasons[0],',
+    to: '    season: seasons[0],',
+    expect: "the grass is the calendar's season",
+  },
+  {
+    // R210 — AND NEVER RAINS. The header says downpour; the field is dry.
+    n: 577, gate: COMMON_PATH, name: 'the weather never reaches the pasture',
+    file: 'ranch/pasture.js',
+    anchor: "    weather: p.weather?.[weather] ? weather : 'clear',",
+    to: "    weather: 'clear',",
+    expect: "the weather is the calendar's",
+  },
+  {
+    // R210 — THE LAMPS NEVER COME ON.
+    n: 578, gate: COMMON_PATH, name: 'the pasture lamps stay dark at night',
+    file: 'ranch/pasture.js',
+    anchor: '    lit: (p.lampBands ?? []).includes(sky.band),',
+    to: '    lit: false,',
+    expect: 'the lamps come on at night',
+  },
+  {
+    // R210 — ADULTS ONLY. A fresh lab's goats are juveniles, so the first
+    // pasture a new player sees holds one bear and no goats.
+    n: 579, gate: COMMON_PATH, name: "the pasture leaves a fresh lab's young animals out",
+    file: 'ranch/pasture.js',
+    anchor: '  const shown = herd.slice(0, Math.min(p.cap ?? p.spots.length, p.spots.length));',
+    to: "  const shown = herd.filter((a) => ageStage(a, content, now) !== 'juvenile').slice(0, Math.min(p.cap ?? p.spots.length, p.spots.length));",
+    expect: 'opens with its own animals in the pasture',
+  },
+  {
+    // R210 — FED, AND NOTHING SHOWS IT.
+    n: 580, gate: COMMON_PATH, name: 'a fed animal stops munching',
+    file: 'ranch/pasture.js',
+    anchor: '      fed: now - (animal.lastCare?.feed ?? 0) < (p.fedHours ?? 6) * HOUR,',
+    to: '      fed: false,',
+    expect: 'fed, it munches',
+  },
+  {
+    // R210 — THE SHELL NEVER ASKS FOR IT. The module and its data ship and
+    // precache, and the Ranch is rows of text again.
+    n: 581, gate: COMMON_PATH, name: 'the shell never fetches the pasture',
+    file: 'main.js',
+    anchor: "    import('./ranch/pasture.js').then(({ pastureMarkup }) => { ctx.pasture = pastureMarkup; tick({ force: true }); }).catch(() => {});\n",
+    to: '',
+    expect: 'the shell fetches the pasture after the paint',
+  },
+  {
+    // R210 — AND THE OTHER WAY: it arrives with the first paint, one eager
+    // import in the Ranch putting the whole field in front of every launch.
+    n: 582, gate: SHARD_D, name: 'the pasture loads before the game paints',
+    file: 'ranch/ui.js',
+    anchor: "import { calendarLine } from '../campaign/calendar.js';",
+    to: "import { calendarLine } from '../campaign/calendar.js';\nimport './pasture.js';",
+    expect: 'modules eagerly, over the cap',
+  },
+  {
+    // R210 — THE GRAZING NEVER STOPS. The a11y gate reads every animated
+    // selector in style.css against the reduced-motion blocks.
+    n: 583, gate: A11Y, name: 'the pasture keeps moving under reduced motion',
+    file: 'style.css',
+    anchor: '  .pasture-body, .is-fed .pasture-face svg, .pasture-fall, .pasture-drift, .pasture-shimmer, .pasture-twinkle { animation: none; }\n',
+    to: '',
+    expect: 'block turns it off',
+  },
+  {
+    // R210 — THE FIELD GROWS PAST WHAT IT WAS BUDGETED. A taller pasture is
+    // chrome by the height gate's definition, and its budget moved by
+    // exactly the pasture's 5:2 box.
+    n: 584, gate: HEIGHT, name: 'the pasture grows taller than the budget made room for',
+    file: 'style.css',
+    anchor: '.pasture-field { position: relative; aspect-ratio: 5 / 2;',
+    to: '.pasture-field { position: relative; aspect-ratio: 5 / 3;',
+    expect: 'chrome budget',
+  },
 ];
 
 const pristine = {};

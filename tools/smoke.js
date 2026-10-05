@@ -7428,6 +7428,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // block — every tag drawn, every region on its own ground, every unit
     // leaving the way its line says.
     'arena.json': null,
+    // R210 — the pasture's drawing, exempt for the arena's reason: a player
+    // meets it as their own animals standing in a field. Its gate is the R210
+    // block.
+    'pasture.json': null,
     // R110 — the battle's own beats and whatever follows them out of the
     // modules. A player meets these AS the thing they describe: the line that
     // says a specimen is trapped arrives at the moment it is trapped. There is
@@ -7672,6 +7676,9 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // draws for: a player meets an effect, a backdrop and an exit in a fight,
     // never as a system of its own.
     'battle/stagecraft.js': null,
+    // R210 — the herd drawn in its field. Exempt like the Ranch screen it
+    // draws for.
+    'ranch/pasture.js': null,
     'campaign/matchup.js': null,
     'campaign/monologue.js': null,
     'campaign/identity.js': null,
@@ -15350,6 +15357,116 @@ if (inShard('spar')) {
     'every Web Animation is behind the reduced-motion guard');
   console.log(`   R209 arena: ${tags.size} tags drawn, ${regions.length} regions and the Gauntlet on their own ground,`
     + ` ${units.length} units leaving by ${used.size} exits`);
+}
+
+// --- R210, THE RANCH THROUGH THE WINDOW. Pure reads of the pasture and one
+// --- stubbed render of the Ranch with it, so it rides the common path too.
+{
+  const pasture = await import('../ranch/pasture.js');
+  const { foundLab } = await import('../ranch/ranch.js');
+  const { renderRanchScreen } = await import('../ranch/ui.js');
+  const { recordingRoot, installDom, memoryStorage } = await import('./domstub.js');
+  const { seasonOf, weatherOf, skyOf } = await import('../campaign/calendar.js');
+  const p = content.pasture;
+  assert.ok(p?.spots?.length && p.seasons && p.weather, 'the pasture arrives with the geometry round');
+  const cal = readJSON('data/calendar.json');
+  assert.deepEqual(Object.keys(p.seasons).sort(), [...cal.order].sort(), 'every season of the calendar has its grass');
+  assert.deepEqual(Object.keys(p.weather).sort(), [...cal.weather.order].sort(), 'and every kind of weather falls on it');
+  assert.ok(p.cap <= p.spots.length && p.cap <= 8,
+    `every animal in the field is one whose card is on the Ranch's first page (cap ${p.cap}, ${p.spots.length} spots, a page of 8)`);
+  // Six buttons on one 356px row (a 380px phone less the column's padding):
+  // each at least 40px wide and 6px clear of the next, the a11y gate's floor.
+  const row = [...p.spots].sort((a, b) => a.x - b.x);
+  for (const [i, sp] of row.entries()) {
+    assert.ok(sp.w * 3.56 >= 40, `spot ${i} is a 40px button at 380px (${(sp.w * 3.56).toFixed(0)}px)`);
+    const next = row[i + 1];
+    if (next) assert.ok(((next.x - sp.x) - (sp.w + next.w) / 2) * 3.56 >= 6, `spot ${i} keeps 6px from the next`);
+  }
+
+  // 1. A fresh save shows the founding lab's animals, each opening its own
+  //    card on the Ranch below it.
+  for (const lab of content.starterLabs) {
+    const fresh = { ...newGameState(), seed: 210 };
+    foundLab(fresh, content, lab.id, t0);
+    fresh.createdAt = t0;
+    const scene = pasture.pastureScene(fresh, content, t0);
+    assert.deepEqual(scene.animals.map((a) => a.animal.id), fresh.ranch.stock.map((a) => a.id),
+      `${lab.name} opens with its own animals in the pasture`);
+    assert.equal(scene.more, 0, 'and none of them out past the fence');
+  }
+  const lab = { ...newGameState(), seed: 210 };
+  foundLab(lab, content, content.starterLabs[0].id, t0);
+  lab.createdAt = t0;
+  while (lab.ranch.stock.length < 11) lab.ranch.stock.push({ ...structuredClone(lab.ranch.stock[0]), id: `r210-${lab.ranch.stock.length}`, name: `Extra ${lab.ranch.stock.length}` });
+  const ranchRoot = recordingRoot();
+  const restore = installDom({ overlay: recordingRoot(), storage: memoryStorage() });
+  try {
+    const ctx = { state: lab, content, now: () => t0, save() {}, pasture: pasture.pastureMarkup, goto() {}, tick() {}, pushNews() {}, refreshTicker() {} };
+    renderRanchScreen(ranchRoot.host, ctx);
+    const html = ranchRoot.host.innerHTML;
+    const buttons = [...html.matchAll(/<button type="button" class="pasture-animal[^>]*>/g)].map((m) => m[0]);
+    assert.equal(buttons.length, p.cap, `the pasture is capped at ${p.cap}`);
+    const herd = buttons.map((tag) => tag.match(/data-open-fold="(ranch-[^"]+)"/)?.[1]);
+    assert.ok(herd.every(Boolean), 'every animal in the pasture opens its own card');
+    assert.ok(html.includes(copy(content, 'pasture.more', { n: lab.ranch.stock.length - p.cap })),
+      'and says how many more there are');
+    for (const fold of herd) assert.ok(html.includes(`data-fold="${fold}"`), `${fold} in the pasture is a card on the screen`);
+    // Press the last animal out there: its card opens, and only its card.
+    const hit = ranchRoot.bound.filter((b) => b.el?.dataset?.openFold === herd.at(-1) && b.el.classList.contains('pasture-animal'));
+    assert.ok(hit.length, 'an animal in the pasture is something you can press');
+    hit[0].fn({ preventDefault() {}, stopPropagation() {}, target: hit[0].el, currentTarget: hit[0].el });
+    assert.equal(lab.ui.collapsed[herd.at(-1)], false, 'pressing it opens its card');
+    assert.ok(herd.slice(0, -1).every((f) => lab.ui.collapsed[f] !== false), 'and only its card');
+    // Before the module lands the Ranch is exactly what it was.
+    renderRanchScreen(ranchRoot.host, { ...ctx, pasture: undefined });
+    assert.ok(!ranchRoot.host.innerHTML.includes('class="pasture'), 'without the module there is no pasture, and nothing waits for one');
+  } finally {
+    restore();
+  }
+
+  // 2. Season, weather and hour change the scene.
+  const DAY = 86400000;
+  const at = (day, hour) => { const d = new Date(t0 + day * DAY); d.setHours(hour, 0, 0, 0); return d.getTime(); };
+  const seasons = new Set();
+  const weathers = new Set();
+  for (let day = 0; day < cal.seasonDays * cal.order.length; day++) {
+    const sc = pasture.pastureScene(lab, content, at(day, 12));
+    assert.equal(sc.season, seasonOf(lab, content, at(day, 12)).id, `day ${day}: the grass is the calendar's season`);
+    assert.equal(sc.weather, weatherOf(lab, content, at(day, 12)).id, `day ${day}: the weather is the calendar's`);
+    seasons.add(sc.season); weathers.add(sc.weather);
+    if (seasons.size === cal.order.length && weathers.size === cal.weather.order.length) break;
+  }
+  assert.equal(seasons.size, cal.order.length, 'a year in the pasture passes through every season');
+  assert.equal(weathers.size, cal.weather.order.length, 'and every kind of weather');
+  const markup = (now) => pasture.pastureMarkup(lab, content, now);
+  for (const season of cal.order) {
+    const day = cal.order.indexOf(season) * cal.seasonDays + 1;
+    assert.ok(markup(at(day, 12)).includes(`fill="${p.seasons[season].palette.primary}"`), `${season} paints the field its own colour`);
+  }
+  const noon = pasture.pastureScene(lab, content, at(3, 12));
+  const night = pasture.pastureScene(lab, content, at(3, 2));
+  assert.ok(!noon.lit && night.lit && night.dark > noon.dark, 'the lamps come on at night, and the night darkens the field');
+  assert.equal(night.band, skyOf(lab, content, at(3, 2)).band, "and it is the header's own hour");
+  const wet = (() => { for (let d = 0; d < 60; d++) if (weatherOf(lab, content, at(d, 12)).id === 'downpour') return at(d, 12); return null; })();
+  assert.ok(wet && (markup(wet).match(/class="pasture-fall"/g) ?? []).length > 10, 'a downpour falls on the pasture');
+
+  // 3. Eggs glow in the barn's window, and care shows in the field.
+  const eggy = structuredClone(lab);
+  eggy.ranch.eggs = [{ id: 'e1' }, { id: 'e2' }];
+  assert.equal(pasture.pastureScene(eggy, content, at(3, 12)).eggs, 2, 'two eggs, two glows in the window');
+  const cared = structuredClone(lab);
+  cared.ranch.stock[0].lastCare = { feed: at(3, 11), groom: at(3, 11), exercise: 0, enrich: 0 };
+  const caredHtml = pasture.pastureMarkup(cared, content, at(3, 12));
+  assert.ok(/class="pasture-animal is-fed is-groomed"/.test(caredHtml) && caredHtml.includes('class="pasture-hay"') && caredHtml.includes('class="pasture-shine"'),
+    'fed, it munches; groomed, it shines');
+  assert.ok(!/is-fed/.test(pasture.pastureMarkup(cared, content, at(3, 12) + (p.fedHours + 1) * 3600000)), 'and the meal wears off');
+
+  // 4. Drawn after the first paint: no eager module imports it, and the shell
+  //    asks for it in the same after-the-paint window as the sky.
+  const mainSrc = readFileSync(join(root, 'main.js'), 'utf8');
+  const lazySky = mainSrc.indexOf("import('./ui/sky.js')");
+  assert.ok(lazySky > 0 && mainSrc.indexOf("import('./ranch/pasture.js')") > lazySky, 'the shell fetches the pasture after the paint, beside the sky');
+  console.log(`   R210 pasture: ${p.cap} of a herd in the field, ${seasons.size} seasons and ${weathers.size} weathers on it, lamps by the header's hour`);
 }
 
 // R71, second half: save slots. Multiple independent labs on one device —

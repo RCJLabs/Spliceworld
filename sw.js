@@ -28,7 +28,7 @@
 // which is R122's original bug report — a phone stuck on a broken build.
 // `tools/release.js` is the answer and exists for this: CACHE is checked
 // against SAVE_VERSION by a gate rather than by anybody remembering.
-const CACHE = 'spliceworld-v64-00dc4bdc';
+const CACHE = 'spliceworld-v64-177355c0';
 
 const SHELL = [
   '.',
@@ -109,6 +109,7 @@ const SHELL = [
   'battle/statblock.js',
   'battle/ui.js',
   'battle/stagecraft.js',
+  'ranch/pasture.js',
   'campaign/campaign.js',
   'campaign/map.js',
   'campaign/monologue.js',
@@ -161,6 +162,8 @@ const SHELL = [
   'data/enemies-shapes.json',
   // R209: the arena effects, scenery and exits, in that same late round.
   'data/arena.json',
+  // R210: the pasture, fetched in that same late round.
+  'data/pasture.json',
   // R109: the spare phrasings, fetched in the same round for the same
   // reason. Offline gets the whole voice, it just does not wait for it.
   'data/voice-pools.json',

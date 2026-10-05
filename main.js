@@ -532,6 +532,8 @@ async function boot() {
       setInterval(() => { if (!document.hidden) draw(); }, 30000);
       document.addEventListener('visibilitychange', () => { if (!document.hidden) draw(); });
     }).catch(() => { /* a header without weather is still a header */ });
+    // R210 — and the pasture under it, for the same reason.
+    import('./ranch/pasture.js').then(({ pastureMarkup }) => { ctx.pasture = pastureMarkup; tick({ force: true }); }).catch(() => {});
   }, 0));
 
   document.addEventListener('visibilitychange', () => {

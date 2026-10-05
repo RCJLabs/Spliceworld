@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**5 entries queued.** R210, R211, R212, R213, R214.
+**4 entries queued.** R211, R212, R213, R214.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -8373,7 +8373,8 @@ written so that it has something on screen when it ships.
   * **The engine stays DOM-free:** the beats carry what the arena draws, and
     stagecraft is as pure as the engine; scopecheck passes.
 
-- **R210 — The ranch through the window.** The header already paints the sky
+- **R210 — The ranch through the window.** ✅
+  The header already paints the sky
   for the hour and the weather (R105), and under it the Ranch is rows of
   text. The header becomes the pasture: a fence, the barn, a trough, and the
   player's own animals drawn small, grazing and wandering. Eggs glow in the
@@ -8387,6 +8388,91 @@ written so that it has something on screen when it ships.
   motion stills it; it is drawn after the first paint, so the boot budget does
   not move; and the Ranch's height and chrome budgets are re-derived for it,
   with the reason.*
+
+  **Shipped: the Ranch opens on its own field, with the player's animals in
+  it.**
+  * **`ranch/pasture.js`** (pure) draws it, and `data/pasture.json` says
+    what it draws. The shell fetches both after the first paint, beside the
+    sky, and hands its `pastureMarkup` to the Ranch as `ctx.pasture`; until then the
+    Ranch is exactly what it was.
+  * **The scene:** far hills and a field, a fence along the back, a barn
+    with a round window in its gable, a trough and two lamp posts, all in a
+    5:2 box under the header's sky.
+    - **The season is the grass:** Splicetember's flowers, Swelterval's dry
+      tufts, Moultober's falling leaves, and Frostivus's snow on the field and
+      the barn roof.
+    - **The calendar's weather falls on it,** in front of the animals:
+      drizzle, downpour, fog drifting and a swelter shimmer.
+    - **The hour is the header's own** (`skyOf`): its tint darkens the field
+      and the animals together, and the lamps come on at dusk and stay on
+      through the night.
+    - **Eggs glow in the barn's window,** one per egg, up to three.
+  * **The animals are the roster's first six,** in its own order, each drawn
+    by the real renderer and facing its own way. They graze on a slow walk,
+    munch with hay at their feet for six hours after a feed, and wear a
+    sparkle for six after a grooming. A line under the field counts the
+    rest. Each animal is a button carrying the agenda rows' `data-open-fold`,
+    so the Ranch's own handler opens its card and scrolls to it.
+  * **One row, on purpose.** Every animal is a 50px button 9px from the
+    next at 380px; a second row would put buttons on buttons, and the a11y
+    gate's floor is 40px and 6px.
+  * **Reduced motion stills it:** the walk, the munch, the rain, the fog,
+    the shimmer and the sparkle all sit in style.css's reduced-motion block,
+    and the a11y gate holds them to it.
+
+  **The boot budget did not move.** First paint read 1,195 KB before and
+  after, against an unchanged 1,197. The pasture's 1.6 KB of CSS was paid
+  for by moving four comment essays (3 KB) from `style.css` to
+  `docs/STYLE.md`, and its three lines of copy are in `data/copy.json`. The
+  eager hook is one line in `main.js` and one in `ranch/ui.js`: eager code
+  is 337.9 KB against an unchanged 338, prose 260.9 against 261, and the
+  graph is still 51 modules. The module (5 KB) and the data (18 KB) arrive
+  after the paint and are precached.
+
+  **The Ranch's budgets, re-derived** in `tools/height.js`: +174px on shut
+  (1,980 -> 2,154), chrome (1,050 -> 1,224) and tallest (4,450 -> 4,624).
+  Measured on the day-180 save, shut went 1,841 -> 2,014 and chrome 996 ->
+  1,169: +173 on both, which is the pasture's own box (a 142px field, 144
+  with its border, a 17px line and its 4px margin, and the screen's 12px
+  gap). Its height depends on the column's width and nothing else, because
+  the herd is capped on one row, so a bigger ranch cannot make it taller.
+
+  **Found on the way:**
+  * **The overflow line wrapped to two lines at 380px** and cost 15px more
+    than it needed to. It was cut to one rather than budgeted.
+  * **A portrait's crop made every animal half its button.** The pasture
+    asks the renderer for a tighter one.
+  * **`.pasture-animal svg` outranked the hay's own width**, so the tuft
+    was drawn as wide as the animal. The creature rule now names its own
+    wrapper.
+  * **Breaks 574-584:**
+    - the count past the cap dropped;
+    - an animal that opens nothing;
+    - the season, the weather or the lamps ignored;
+    - a fresh lab's young animals left out;
+    - a fed animal that stops munching;
+    - the pasture never fetched, or fetched before the paint;
+    - the grazing left moving under reduced motion;
+    - the field grown past its budget.
+
+  **Done when, checked** (at 380px, with zero console errors on a fresh
+  founding, on a v63 save migrated to v64, and on the day-180 save):
+  * **The stock in the pasture, capped:** the day-180 ranch shows six of 18
+    and says "And 12 more out past the fence." Smoke renders the Ranch with
+    the module and holds every animal in the field to a card on the screen.
+  * **Each animal opens its own card:** tapping the fourth opened its card
+    and scrolled to it, and only its card. The card was still open after a
+    reload.
+  * **Season, weather and hour:** eight scenes drawn across 72 days and
+    every hour band: all four seasons, all five weathers, the lamps lit at
+    night and dusk and dark by day. Smoke walks a year and asserts each day's
+    grass and weather are the calendar's.
+  * **A fresh save:** a new lab's pasture holds its own three animals and
+    nothing past the fence, for every lab in starters.json.
+  * **Reduced motion:** nothing in the pasture animating.
+  * **After the first paint:** as above, and smoke asserts the shell asks
+    for it beside the sky.
+  * **The budgets:** as above, with the reason beside them.
 
 - **R211 — The county on a map.** The War Room opens on its map tab, and the
   map is five region cards with a row of text per node. Nothing on screen

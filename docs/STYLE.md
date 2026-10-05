@@ -91,3 +91,23 @@ pair the stylesheet already ships and the a11y gate already measures.
 `min-width` rather than fixed: a single letter in a circle looks like a
 typo when the row beside it is 40px tall, and the tier chip sits in a
 fold summary that a thumb has to hit.
+
+## R124 — the animal card stretches its column
+
+`align-items: flex-start` top-aligns the portrait beside the text in the ROW layout. Turning the card into a COLUMN changes what that property means — the cross axis is now horizontal, so it stops the info block stretching and every child shrink-wraps to its own content. The widest child is the Extract button, whose label carries the animal's NAME, so each card in the list ends at a different place: read off a 411px-wide phone, two cards of identical width ended about 70px apart. Stretch is what a column wants; the portrait keeps centring itself with its own `align-self`.
+
+Invisible at 380px, which is why no gate had ever seen it: down there the text's max-content already exceeds the line, so `fit-content` clamps to full width and the bug has nowhere to show. A band measured only at its narrow end is a band measured once.
+
+## R122 — `.sheet` is a card
+
+R122 — `.sheet` had no rule at all. Two dialogs wear it (the Pens' repertoire picker and the arena's move readout) and both were therefore transparent, showing the screen behind them through their own text — the same defect as the founding card, on a screen nobody had reported. A card is a card: its own ground, its own edge, and its own scroll, because the fixed overlay it sits in does not scroll. `.move-sheet` still sets its own padding; this is only what every card in the game already has.
+
+## R113 — a held node wraps its row
+
+R113: a HELD node puts three children in this row — the description, the HELD tag and the Spar button — where every other status puts two, and the button is `flex: 0 0 auto`. At 150% text the row ran 86px past its card rather than giving way. Wrapping costs nothing at 100%, where it already fits, and at 150% the tag and the button drop under the description instead of squeezing it.
+
+`.encounter > div { flex: 1 1 auto; min-width: 0 }` was shipped beside this and then taken back out: measured against the exact stylesheet of the commit before, EITHER one alone brings the row from 86px over to 12px inside. Two rules for one defect means a break aimed at either is caught by the other, which is a rule nothing can go red for. Wrapping is the one kept because it is one declaration and because it keeps the description readable rather than shrinking it.
+
+## R117 — wide screens
+
+R117 — WIDE SCREENS: the first `min-width` rules this file has carried. Every width breakpoint before this was a `max-width` (400, 430, 420, 400, 340), so the layout could only get narrower than its 560px column, and at 1,280px the game used 43.8% of the glass with the agenda drawn on one screen of six and the wire in a footer below the fold. The argument is in ui/rail.js and ROADMAP R117; what a reader of this file needs is that at 900px the shell becomes a two-column grid AND becomes fixed-height, the way `body.in-battle` already is on a phone — that second half is what keeps the rail's foot in the glass without a magic number.

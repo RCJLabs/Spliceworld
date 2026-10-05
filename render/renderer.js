@@ -298,6 +298,7 @@ export function attachShapes(content, raw) {
     }
   }
   if (raw?.arena) content.arena = raw.arena;
+  if (raw?.pasture) content.pasture = raw.pasture;
   return content;
 }
 
