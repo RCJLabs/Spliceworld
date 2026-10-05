@@ -10,7 +10,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { indexContent, slotOfSocket } from '../render/renderer.js';
+import { indexContent, socketFits, frameHasSocket, SOCKETS } from '../render/renderer.js';
 import { CONTENT_FILES } from '../data/loader.js';
 import { seedTemperament } from '../splice/temperament.js';
 import { rushable, rush, rushTuning } from '../splice/rush.js';
@@ -78,9 +78,14 @@ export function makeSimChimera(frame, partIds, grade, content) {
   for (const pid of partIds) {
     const part = content.parts[pid];
     if (!part) continue; // R72: a retired id measures as the build without it
-    let socketId = part.slot;
-    let n = 2;
-    while (used.has(socketId)) socketId = `${part.slot}${n++}`;
+    // R207 — the first socket on this frame that takes it (a third limb lands
+    // in `midlimbs` on the Hexapod), else a numbered spare as before.
+    let socketId = SOCKETS.find((s) => !used.has(s) && socketFits(s, part.slot) && frameHasSocket(content.frames[frame], s));
+    if (!socketId) {
+      socketId = part.slot;
+      let n = 2;
+      while (used.has(socketId)) socketId = `${part.slot}${n++}`;
+    }
     used.add(socketId);
     tokens[socketId] = {
       id: `sim-${pid}`,
@@ -267,6 +272,12 @@ export function sampleBuilds(content, n, seed) {
   const bySlot = {};
   for (const part of Object.values(content.parts)) (bySlot[part.slot] ??= []).push(part.id);
   const frames = Object.keys(content.frames);
+  // R207 — a frame with a middle pair is sampled wearing one.
+  const limbs = [...(bySlot.forelimbs ?? []), ...(bySlot.hindlimbs ?? [])];
+  const dressed = (frame, partIds) => {
+    const ids = [...partIds];
+    return frameHasSocket(content.frames[frame], 'midlimbs') ? [...ids, pick(rng, limbs.filter((id) => !ids.includes(id)))] : ids;
+  };
   const builds = [];
   const seen = new Set();
   const push = (frame, partIds) => {
@@ -306,7 +317,8 @@ export function sampleBuilds(content, n, seed) {
     for (const slot of ['hindlimbs', 'organ']) {
       if (!filled.has(slot)) partIds.add(pick(rng, bySlot[slot]));
     }
-    push(pick(rng, frames), [...partIds]);
+    const frame = pick(rng, frames);
+    push(frame, dressed(frame, partIds));
   }
   while (builds.length < n) {
     const partIds = [pick(rng, bySlot.head)];
@@ -317,7 +329,8 @@ export function sampleBuilds(content, n, seed) {
         filled.add(slot);
       }
     }
-    push(pick(rng, frames), partIds);
+    const frame = pick(rng, frames);
+    push(frame, dressed(frame, partIds));
   }
   return builds;
 }
@@ -1289,7 +1302,8 @@ export function bestSplice(state, content, wanted = null, wall = null) {
   // with a sixth socket the Kite does not have.
   const liftFirst = (t) => rank(t) + ((content.parts[t.partId]?.phys?.lift ?? 0) > 0 ? 50 : 0);
   let best = null;
-  for (const frameId of ['M', 'S', 'L', 'A']) {
+  // R207 — and every frame the data adds after them, in the data's order.
+  for (const frameId of new Set(['M', 'S', 'L', 'A', ...Object.keys(content.frames)])) {
     const frame = content.frames[frameId];
     if (!frame) continue;
     // R147 — FILL BY SOCKET, NOT BY SLOT, AND ASK THE THEATER WHICH SOCKETS
@@ -1329,7 +1343,7 @@ export function bestSplice(state, content, wanted = null, wall = null) {
         // The first granted socket of this part's slot that is still open —
         // so two organs land in `organ` and `organ2` rather than the second
         // being dropped on the floor.
-        const socketId = granted.find((sid) => slotOfSocket(sid) === part.slot && !slots[sid]);
+        const socketId = granted.find((sid) => socketFits(sid, part.slot) && !slots[sid]);
         if (!socketId) continue;
         slots[socketId] = token.id;
         used.add(token.id);

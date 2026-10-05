@@ -2301,7 +2301,7 @@ const BREAKS = [
     // CHASSIS_SLOTS and still shipped a dead bay.
     n: 273, gate: DIET, name: 'sockets are matched by name rather than by the slot they take',
     file: 'tools/sim.js',
-    anchor: '        const socketId = granted.find((sid) => slotOfSocket(sid) === part.slot && !slots[sid]);',
+    anchor: '        const socketId = granted.find((sid) => socketFits(sid, part.slot) && !slots[sid]);',
     to: '        const socketId = granted.find((sid) => sid === part.slot && !slots[sid]);',
   },
   {

@@ -5,7 +5,7 @@
 // systems that care read them. The Surgery Theater asks this module what it
 // is allowed to build with; it does not know what a "tier" is.
 
-import { SOCKETS, slotOfSocket } from '../render/renderer.js';
+import { SOCKETS, slotOfSocket, frameHasSocket } from '../render/renderer.js';
 import { fmtMoney } from '../util/text.js';
 
 export function tracks(content) {
@@ -142,13 +142,15 @@ export function facilityUpkeepPerDay(state, content) {
 export function theaterGrants(state, content, frameId = null) {
   const g = grantsOf(state, content, 'theater');
   const sockets = g.sockets ?? SOCKETS;
-  const frameSlots = frameId ? content.frames?.[frameId]?.slots : null;
+  const frame = frameId ? content.frames?.[frameId] : null;
+  const frameSlots = frame?.slots;
   return {
     // No facility data at all (a Node tool with a partial content bundle)
     // means "everything" rather than "nothing" — never lock a player out
     // because a file failed to load.
     frames: g.frames ?? Object.keys(content.frames ?? {}),
-    sockets: frameSlots ? sockets.filter((s) => frameSlots.includes(slotOfSocket(s))) : sockets,
+    // R207 — nor where it has no position to draw one (the middle pair).
+    sockets: sockets.filter((s) => (!frameSlots || frameSlots.includes(slotOfSocket(s))) && (!frame || frameHasSocket(frame, s))),
     // R91 — the Theater builds the creatures, so the Theater houses them,
     // and its one table decides how often it can change its mind.
     stable: g.stable ?? 12,

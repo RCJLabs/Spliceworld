@@ -31,7 +31,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadSimContent, campaignWalk, WALK_INJURY_MIX, infirmaryClock } from './sim.js';
-import { infirmaryGrants } from '../splice/facility.js';
+import { infirmaryGrants, theaterGrants } from '../splice/facility.js';
 import { walkedSave, primeWalkCache, walkedAgentCampaign } from './fixtures.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -157,6 +157,15 @@ const COMBO_SEEDS = [2026, 7, 101, 4242, 55, 900, 31];
 // sells. One home, so the rule below and its failure text read the same
 // number; see the derivation beside that rule.
 const BAY_FLOOR = 1 / 3;
+// R207 — THE ONE EXCEPTION THE RULE BELOW ASKS FOR, with its derivation.
+// `midlimbs` is sold by Theater Tier III, which the walk buys on day 104-135,
+// long after the roster is built, and only the Hexapod has the positions.
+// What fills it is the three stalls Tier III adds, so a full share is about
+// 3 of 16. On the six of seven seeds that own the tier: 2026 3/16, 7 3/17,
+// 4242 3/16, 55 3/16, 900 4/16, 31 3/16 — worst 17.6%, pooled 19/97 = 19.6%.
+// Break 273 reads 0. A tenth sits under the worst clean seed and far above
+// zero.
+const BAY_FLOORS = { midlimbs: 1 / 10 };
 // Measured 32.6%; break 151 puts it at 1.2%. The floor sits between them and
 // near enough to today's number that drift fails.
 const COMBO_REACH = 0.22;
@@ -251,11 +260,16 @@ const COMBO_REACH = 0.22;
   // derivation, not to lower it for everything.
   {
     const worn = new Map();
+    // R207 — counted on the campaigns that BOUGHT the bay, which until Tier
+    // III was every campaign for every bay.
+    const owners = new Map();
     let bodies = 0;
     for (const seed of COMBO_SEEDS) {
       const save = seed === 2026 ? walk.save : walkedSave({ seed, days: 180 });
+      const owned = theaterGrants(save, content).sockets;
       for (const c of save.chimeras ?? []) {
         bodies++;
+        for (const socketId of owned) owners.set(socketId, (owners.get(socketId) ?? 0) + 1);
         for (const socketId of Object.keys(c.tokens ?? {})) {
           worn.set(socketId, (worn.get(socketId) ?? 0) + 1);
         }
@@ -266,19 +280,21 @@ const COMBO_REACH = 0.22;
     const sellable = new Set(
       (content.facility?.theater?.levels ?? []).flatMap((lv) => lv.grants?.sockets ?? [])
     );
-    const share = (socketId) => (bodies ? (worn.get(socketId) ?? 0) / bodies : 0);
-    const starved = [...sellable].filter((socketId) => share(socketId) < BAY_FLOOR);
+    const of = (socketId) => owners.get(socketId) ?? 0;
+    const share = (socketId) => (of(socketId) ? (worn.get(socketId) ?? 0) / of(socketId) : 0);
+    const floor = (socketId) => BAY_FLOORS[socketId] ?? BAY_FLOOR;
+    const starved = [...sellable].filter((socketId) => share(socketId) < floor(socketId));
     if (REPORT) {
       console.log(`
 sockets across ${bodies} kept chimeras: `
-        + [...sellable].map((k) => `${k} ${worn.get(k) ?? 0} (${(100 * share(k)).toFixed(1)}%)`).join(', '));
+        + [...sellable].map((k) => `${k} ${worn.get(k) ?? 0}/${of(k)} (${(100 * share(k)).toFixed(1)}%)`).join(', '));
     }
     if (starved.length) {
       fails.push('starved bay: the Surgery Theater sells '
-        + starved.map((k) => `${k} (${worn.get(k) ?? 0} of ${bodies}, `
-          + `${(100 * share(k)).toFixed(1)}%)`).join(', ')
-        + ` and under ${(100 * BAY_FLOOR).toFixed(0)}% of the chimeras these campaigns kept`
-        + ' is wearing it — a bay the balance model cannot fill makes every number it'
+        + starved.map((k) => `${k} (${worn.get(k) ?? 0} of ${of(k)}, `
+          + `${(100 * share(k)).toFixed(1)}%, under ${(100 * floor(k)).toFixed(0)}%)`).join(', ')
+        + ' and too few of the chimeras these campaigns kept'
+        + ' are wearing it — a bay the balance model cannot fill makes every number it'
         + ' derives a measurement of a different game');
     }
   }

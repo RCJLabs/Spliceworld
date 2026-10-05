@@ -2,7 +2,7 @@
 // physiology panel explain the consequences live, then splice. Replaces the
 // M0 free-form dev slab — every part here is an owned token with lineage.
 
-import { creaturePortrait, slotOfSocket } from '../render/renderer.js';
+import { creaturePortrait, socketFits } from '../render/renderer.js';
 import { tierOfBuild } from './tier.js';
 import { renderIcon } from '../ui/icons.js';
 import { gradeOf, gradeIndexOf } from './extract.js';
@@ -24,7 +24,7 @@ import { copy, fmtMoney } from '../util/text.js';
 
 const SLOT_LABELS = {
   head: 'Head', forelimbs: 'Forelimbs', hindlimbs: 'Hindlimbs',
-  tail: 'Tail', hide: 'Hide', organ: 'Organ', organ2: 'Organ II',
+  tail: 'Tail', hide: 'Hide', organ: 'Organ', organ2: 'Organ II', midlimbs: 'Middle Pair',
 };
 
 // Screen-local draft (not saved: an unspliced slab is just a shopping cart).
@@ -95,8 +95,7 @@ export function renderTheaterScreen(root, ctx) {
   // `tickWorld`, so this is the same field the harness reports.
   const built = new Set(state.dex?.worn ?? []);
   const slotOptions = (socketId) => {
-    const slot = slotOfSocket(socketId);
-    const owned = state.inventory.parts.filter((t) => content.parts[t.partId]?.slot === slot);
+    const owned = state.inventory.parts.filter((t) => socketFits(socketId, content.parts[t.partId]?.slot));
     const bySpecies = new Map();
     for (const t of owned) {
       const sp = content.parts[t.partId].species;
@@ -257,7 +256,9 @@ export function renderTheaterScreen(root, ctx) {
         ? 'A head is mandatory. Every abomination deserves googly eyes.'
         : socketId === 'organ2'
           ? 'The second bay. More metabolism, or a second ability — if the frame can carry the mass.'
-          : 'Leave it empty if you like living dangerously.',
+          : socketId === 'midlimbs'
+            ? 'Arms or legs, your call. Every limb is mass, and the frame pays for it in speed.'
+            : 'Leave it empty if you like living dangerously.',
       selectedId: draft.slots[socketId] ?? '',
       groups: [{ label: null, options: [{ id: '', label: 'Empty socket', sub: 'Nothing installed' }] }, ...groups],
       onPick: (value) => {

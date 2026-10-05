@@ -6,6 +6,7 @@
 import { gradeOf } from './extract.js';
 import { renderIcon } from '../ui/icons.js';
 import { frameOf, speciesOf, isRetired } from '../data/catalog.js';
+import { frameHasSocket, slotsOfSocket } from '../render/renderer.js';
 
 export const PHYS_TUNING = {
   massSpeedPenaltyPer: 50, // -1 speed per this much mass
@@ -259,6 +260,20 @@ export function analyze(frameId, tokens, content, socketCount = 6) {
         : emptySockets >= 2
           ? `${emptySockets} empty sockets — survivable, but you are leaving stats on the table.`
           : 'One empty socket. Close enough for government work.',
+    });
+  }
+
+  // R207 — the middle pair, priced where it is chosen; data/notes/frames.md.
+  if (frameHasSocket(frame, 'midlimbs')) {
+    const limbs = tokens.map((t) => content.parts[t.partId]).filter((p) => p && slotsOfSocket('midlimbs').includes(p.slot));
+    const limbMass = limbs.reduce((m, p) => m + p.phys.mass, 0);
+    const votes = limbs.filter((p) => content.classes?.[p.classAffinity]).length;
+    rows.push({
+      label: 'Third pair',
+      value: limbs.length >= 3 ? 'Six limbs' : `${limbs.length * 2} of 6 limbs`,
+      note: limbs.length >= 3
+        ? `Arms or legs, the middle pair takes either. All three pairs weigh ${limbMass} (the Speed row charges for it) and cast ${votes} of the class votes. Shoe budget: tripled.`
+        : `The ${frame.name} has a middle pair to fill with arms or legs. Each pair adds its mass, which costs speed, and a vote for the class.`,
     });
   }
 
