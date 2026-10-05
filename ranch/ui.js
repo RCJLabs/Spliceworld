@@ -609,7 +609,7 @@ export function renderRanchScreen(root, ctx) {
   // R105 — the calendar as ONE LINE, not a card: R133 spent a milestone
   // getting things off the top of this screen.
   const calendar = `<p class="calendar-line">${calendarLine(state, content, t)}</p>`;
-  root.innerHTML = onboarding + note + rightNow + calendar + head + breeding + incubator + roster;
+  root.innerHTML = (ctx.pasture?.(state, content, t, ordered) ?? '') + onboarding + note + rightNow + calendar + head + breeding + incubator + roster;
   const again = () => renderRanchScreen(root, ctx);
   root.querySelectorAll('button[data-rename]').forEach((btn) => {
     btn.addEventListener('click', () => {

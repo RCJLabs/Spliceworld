@@ -176,7 +176,21 @@ const BUDGET = {
   // shelf) and its page carries all three — two more headings at 39px each.
   // Three is the most a page CAN carry, so this is the ceiling state of that
   // term, and 1,980 is the old budget plus exactly those two headings.
-  ranch:          { folded: 1980,  tallest: 4450, opens: 20, chrome: 1050 },
+  // R210 — +174 on all three, and it is THE PASTURE, which sits above the
+  // first card, so it is chrome by this table's own definition (everything
+  // before the first animal). Measured on the day-180 save: shut 1,841 ->
+  // 2,014 and chrome 996 -> 1,169, both +173, which is the pasture's own
+  // box and nothing else — a 5:2 field at the 356px column (142px, 144 with
+  // its border), its one line counting the herd past the cap (17px and a 4px
+  // margin), and the screen's 12px gap. The line was two lines at first
+  // ("…minding their own business"), +188, and was cut to one rather than
+  // budgeted. Its height is a function of the column's width and nothing
+  // else: the herd is capped at six on one row (data/pasture.json), so a
+  // bigger ranch can never make the field taller. That is why the budgets
+  // move by exactly its height, and why a Ranch that grows past them is
+  // still something else growing. Tallest moves with them for the same
+  // reason; it is far under (3,248), and the pasture is in it too.
+  ranch:          { folded: 2154,  tallest: 4624, opens: 20, chrome: 1224 },
   // R154 — THE PENS' SHUT HEIGHT IS DERIVED TOO, for R92's reason and
   // R131's cause. This screen is the multiplication R131 named — one folded
   // card per chimera — and, alone among the screens R131 paged, it never got

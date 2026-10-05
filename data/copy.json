@@ -231,5 +231,10 @@
     "alive_title": "IT'S ALIVE!",
     "alive_skip": "Skip the theatrics",
     "alive_continue": "Meet it"
+  },
+  "pasture": {
+    "label": "The pasture",
+    "open": "{name}: open the card",
+    "more": "And {n} more out past the fence."
   }
 }

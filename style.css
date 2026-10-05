@@ -459,20 +459,7 @@ main {
 .care-row button:disabled { opacity: 0.6; cursor: default; }
 
 @media (max-width: 420px) {
-  /* `align-items: flex-start` top-aligns the portrait beside the text in the
-     ROW layout. Turning the card into a COLUMN changes what that property
-     means — the cross axis is now horizontal, so it stops the info block
-     stretching and every child shrink-wraps to its own content. The widest
-     child is the Extract button, whose label carries the animal's NAME, so
-     each card in the list ends at a different place: read off a 411px-wide
-     phone, two cards of identical width ended about 70px apart. Stretch is
-     what a column wants; the portrait keeps centring itself with its own
-     `align-self`.
-
-     Invisible at 380px, which is why no gate had ever seen it: down there
-     the text's max-content already exceeds the line, so `fit-content`
-     clamps to full width and the bug has nowhere to show. A band measured
-     only at its narrow end is a band measured once. */
+  /* R124: a column stretches its children (docs/STYLE.md). */
   .animal-card { flex-direction: column; align-items: stretch; }
   .portrait { flex-basis: auto; width: 100%; max-width: 220px; align-self: center; }
 }
@@ -521,13 +508,7 @@ main {
   z-index: 50;
 }
 .overlay[data-locked] { background: var(--ink); }
-/* R122 — `.sheet` had no rule at all. Two dialogs wear it (the Pens'
-   repertoire picker and the arena's move readout) and both were therefore
-   transparent, showing the screen behind them through their own text — the
-   same defect as the founding card, on a screen nobody had reported. A card
-   is a card: its own ground, its own edge, and its own scroll, because the
-   fixed overlay it sits in does not scroll. `.move-sheet` still sets its own
-   padding; this is only what every card in the game already has. */
+/* R122 — `.sheet` is a card (docs/STYLE.md). */
 .sheet {
   width: 100%;
   max-width: 440px;
@@ -698,20 +679,7 @@ main {
 
 .encounter {
   display: flex;
-  /* R113: a HELD node puts three children in this row — the description, the
-     HELD tag and the Spar button — where every other status puts two, and the
-     button is `flex: 0 0 auto`. At 150% text the row ran 86px past its card
-     rather than giving way. Wrapping costs nothing at 100%, where it already
-     fits, and at 150% the tag and the button drop under the description
-     instead of squeezing it.
-
-     `.encounter > div { flex: 1 1 auto; min-width: 0 }` was shipped beside
-     this and then taken back out: measured against the exact stylesheet of
-     the commit before, EITHER one alone brings the row from 86px over to
-     12px inside. Two rules for one defect means a break aimed at either is
-     caught by the other, which is a rule nothing can go red for. Wrapping is
-     the one kept because it is one declaration and because it keeps the
-     description readable rather than shrinking it. */
+  /* R113: a held node wraps its row (docs/STYLE.md). */
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
@@ -2995,15 +2963,36 @@ header > *:not(.sky-layer) { position: relative; z-index: 1; }
   .sky-layer { opacity: calc(var(--sky-alpha, 0) * 0.5); }
 }
 
-/* R117 — WIDE SCREENS: the first `min-width` rules this file has carried.
-   Every width breakpoint before this was a `max-width` (400, 430, 420, 400,
-   340), so the layout could only get narrower than its 560px column, and at
-   1,280px the game used 43.8% of the glass with the agenda drawn on one
-   screen of six and the wire in a footer below the fold. The argument is in
-   ui/rail.js and ROADMAP R117; what a reader of this file needs is that at
-   900px the shell becomes a two-column grid AND becomes fixed-height, the
-   way `body.in-battle` already is on a phone — that second half is what
-   keeps the rail's foot in the glass without a magic number. -------------- */
+/* R210 — the pasture under that sky (ranch/pasture.js, data/notes/pasture.md). */
+.pasture { width: 100%; max-width: 560px; margin: 0 auto; }
+.pasture-field { position: relative; aspect-ratio: 5 / 2; border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+  background: linear-gradient(180deg, var(--stage-a), var(--stage-c)); }
+.pasture-land, .pasture-sky { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pasture-sky { pointer-events: none; }
+.pasture-animal { position: absolute; display: block; padding: 0; border: 0; border-radius: 10px; background: none; transform: translate(-50%, -100%); }
+.pasture-face svg { display: block; width: 100%; height: auto; }
+.pasture-body { display: block; animation: pasture-graze 9s ease-in-out infinite alternate; }
+.pasture-face { display: block; }
+.pasture-face.is-left { transform: scaleX(-1); }
+.pasture-hay { position: absolute; left: 4%; bottom: 0; width: 26%; height: auto; }
+.pasture-shine { position: absolute; right: 4%; top: 0; width: 28%; height: auto; }
+.pasture-more { margin: 4px 2px 0; font-size: 0.8rem; color: var(--muted); }
+@keyframes pasture-graze { 0% { transform: translateX(-8%); } 45%, 55% { transform: translateX(3%) translateY(3%); } 100% { transform: translateX(8%); } }
+@keyframes pasture-munch { 50% { transform: translateY(4%); } }
+@keyframes pasture-fall { from { transform: translateY(-30px); } to { transform: translateY(40px); } }
+@keyframes pasture-drift { 50% { transform: translateX(16px); } }
+@keyframes pasture-shimmer { 50% { transform: translateY(-2px); opacity: 0.12; } }
+@keyframes pasture-twinkle { 50% { opacity: 0.2; } }
+.is-fed .pasture-face svg { animation: pasture-munch 0.7s ease-in-out infinite; }
+.pasture-fall { animation: pasture-fall 1.1s linear infinite; }
+.pasture-drift { animation: pasture-drift 14s ease-in-out infinite; }
+.pasture-shimmer { animation: pasture-shimmer 2.4s ease-in-out infinite; }
+.pasture-twinkle { animation: pasture-twinkle 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .pasture-body, .is-fed .pasture-face svg, .pasture-fall, .pasture-drift, .pasture-shimmer, .pasture-twinkle { animation: none; }
+}
+
+/* R117 — WIDE SCREENS: at 900px a two-column, fixed-height grid (docs/STYLE.md). */
 
 .rail { display: none; }
 
