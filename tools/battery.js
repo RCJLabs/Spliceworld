@@ -387,6 +387,11 @@ const SHARD_B = ['node', '-e',
 const HEXAPOD = ['node', '-e',
   "process.env.SW_SHARD = 'z'; await import('./tools/smoke.js');"];
 
+// R208 — THE COMMON PATH, named for the lane: `z` names no block, so this runs
+// what every shard runs and nothing else. R208's Theater rules live there.
+const COMMON_PATH = ['node', '-e',
+  "process.env.SW_SHARD = 'z'; await import('./tools/smoke.js');"];
+
 // Shard d, per SHARD_OF. R145 opened this lane (a fight ends, and it ends the
 // right way: six seeds x 3,536 scripted fights, median 9 on every one, against
 // two on seed 11 that never ended at all before it) and named the constant
@@ -7807,6 +7812,118 @@ const BREAKS = [
     anchor: "  for (const frameId of new Set(['M', 'S', 'L', 'A', ...Object.keys(content.frames)])) {",
     to: "  for (const frameId of ['M', 'S', 'L', 'A']) {",
     expect: 'and never built Hexapod Frame',
+  },
+  {
+    // R208 — THE PICKER GOES BACK TO NAMES. The Theater stops asking for a
+    // thumbnail per row, and choosing between two forelimbs is a memory test
+    // again.
+    n: 549, gate: COMMON_PATH, name: 'the socket picker lists parts by name only, with nothing drawn',
+    file: 'splice/theater-ui.js',
+    anchor: '              thumb: thumbs ? partThumbnail(t.partId, draft.frame, socketId, content) : \'\',',
+    to: "              thumb: '',",
+    expect: 'every row in the picker shows its part',
+  },
+  {
+    // R208 — THE SHEET DROPS WHAT IT IS GIVEN. The Theater still draws every
+    // part; the shared picker stops putting the drawing in the row.
+    // BLIND AGAIN IF the smoke rule counts thumbnails in the options rather
+    // than in the sheet's markup.
+    n: 550, gate: COMMON_PATH, name: "the picker sheet throws away the row's drawing",
+    file: 'ui/picker.js',
+    anchor: "          ${o.thumb ?? ''}<span class=\"pick-row-main\">",
+    to: '          <span class="pick-row-main">',
+    expect: 'every row in the picker shows its part',
+  },
+  {
+    // R208 — A FILLED SOCKET SAYS ITS NAME AND SHOWS NOTHING.
+    n: 551, gate: COMMON_PATH, name: 'a filled socket stops showing the part in it',
+    file: 'splice/theater-ui.js',
+    anchor: '      thumb: part ? partThumbnail(token.partId, draft.frame, socketId, content) : \'\',',
+    to: "      thumb: '',",
+    expect: 'the filled socket shows its part',
+  },
+  {
+    // R208 — AND THE FIELD DROPS IT, the same defect one module over.
+    n: 552, gate: COMMON_PATH, name: "the socket field throws away its part's drawing",
+    file: 'ui/picker.js',
+    anchor: '        ${thumb}<span class="pick-value"',
+    to: '        <span class="pick-value"',
+    expect: 'the filled socket shows its part',
+  },
+  {
+    // R208 — THE THUMBNAIL LOOKS IN THE WRONG PLACE. Every socket is read as
+    // the head, so a limb's crop is empty and the row shows a blank tile.
+    n: 553, gate: COMMON_PATH, name: 'a thumbnail crops to the head whatever socket it is for',
+    file: 'render/thumb.js',
+    anchor: "  .filter((name) => name.replace(/_(near|far)$/, 's') === socketId);",
+    to: "  .filter((name) => name.replace(/_(near|far)$/, 's') === 'head');",
+    expect: 'a decorative thumbnail with a real viewBox',
+  },
+  {
+    // R208 — THE SLAB STAYS STILL. The renderer stops marking the part that
+    // was just chosen, so it appears in place with nothing to say it arrived.
+    n: 554, gate: COMMON_PATH, name: 'a chosen part appears on the slab without arriving',
+    file: 'render/renderer.js',
+    anchor: '  const lay = (slot, g) => layers.push(slot === arrive ? `<g class="sw-arrive">${g}</g>` : g);',
+    to: '  const lay = (slot, g) => layers.push(g);',
+    expect: 'the chosen part arrives on the slab',
+  },
+  {
+    // R208 — AND IT ARRIVES FOREVER. Nothing clears the socket after the
+    // render that shows it, so every later render drops the part in again.
+    n: 555, gate: COMMON_PATH, name: 'the last part chosen drops onto the slab on every render',
+    file: 'splice/theater-ui.js',
+    anchor: '  arriving = null;\n  bindFieldNote(',
+    to: '  bindFieldNote(',
+    expect: 'and it arrives once',
+  },
+  {
+    // R208 — THE SPLICE LANDS AS A CARD AGAIN. No scene, no stinger: the
+    // R112 walk splices for real and reads what comes up first.
+    n: 556, gate: COMMON_PATH, name: 'a splice goes straight to the card and skips IT\'S ALIVE',
+    file: 'splice/theater-ui.js',
+    anchor: "      playAlive(document.querySelector('#overlay'), content, bornGenome(result.chimera),\n        () => showSpliceResult(ctx, result, () => renderTheaterScreen(root, ctx)));",
+    to: '      showSpliceResult(ctx, result, () => renderTheaterScreen(root, ctx));',
+    expect: "the splice plays IT'S ALIVE before the card",
+  },
+  {
+    // R208 — SKIP DOES NOTHING. The button is drawn and nobody listens to it,
+    // so the only way past the scene is to wait it out.
+    n: 557, gate: COMMON_PATH, name: 'the Skip button on IT\'S ALIVE is not wired to anything',
+    file: 'splice/alive-ui.js',
+    anchor: "  overlay.querySelector('#alive-skip')?.addEventListener('click', finish);\n",
+    to: '',
+    expect: 'nothing to press',
+  },
+  {
+    // R208 — REDUCED MOTION GETS THE WHOLE SHOW. The CSS still stops the
+    // animations, but the scene's timer runs anyway and the card swaps itself
+    // out with no button pressed.
+    n: 558, gate: COMMON_PATH, name: 'a player who asked for less motion still gets the timed scene',
+    file: 'splice/alive-ui.js',
+    anchor: '  const still = reducedMotion();',
+    to: '  const still = false;',
+    expect: 'under reduced motion the scene is one still frame',
+  },
+  {
+    // R208 — AND THE STYLESHEET'S OFF-SWITCH GOES. The a11y gate reads every
+    // animated selector in style.css against the reduced-motion blocks.
+    // BLIND AGAIN IF the scene's motion moves into inline styles or SMIL.
+    n: 559, gate: A11Y, name: "the slab's arrival and the scene keep moving under reduced motion",
+    file: 'style.css',
+    anchor: '  .sw-arrive, .alive-body svg, .alive-bolt, .alive-stitch, .alive-eye, .alive h3.alive-title { animation: none; }\n',
+    to: '',
+    expect: 'block turns it off',
+  },
+  {
+    // R208 — THE THUMBNAILS JOIN THE FIRST PAINT. They load with the Theater
+    // because the boot budget was not allowed to move; one eager import puts
+    // them in front of every player on every launch.
+    n: 560, gate: SHARD_D, name: 'the part thumbnails load before the game paints',
+    file: 'main.js',
+    anchor: "import { loadContent, loadShapes } from './data/loader.js';",
+    to: "import './render/thumb.js';\nimport { loadContent, loadShapes } from './data/loader.js';",
+    expect: 'modules eagerly, over the cap',
   },
 ];
 

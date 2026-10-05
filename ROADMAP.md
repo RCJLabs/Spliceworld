@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**7 entries queued.** R208, R209, R210, R211, R212, R213, R214.
+**6 entries queued.** R209, R210, R211, R212, R213, R214.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -8170,7 +8170,8 @@ written so that it has something on screen when it ships.
     three Hexapods on days 118.83, 121.08 and 122.92, all kept. 11 of 14
     cached seeds buy the tier, and every one of them keeps 1 to 4.
 
-- **R208 — The Surgery Theater you can see.** Three changes:
+- **R208 — The Surgery Theater you can see.** ✅
+  Three changes:
   * **Parts you can see.** A `partThumbnail` in the renderer draws one part on
     a faint ghost chassis. Every picker row and every filled socket carries
     one.
@@ -8184,6 +8185,77 @@ written so that it has something on screen when it ships.
   part; the ceremony plays on a real splice and can be skipped; reduced
   motion replaces it with a still frame; picker rows still clear 40px and the
   contrast floor; and the boot budget does not move.*
+
+  **Shipped: parts you can see before you choose them, a slab that answers,
+  and a scene when the creature wakes up.**
+  * **`partThumbnail`** (`render/thumb.js`, lazy) asks the real renderer for
+    a genome holding just that part. It draws on a ghost of the chassis it is
+    being chosen for and is cropped to the part's own sockets, read from the
+    frame's positions and the part's shape extents. A hide is drawn on a
+    solid torso, because a hide IS the torso's colouring. Thumbnails are
+    decorative (`aria-hidden`), because the row beside them names the part.
+    `renderCreatureSVG` learned three options for this, all off by default
+    so every other portrait is byte-identical:
+    - `ghost`: a faint torso;
+    - `viewBox`: the crop;
+    - `arrive`: wraps the chosen socket's part in `.sw-arrive`.
+  * **Every picker row and every filled socket carries one.** The pickers
+    only draw them when a sheet opens; the fields ask only for the count.
+  * **The slab responds.** A chosen part drops into its socket once. The
+    render that shows it clears it.
+  * **IT'S ALIVE** (`splice/alive-ui.js`, lazy) plays before the result card
+    it always led to:
+    - a bolt strikes a darkened creature;
+    - a seam stitches itself shut across the torso;
+    - two eyes open in the dark, on a new synth stinger;
+    - the lights come up, and the title pops.
+
+    Each beat is a delayed CSS animation and one timer ends the scene, so
+    nothing waits on `animationend`. "Skip the theatrics" or Escape ends it
+    at once. Under reduced motion it is the last frame, held, with a "Meet
+    it" button and no timer.
+
+  **The boot budget did not move.** The two modules are lazy and precached.
+  The eager additions (three renderer options, the picker's thumbnail slot,
+  six lines of copy) are 0.25 KB of code. The new CSS (2.8 KB) was paid for
+  by moving six comment essays from `style.css` to `docs/STYLE.md`, R117's
+  way. First paint read 1,194 KB before and 1,193 after, against an
+  unchanged 1,197. Eager code is 337.6 KB against an unchanged 338, prose is
+  unchanged, and the eager graph is still 51 modules.
+
+  **Found on the way:**
+  * **The seam was invisible while the scene played and visible in the still
+    frame.** The body's animated `filter` made it a stacking context, which
+    paints above the non-positioned seam laid over it. Every layer of the
+    stage is positioned now.
+  * **The a11y gate refused the first reduced-motion line.** It named
+    `.alive-title` while the animated rule read `.alive h3.alive-title`. The
+    gate matches selectors exactly, which is the point of it.
+  * **R112's walk splices for real**, so it now meets the scene, presses
+    Skip and finds the naming card behind it. That makes it the headless
+    proof that the scene plays on a real splice and can be skipped.
+  * **Breaks 549-560:**
+    - a row, a sheet, a field or a socket losing its drawing;
+    - a crop read from the wrong socket;
+    - the slab never animating, or animating every render;
+    - the scene skipped, or its Skip unwired;
+    - reduced motion ignored, in the code and in the stylesheet;
+    - the thumbnails pulled into the first paint.
+
+  **Done when, checked** (at 380px, on the day-180 save, with zero console
+  errors on it, on a fresh founding and on a v63 save migrated to v64):
+  * **Every part shows its drawing:** every row of all eight socket pickers
+    (572 rows) and every filled socket. Smoke draws every part in every
+    socket it fits, on every chassis that has that socket.
+  * **The ceremony:** it plays on a real splice. Skip reaches the card in
+    9 ms; left alone, the card arrives at 2.7 s. The spliced creature
+    survives a reload.
+  * **Reduced motion:** one still frame, nothing animating, waiting for the
+    player.
+  * **Picker rows:** 64px at their shortest. The a11y gate opens every
+    picker and clears every control at 40px and every word at the contrast
+    floor, in every theme.
+  * **The boot budget:** as above.
 
 - **R209 — Battles you can feel.**
   * **Effects by tag, from data:** a bolt for Electric, a splash for Aquatic, a

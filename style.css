@@ -1187,7 +1187,7 @@ body.in-battle .ticker { font-size: 0.75rem; }
   .shift-a, .shift-b, .shift-c { animation: none; }
   /* R208 — the slab and the scene. Safe: the scene ends on a timer, and the
      Theater shows the still frame instead when it can see this setting. */
-  .sw-arrive, .alive-body svg, .alive-bolt, .alive-stitch, .alive-eye, .alive-title { animation: none; }
+  .sw-arrive, .alive-body svg, .alive-bolt, .alive-stitch, .alive-eye, .alive h3.alive-title { animation: none; }
 }
 
 /* Taller phones get a roomier field; short ones keep the menu reachable. */
