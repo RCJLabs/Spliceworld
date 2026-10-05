@@ -236,5 +236,13 @@
     "label": "The pasture",
     "open": "{name}: open the card",
     "more": "And {n} more out past the fence."
+  },
+  "county": {
+    "label": "Map of the county",
+    "held": "Held",
+    "contested": "Contested",
+    "open": "Open",
+    "locked": "Locked",
+    "node": "{name}, {region}: {state}"
   }
 }

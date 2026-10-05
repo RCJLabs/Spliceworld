@@ -1,5 +1,80 @@
 # PROGRESS
 
+## Session 235 — R211: the county on a map ✅
+
+**The War Room's map tab opens on a drawn county: five region outlines, the
+roads, the lab in the middle, and every node on it as a button that says
+its state in a shape and a word as well as a colour, and opens its card by
+tap or by keyboard. Raids park vans at the lab's gate, an expedition camps
+in its region, and loose specimens wander the open country. Every
+coordinate is in `regions.json`. The boot budget did not move.**
+
+### What shipped
+
+- **`campaign/county.js`** (pure, lazy with the War Room): `countyScene`
+  decides what is on the map; `countyMarkup` draws it. `campaign/ui.js` puts
+  it above the region cards and binds `data-map-node`.
+- **`regions.json`:** every node's `at` and `road`; every region's `map`
+  (outline, name, camp, open country, tint; Greenfield's carries the lab).
+  Documented under two new sections of `data/notes/regions.md`.
+- **A node's row has an id** (`node-<id>`), so the tap can scroll to it.
+- **Copy** for the county in `data/copy.json`; **CSS** paid for by moving
+  eight comment essays from `style.css` to `docs/STYLE.md`.
+- **Gates:** an R211 smoke block (geometry, spacing at 380px, roads home,
+  shapes and words, the busy county, a sixth region, the press). **Breaks
+  585-597**, and 218 re-aimed.
+
+### Found on the way
+
+- **A top-level `county` block** would have been dropped by the content
+  indexer, and teaching the indexer costs eager code the 338 KB cap does
+  not have. The lab and the open country moved onto the regions.
+- **Labels near the right edge wrapped**; they are single lines now.
+- **Locked nodes' muted text failed contrast** in the a11y gate (2.12:1).
+- **Focus after a tap landed on the page body** when the row's only button
+  was a disabled Spar.
+- **Break 218's anchor was split** by the new `map` line and re-aimed.
+
+### Verification
+
+- **`npm test`, run alone:** green warm, 1,380 CPU-seconds of 1,425, 363s
+  wall. The first run, cold, went red on seconds: 1,657 of 1,641. It had
+  rebuilt six walks, because `regions.json` changed. CLAUDE.md's A/B first:
+  `main` (R210) in a worktree on the same box read 1,367 and 1,343 warm.
+  So the cold overrun is the six rebuilds costing about 46s each on this
+  host against the 36s allowance, plus R211's own ~25s (its smoke block
+  rides all four shards, and the handlers walk presses 23 more buttons).
+- **Battery:**
+  - `--anchors`: 588 of 588.
+  - `--only` over breaks 585-597, 218 (re-aimed) and the thirteen aimed
+    near R211's code (the War Room module, `regions.json`, the copy): 26 of
+    27 caught, behind a 41-of-41 green baseline. 595 read ELSEWHERE: the
+    a11y gate caught exactly the right defect ("is 30x30, under the 40px
+    floor"), but my `expect` used words that gate only prints when it
+    passes. Corrected, and 595 re-run: caught, behind a green baseline.
+- **Boot:** first paint 1,196 KB (1,195 before) against an unchanged 1,197.
+  Eager code is unchanged at 337.9 KB and prose at 260.9.
+- **a11y, height, wide, handlers, scope and release gates green.** The
+  a11y gate measured the nodes in every theme on fresh and day-180 saves
+  (125 distinct controls, up from 122), and plays the game from the
+  keyboard through them.
+- **At 380px** (scratchpad probe, real UI):
+  - zero console errors on a fresh founding, on a v63 save migrated to v64,
+    and on the day-180 save;
+  - a fresh lab's county shows one open node and 22 padlocks;
+  - the day-180 county, made busy (a raid, a contest, an expedition, two
+    loose specimens): two vans at the gate, the party's tent in Kestrel
+    Reach, two strays, and Downtown showing "7h" named "Contested 7h 0m";
+  - a tap on the Rolling Mill unfolds the Foundry Belt with the row on
+    screen, still open after a reload; Enter on the Spire's reception desk
+    unfolds the Spire;
+  - under reduced motion nothing in the county moves; nothing scrolls
+    sideways.
+
+### Next session
+
+R212: commissions. The next full battery is due with it.
+
 ## Session 234 — R210: the ranch through the window ✅
 
 **The Ranch opens on a field under the header's sky: a fence, a barn with

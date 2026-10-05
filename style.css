@@ -1342,13 +1342,7 @@ body.in-battle .ticker { font-size: 0.75rem; }
 .forecast-even strong { color: var(--warn); }
 .forecast-losing { border-color: var(--danger-2); }
 .forecast-losing strong { color: var(--danger-soft); }
-/* R73 follow-up — the one band that fills its whole row with a colour, and
-   the only place in the file that hardcoded a hex for text. Measured white
-   on `--danger-2` across the five themes: 3.96 / 2.78 / 4.18 / 4.01 / 3.62,
-   below AA in every one, worst on the theme whose danger red is lightest.
-   Nothing light passes on this background — the ceiling for white is about
-   4.15 — so the text goes dark instead, on the token that is near-black in
-   every scheme. */
+/* R73 — the one band that fills its row with a colour (docs/STYLE.md). */
 .forecast-hopeless {
   border-color: var(--danger);
   background: var(--danger-2);
@@ -1610,12 +1604,7 @@ body.in-battle .ticker { font-size: 0.75rem; }
 }
 .list-group:first-child { margin-top: 4px; }
 .dex-portrait svg { width: 100%; height: auto; display: block; }
-/* R204 — a cell still waiting for its creature holds the creature's box. Every
-   portrait the Dex defers is drawn in the renderer's 460x440 viewBox at the
-   cell's full width, so this is the drawn height exactly, and the roster is
-   the same height before a scroll as after one. Without it the 28 cells past
-   the ninth were 0px of art until they drew: the screen grew 854px under a
-   scrolling thumb, and the height gate measured a page nobody scrolls to. */
+/* R204 — a cell waiting for its creature holds its box (docs/STYLE.md). */
 .dex-later { aspect-ratio: 460 / 440; }
 .dex-mystery {
   font-size: 2.4rem;
@@ -1734,12 +1723,7 @@ footer {
   margin-bottom: 6px;
   padding: 2px 8px;
 }
-/* R131 — the bay head is a real button now, on the same `data-fold`
-   contract as every other fold in the game, so `bindFolds` can keep one open
-   and both browser gates can find it. Styled to sit exactly where the
-   `<summary>` sat: this is the shut Vault's whole height, forty-one of them,
-   and the budget has 120px of headroom. `min-height` is R73's 40px floor,
-   which the 35px summary never had to clear because it was not a control. */
+/* R131 — the bay head is a button (docs/STYLE.md). */
 .vault-species > .bay-head {
   display: flex;
   align-items: center;
@@ -1916,13 +1900,7 @@ footer {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  /* R124 — stretch, not flex-start. In a column, flex-start shrink-wraps
-     every child to its own text: measured at 380px, four option rows of
-     identical width held main blocks 83, 94, 123 and 81px wide. Nothing
-     shows today because those blocks carry no background and their text is
-     left-aligned anyway — but it is why `margin-left: auto` on the price
-     would quietly do nothing, and it is the same rule the ranch cards
-     broke visibly. Row height and text position are unchanged by this. */
+  /* R124 — stretch, not flex-start (docs/STYLE.md). */
   align-items: stretch;
   text-align: left;
   /* R80 — 6px, the gutter every other control row in the game uses. These
@@ -1960,13 +1938,7 @@ footer {
   width: 100%;
   display: flex;
   align-items: center;
-  /* R73's global `button { justify-content: center }` exists so a
-     shrink-wrapped label sits in the middle of its 40px target. This row
-     fills its line, so centring slides its content by half of whatever
-     slack the row's own text leaves: measured on the briefing, three
-     roster rows started their tick 82px in and a fourth, whose label
-     wrapped, started at 12px. That is the ragged left edge reported from a
-     phone. Third leak of this rule — R122 fixed `.lab-pick` the same way. */
+  /* R73 — a full-width button's label starts at the left (docs/STYLE.md). */
   justify-content: flex-start;
   gap: 9px;
   text-align: left;
@@ -2639,12 +2611,7 @@ button.dex-cell:focus-visible {
 }
 .xp-fill { display: block; height: 100%; background: var(--accent); }
 .xp-cap { font-size: 0.75rem; font-weight: 700; color: var(--accent); letter-spacing: 0.08em; }
-/* R73 — this sat at 15x21, the smallest control in the game, and it opens a
-   destructive-ish flow (renaming a creature you have grown attached to).
-   It lives INSIDE an <h4>, so it cannot take a 40px box in the flow without
-   pushing the name off its own line: the visible pencil stays small and the
-   TOUCH area is grown around it with a negative margin, which is the one
-   place that trick is the right answer rather than a dodge. */
+/* R73 — the smallest control in the game (docs/STYLE.md). */
 .rename-btn {
   background: none;
   border: none;
@@ -2749,12 +2716,7 @@ button.dex-cell:focus-visible {
 .feral-panel p { margin: 0 0 5px; }
 .feral-panel p:last-child { margin-bottom: 0; }
 .feral-head { font-size: 0.78rem; font-weight: 700; color: var(--text); }
-/* Measured at 380px: `.fine-print`'s muted grey on the warn ground came out
-   at 3.42:1, under AA for text this size, on the one panel in the game that
-   explains how not to lose a creature. `--text` is the readable foreground
-   in every theme and the ground is `--warn-dim` in every theme, so pairing
-   them holds across all five; the hierarchy is carried by size and weight
-   rather than by dimming the thing that has to be read. */
+/* The warn ground's fine print (docs/STYLE.md). */
 .feral-panel .fine-print { color: var(--text); }
 /* …except the consequence, which keeps the warn hue for emphasis and clears
    AA on its own (5.6:1). Written after the rule above, which is specific
@@ -2802,13 +2764,7 @@ button.dex-cell:focus-visible {
 .lab-name { font-weight: 700; font-size: 0.95rem; color: var(--text); }
 .lab-blurb { font-size: 0.76rem; color: var(--muted); font-style: italic; }
 .lab-kit { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
-/* Two cells: the icon, then the whole sentence. Grid rather than flex,
-   because a flex row lays out TEXT NODES as items too — it held four of
-   them (the icon, a space, <b>Bear</b>, ", fully grown...") with 5px
-   between each, so the screen read "Bear , fully grown" and a two-word
-   species name took a column of its own with the rest of its sentence
-   stranded beside it. One cell means the sentence wraps like prose and
-   keeps its own punctuation. */
+/* Two cells: the icon, then the sentence (docs/STYLE.md). */
 .lab-row {
   font-size: 0.76rem;
   line-height: 1.35;
@@ -2991,6 +2947,24 @@ header > *:not(.sky-layer) { position: relative; z-index: 1; }
 @media (prefers-reduced-motion: reduce) {
   .pasture-body, .is-fed .pasture-face svg, .pasture-fall, .pasture-drift, .pasture-shimmer, .pasture-twinkle { animation: none; }
 }
+
+/* R211 — the county (campaign/county.js, data/notes/regions.md). Every node
+   is a 40px button and says its state in a word and a shape, not a colour. */
+.county { width: 100%; max-width: 560px; margin: 0 auto; }
+.county-map { position: relative; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--well); }
+.county-map > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.county-name { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; font-size: 0.75rem; font-weight: 700; line-height: 1.15;
+  text-align: center; color: var(--text); text-shadow: 0 1px 2px #000, 0 0 4px #000; pointer-events: none; }
+.county-node { position: absolute; transform: translate(-50%, -50%); flex-direction: column; gap: 0; padding: 3px 4px; font-size: 0.75rem; line-height: 1.1; border-width: 2px; }
+.county-node.is-held { border-color: var(--goo); }
+.county-node.is-held svg { color: var(--goo); }
+.county-node.is-contested { border-color: var(--warn); }
+.county-node.is-contested svg { color: var(--warn); }
+.county-node.is-available { border-color: var(--zap); }
+.county-node.is-locked { border-style: dashed; background: var(--well); }
+@keyframes county-roam { to { transform: translate(9px, -4px); } }
+.county-stray { animation: county-roam 6s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) { .county-stray { animation: none; } }
 
 /* R117 — WIDE SCREENS: at 900px a two-column, fixed-height grid (docs/STYLE.md). */
 

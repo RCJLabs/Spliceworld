@@ -5715,9 +5715,9 @@ const BREAKS = [
     n: 218, gate: FACILITY, name: 'a region declares an answer that does not clear it, and nothing notices',
     file: 'data/regions.json',
     anchor: `      "answer": "air",
-      "requires": {`,
+      "map": { "outline": "300,190`,
     to: `      "answer": "water",
-      "requires": {`,
+      "map": { "outline": "300,190`,
   },
   {
     // And the walker goes back to taking the first frame that validates, in
@@ -8141,6 +8141,119 @@ const BREAKS = [
     anchor: '.pasture-field { position: relative; aspect-ratio: 5 / 2;',
     to: '.pasture-field { position: relative; aspect-ratio: 5 / 3;',
     expect: 'chrome budget',
+  },
+  {
+    // R211 — A NODE WITH NOWHERE TO STAND. The Aerodrome loses its place,
+    // and the county has a node the map cannot draw.
+    n: 585, gate: COMMON_PATH, name: 'a node has no place on the county',
+    file: 'data/regions.json',
+    anchor: '          "at": [150, 30],\n',
+    to: '',
+    expect: 'has a place on the county',
+  },
+  {
+    // R211 — A NODE IN THE WRONG COUNTRY. The Aerodrome is drawn in the
+    // middle of the Compliance Spire.
+    n: 586, gate: COMMON_PATH, name: 'a node is placed in another region',
+    file: 'data/regions.json',
+    anchor: '          "at": [150, 30],',
+    to: '          "at": [330, 90],',
+    expect: 'stands inside its own region',
+  },
+  {
+    // R211 — A ROAD FROM NOWHERE.
+    n: 587, gate: COMMON_PATH, name: "a node's road starts somewhere the map does not have",
+    file: 'data/regions.json',
+    anchor: '          "road": "precinct",',
+    to: '          "road": "the_old_quarry",',
+    expect: 'road comes from somewhere on the map',
+  },
+  {
+    // R211 — STATE BY COLOUR ALONE. Every node wears the same target and a
+    // player who cannot tell the borders apart cannot tell held from lost.
+    n: 588, gate: COMMON_PATH, name: 'every node on the map wears the same shape',
+    file: 'campaign/county.js',
+    anchor: "const ICON = { held: 'flag', contested: 'hourglass', available: 'target', locked: 'lock' };",
+    to: 'const ICON = {};',
+    expect: 'shows its state by shape',
+  },
+  {
+    // R211 — AND WITHOUT A WORD.
+    n: 589, gate: COMMON_PATH, name: 'a node on the map stops saying its state',
+    file: 'campaign/county.js',
+    anchor: '<span class="county-word">${esc(word)}</span>',
+    to: '',
+    expect: 'says its state in a word',
+  },
+  {
+    // R211 — A NODE THAT OPENS NOTHING. The button is pressed and the card
+    // stays shut.
+    n: 590, gate: COMMON_PATH, name: 'pressing a node on the map opens no card',
+    file: 'campaign/ui.js',
+    anchor: '      state.ui.collapsed[`region:${region.id}`] = false;\n      ctx.save();\n      renderMap(root, ctx);',
+    to: '      ctx.save();\n      renderMap(root, ctx);',
+    expect: "opens its region's card",
+  },
+  {
+    // R211 — A NEW REGION NEEDS CODE. The map draws the five it was told
+    // about, and a sixth in regions.json never appears.
+    n: 591, gate: COMMON_PATH, name: 'the county only draws the regions it was told about',
+    file: 'campaign/county.js',
+    anchor: '  const drawn = regionStates(state, content).filter(({ region }) => region.map?.outline);',
+    to: "  const drawn = regionStates(state, content).filter(({ region }) => region.map?.outline && ['greenfield', 'kestrel', 'drowned', 'foundry', 'spire'].includes(region.id));",
+    expect: 'appear on a county that grew to hold them',
+  },
+  {
+    // R211 — THE VANS NEVER COME. A raid bills you and the map shows a
+    // quiet lab.
+    n: 592, gate: COMMON_PATH, name: 'a raid parks no vans at the lab',
+    file: 'campaign/county.js',
+    anchor: '    raid: !!activeRaid(state),',
+    to: '    raid: false,',
+    expect: 'a raid at the gate is drawn as one',
+  },
+  {
+    // R211 — THE PARTY IS NOWHERE.
+    n: 593, gate: COMMON_PATH, name: "an expedition's party is not drawn in its region",
+    file: 'campaign/county.js',
+    anchor: '    party: trip ? drawn.find(({ region }) => region.id === trip.regionId)?.region.map.camp ?? null : null,',
+    to: '    party: null,',
+    expect: 'camps in its region',
+  },
+  {
+    // R211 — THE LOOSE SPECIMENS STAY IN THE LIST.
+    n: 594, gate: COMMON_PATH, name: 'loose specimens never reach the open country',
+    file: 'campaign/county.js',
+    anchor: '    strays: looseSpecimens(state).slice(0, wilds.length).map((one, i) => ({ one, at: wilds[i] })),',
+    to: '    strays: [],',
+    expect: 'wanders the open country',
+  },
+  {
+    // R211 — THE MARKERS SHRINK TO FIT. Twenty-three buttons on a phone is
+    // crowded, and making them smaller is the obvious wrong answer.
+    n: 595, gate: A11Y, name: 'the map shrinks its nodes under the 40px floor',
+    file: 'style.css',
+    anchor: '.county-node { position: absolute; transform: translate(-50%, -50%);',
+    to: '.county-node { position: absolute; transform: translate(-50%, -50%); width: 30px; height: 30px; min-width: 30px; min-height: 30px; overflow: hidden;',
+    expect: 'under the 40px floor',
+  },
+  {
+    // R211 — THE STRAYS KEEP WANDERING under reduced motion. The a11y gate
+    // reads every animated selector against the reduced-motion blocks.
+    n: 596, gate: A11Y, name: 'the loose specimens wander under reduced motion',
+    file: 'style.css',
+    anchor: '@media (prefers-reduced-motion: reduce) { .county-stray { animation: none; } }\n',
+    to: '',
+    expect: 'block turns it off',
+  },
+  {
+    // R211 — THE COUNTY RUNS OFF THE PHONE. A fixed-width map is the easy
+    // way to keep the nodes apart, and it scrolls the War Room sideways.
+    n: 597, gate: WIDE, name: 'the county is wider than a phone',
+    file: 'style.css',
+    anchor: '.county { width: 100%; max-width: 560px; margin: 0 auto; }',
+    to: '.county { width: 420px; max-width: 560px; margin: 0 auto; }',
+    expect: 'scrolls sideways at 380px',
   },
 ];
 

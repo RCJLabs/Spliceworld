@@ -111,3 +111,35 @@ R113: a HELD node puts three children in this row — the description, the HELD 
 ## R117 — wide screens
 
 R117 — WIDE SCREENS: the first `min-width` rules this file has carried. Every width breakpoint before this was a `max-width` (400, 430, 420, 400, 340), so the layout could only get narrower than its 560px column, and at 1,280px the game used 43.8% of the glass with the agenda drawn on one screen of six and the wire in a footer below the fold. The argument is in ui/rail.js and ROADMAP R117; what a reader of this file needs is that at 900px the shell becomes a two-column grid AND becomes fixed-height, the way `body.in-battle` already is on a phone — that second half is what keeps the rail's foot in the glass without a magic number.
+
+## R73 — the one band that fills its row with a colour
+
+R73 follow-up — the one band that fills its whole row with a colour, and the only place in the file that hardcoded a hex for text. Measured white on `--danger-2` across the five themes: 3.96 / 2.78 / 4.18 / 4.01 / 3.62, below AA in every one, worst on the theme whose danger red is lightest. Nothing light passes on this background — the ceiling for white is about 4.15 — so the text goes dark instead, on the token that is near-black in every scheme.
+
+## R204 — a cell waiting for its creature holds its box
+
+R204 — a cell still waiting for its creature holds the creature's box. Every portrait the Dex defers is drawn in the renderer's 460x440 viewBox at the cell's full width, so this is the drawn height exactly, and the roster is the same height before a scroll as after one. Without it the 28 cells past the ninth were 0px of art until they drew: the screen grew 854px under a scrolling thumb, and the height gate measured a page nobody scrolls to.
+
+## R131 — the bay head is a button
+
+R131 — the bay head is a real button now, on the same `data-fold` contract as every other fold in the game, so `bindFolds` can keep one open and both browser gates can find it. Styled to sit exactly where the `<summary>` sat: this is the shut Vault's whole height, forty-one of them, and the budget has 120px of headroom. `min-height` is R73's 40px floor, which the 35px summary never had to clear because it was not a control.
+
+## R124 — stretch, not flex-start
+
+R124 — stretch, not flex-start. In a column, flex-start shrink-wraps every child to its own text: measured at 380px, four option rows of identical width held main blocks 83, 94, 123 and 81px wide. Nothing shows today because those blocks carry no background and their text is left-aligned anyway — but it is why `margin-left: auto` on the price would quietly do nothing, and it is the same rule the ranch cards broke visibly. Row height and text position are unchanged by this.
+
+## R73 — a full-width button's label starts at the left
+
+R73's global `button { justify-content: center }` exists so a shrink-wrapped label sits in the middle of its 40px target. This row fills its line, so centring slides its content by half of whatever slack the row's own text leaves: measured on the briefing, three roster rows started their tick 82px in and a fourth, whose label wrapped, started at 12px. That is the ragged left edge reported from a phone. Third leak of this rule — R122 fixed `.lab-pick` the same way.
+
+## R73 — the smallest control in the game
+
+R73 — this sat at 15x21, the smallest control in the game, and it opens a destructive-ish flow (renaming a creature you have grown attached to). It lives INSIDE an <h4>, so it cannot take a 40px box in the flow without pushing the name off its own line: the visible pencil stays small and the TOUCH area is grown around it with a negative margin, which is the one place that trick is the right answer rather than a dodge.
+
+## The warn ground's fine print
+
+Measured at 380px: `.fine-print`'s muted grey on the warn ground came out at 3.42:1, under AA for text this size, on the one panel in the game that explains how not to lose a creature. `--text` is the readable foreground in every theme and the ground is `--warn-dim` in every theme, so pairing them holds across all five; the hierarchy is carried by size and weight rather than by dimming the thing that has to be read.
+
+## Two cells: the icon, then the sentence
+
+Two cells: the icon, then the whole sentence. Grid rather than flex, because a flex row lays out TEXT NODES as items too — it held four of them (the icon, a space, <b>Bear</b>, ", fully grown...") with 5px between each, so the screen read "Bear , fully grown" and a two-word species name took a column of its own with the rest of its sentence stranded beside it. One cell means the sentence wraps like prose and keeps its own punctuation.
