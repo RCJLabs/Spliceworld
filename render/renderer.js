@@ -297,6 +297,7 @@ export function attachShapes(content, raw) {
       if (into[id]) into[id].shapes = shapes;
     }
   }
+  if (raw?.arena) content.arena = raw.arena;
   return content;
 }
 
@@ -426,7 +427,7 @@ function shapeToSVG(shape, palette) {
   }
 }
 
-function shapesToSVG(shapes, palette) {
+export function shapesToSVG(shapes, palette) {
   return shapes.map((s) => shapeToSVG(s, palette)).join('');
 }
 

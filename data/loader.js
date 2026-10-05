@@ -13,8 +13,8 @@ import { indexContent, attachShapes, attachVoicePools } from '../render/renderer
 // Everything the game needs to know before it can show you anything.
 export const CORE = ['frames', 'parts', 'species', 'combos', 'enemies', 'keywords', 'regions', 'traits', 'classes', 'rivals', 'director', 'facility', 'philosophies', 'operations', 'chaos', 'temperament', 'scars', 'guides', 'resequencer', 'training', 'gauntlet', 'news', 'breakout', 'feral', 'rush', 'taskforce', 'stance', 'starters', 'tiers', 'legacy', 'calendar', 'cards', 'copy', 'yearbook', 'missions', 'henchmen'];
 
-// …and everything it needs before it can draw one.
-export const GEOMETRY = ['parts-shapes', 'enemies-shapes'];
+// …and everything it needs before it can draw one, the arena's included.
+export const GEOMETRY = ['parts-shapes', 'enemies-shapes', 'arena'];
 
 // R109 — and the spare phrasings, for the same reason. Pooling the voice put
 // 29 KB in front of the first paint; the first line of every pool ships with

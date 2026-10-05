@@ -864,6 +864,21 @@ body.in-battle .ticker { font-size: 0.75rem; }
 
 .float-layer { position: absolute; inset: 0; pointer-events: none; }
 
+/* R209 — scenery, effects and exits. Their motion is data played by Web
+   Animations behind a reduced-motion guard in battle/ui.js; nothing here
+   animates. `is-exiting` lifts the knocked-out fade so the exit is seen. */
+.scene, .fx-layer { position: absolute; inset: 0; pointer-events: none; }
+/* On the floor, at most two-thirds as tall as the stage is wide: a tall
+   phone gets sky above the scenery rather than losing its edges. */
+.scene { top: auto; height: min(100%, 66cqw); }
+.scene svg { display: block; width: 100%; height: 100%; }
+.fx-layer { z-index: 1; }
+.actor { position: relative; transform-origin: 50% 90%; }
+.hit-fx, .exit-prop { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.hit-fx.is-immune { opacity: 0.45; }
+.hit-fx.is-miss { opacity: 0.5; translate: -30% -24%; }
+.slot.is-exiting { opacity: 1; }
+
 /* --- HP boxes, overlaid on the field --- */
 
 .hp-box {

@@ -205,6 +205,7 @@ export const ABSENT_UNIT = Object.freeze({
   tags: [],
   moves: [{ name: 'Idle Menacingly', power: 1, cost: 0, acc: 100, tags: [], keywords: {} }],
   koLine: 'The van reverses at speed. Nobody was ever inside it. There was never a van.',
+  exit: 'exeunt',
   // Procedural, like everything else that draws: a blank shape list renders
   // an empty box in the arena, and an empty box is not an explanation.
   shapes: [
@@ -645,13 +646,13 @@ function attack(battle, atk, def, move, events, content, powerScale = 1) {
       (1 - jumpy) *
       (1 - theirs.evasion);
   if (roll(battle) > hitChance) {
-    events.push({ text: copy(content, 'battle.whiff', { name: atk.name, move: move.name }), kind: 'miss', actor: from, target: at, move: move.name });
+    events.push({ text: copy(content, 'battle.whiff', { name: atk.name, move: move.name }), kind: 'miss', actor: from, target: at, move: move.name, tags: move.tags ?? [] });
     return;
   }
 
   const { mult, ignoreArmor } = tagMultiplier(move.tags, def.tags, content.tagChart);
   if (move.power > 0 && mult === 0) {
-    events.push({ text: copy(content, 'battle.no_effect', { name: atk.name, move: move.name, target: def.name, why: chartNote(move.tags, def.tags, content) }), kind: 'immune', actor: from, target: at, move: move.name });
+    events.push({ text: copy(content, 'battle.no_effect', { name: atk.name, move: move.name, target: def.name, why: chartNote(move.tags, def.tags, content) }), kind: 'immune', actor: from, target: at, move: move.name, tags: move.tags ?? [] });
   } else if (move.power > 0) {
     const clsMult = classMultiplier(atk.creatureClass, def.creatureClass, content);
     // Brave: cornered, it starts landing telling blows.
@@ -734,6 +735,8 @@ function attack(battle, atk, def, move, events, content, powerScale = 1) {
       mult: mult * clsMult,
       classMult: clsMult,
       tagMult: mult,
+      tags: move.tags ?? [], // R209: what battle/stagecraft.js draws
+      crit,
     });
     if (clsFirst) events.push({ text: clsWhy, kind: 'info' });
     if (def.status.sleep) {

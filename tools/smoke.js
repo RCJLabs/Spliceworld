@@ -7422,6 +7422,12 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // guide nobody needs. Its gate is the voice block — two genomes must
     // differ and one genome must never drift.
     'voice.json': null,
+    // R209 — the arena's effects, backdrops and exits. Exempt like the shape
+    // files: a player meets them as the fight looking like a fight, and there
+    // is nothing to teach that the fight does not show. Its gate is the R209
+    // block — every tag drawn, every region on its own ground, every unit
+    // leaving the way its line says.
+    'arena.json': null,
     // R110 — the battle's own beats and whatever follows them out of the
     // modules. A player meets these AS the thing they describe: the line that
     // says a specimen is trapped arrives at the moment it is trapped. There is
@@ -7662,6 +7668,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'battle/forecast.js': null,
     'battle/readout.js': null,
     'battle/tagtext.js': null,
+    // R209 — what a beat looks like on the stage. Exempt like the arena it
+    // draws for: a player meets an effect, a backdrop and an exit in a fight,
+    // never as a system of its own.
+    'battle/stagecraft.js': null,
     'campaign/matchup.js': null,
     'campaign/monologue.js': null,
     'campaign/identity.js': null,
@@ -15165,6 +15175,181 @@ if (inShard('spar')) {
   } finally {
     restore();
   }
+}
+
+// --- R209, BATTLES YOU CAN FEEL. Pure reads of data/arena.json, of the beat
+// --- stream and of the arena's markup, so they ride the common path (R208's
+// --- reason) and their breaks pay for nothing else.
+{
+  const sc = await import('../battle/stagecraft.js');
+  const { ABSENT_UNIT } = await import('../battle/engine.js');
+  const { recordingRoot, installDom, memoryStorage } = await import('./domstub.js');
+  const { renderArena } = await import('../battle/ui.js');
+  const { regionOfNode } = await import('../campaign/map.js');
+  const arena = content.arena;
+  assert.ok(arena?.effects && arena?.backdrops && arena?.exits && arena?.motions,
+    'the arena file arrives with the geometry round');
+  const drawn = (markup) => (markup.match(/<(path|circle|ellipse|rect|polygon|line) /g) ?? []).length;
+
+  // 1. Every move tag has an effect, read from the moves themselves rather
+  //    than from a list of tags: a new tag on a new move is found here first.
+  const tags = new Set(content.tagChart.map((r) => r.attack));
+  const visited = new Set();
+  const walk = (o) => {
+    if (!o || typeof o !== 'object' || visited.has(o)) return;
+    visited.add(o);
+    if (Array.isArray(o.tags) && 'power' in o && 'acc' in o) for (const t of o.tags) tags.add(t);
+    for (const v of Object.values(o)) walk(v);
+  };
+  walk(content.parts); walk(content.enemies); walk(content.combos);
+  assert.ok(tags.size >= 8, `the walk reads the moves (${tags.size} tags)`);
+  const undrawn = [...tags].filter((t) => !arena.effects[t]).sort();
+  assert.deepEqual(undrawn, [], `every move tag has an effect (none for: ${undrawn.join(', ')})`);
+  assert.ok(arena.effects.plain, 'and a plain hit has its slash');
+  for (const [id, row] of Object.entries(arena.effects)) {
+    assert.ok(drawn(sc.effectMarkup(id, content)) >= 2 && sc.motionOf(row.motion, content),
+      `the ${id} effect draws and plays a motion the file defines (${row.motion})`);
+  }
+  for (const t of tags) assert.deepEqual(sc.effectsOf({ kind: 'damage', tags: [t] }, content), [t], `a ${t} move draws its own effect`);
+  assert.deepEqual(sc.effectsOf({ kind: 'damage', tags: [] }, content), ['plain'], 'a move with no tags draws the slash');
+  assert.deepEqual(sc.effectsOf({ kind: 'damage', recoil: true }, content), [], 'and recoil is not a move landing');
+
+  // 2. Every region and the Gauntlet fight on their own backdrop.
+  const regions = Object.values(content.regions);
+  const seenScenes = new Set();
+  for (const region of regions) {
+    for (const node of region.nodes) {
+      const id = sc.backdropFor({ context: { kind: 'assault', nodeId: node.id } }, content);
+      assert.equal(id, region.id, `a fight at ${node.id} is held in ${region.name}`);
+    }
+    assert.ok(drawn(sc.sceneMarkup({ context: { kind: 'sparring', nodeId: region.nodes[0].id } }, content)) >= 8,
+      `${region.name} has a backdrop worth the name`);
+    seenScenes.add(region.id);
+  }
+  const hangar = sc.backdropFor({ context: { kind: 'gauntlet' } }, content);
+  assert.ok(hangar && !seenScenes.has(hangar) && drawn(sc.sceneMarkup({ context: { kind: 'gauntlet' } }, content)) >= 8,
+    `the Gauntlet fights on a backdrop of its own (${hangar})`);
+  for (const kind of ['raid', 'rival', 'breakout', 'visiting', 'rescue']) {
+    assert.equal(sc.backdropFor({ context: { kind } }, content), arena.homeBackdrop, `a ${kind} fight is held at home`);
+  }
+
+  // 3. Every enemy unit leaves the way its line says, by an exit named in
+  //    data; a chimera naps. An exit's `cues` are the words in a line that
+  //    can only mean it ("parachute", "loudly"), so a unit whose line says
+  //    one and whose exit is another is caught by the line itself.
+  const units = Object.values(content.enemies);
+  const word = (cue) => new RegExp(`\\b${cue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+  const used = new Set();
+  for (const u of [...units, ABSENT_UNIT]) {
+    assert.ok(arena.exits[u.exit], `${u.id} leaves by an exit the arena draws (${u.exit})`);
+    used.add(u.exit);
+    for (const [id, row] of Object.entries(arena.exits)) {
+      if ((row.cues ?? []).some((c) => word(c).test(u.koLine))) {
+        assert.equal(u.exit, id, `${u.id} leaves the way its line says: "${u.koLine}" is a ${id}`);
+      }
+    }
+    assert.equal(sc.exitOf('enemy', { enemy: { refId: u.id } }, { units: {} }, content), u.exit, `${u.id}'s knockout plays its exit`);
+  }
+  assert.ok(arena.exits[arena.chimeraExit], 'a chimera has an exit to take');
+  assert.equal(sc.exitOf('player', null, {}, content), arena.chimeraExit, 'your chimera naps');
+  const rival = { id: 'r209-rival', genome: { frame: 'M', parts: {} }, exit: 'smoke' };
+  assert.equal(sc.exitOf('enemy', { enemy: { refId: rival.id } }, { units: { [rival.id]: rival } }, content), arena.chimeraExit,
+    "and so does anyone else's, whatever its record says");
+  used.add(arena.chimeraExit);
+  for (const [id, row] of Object.entries(arena.exits)) {
+    assert.ok(used.has(id), `the ${id} exit is one somebody takes`);
+    assert.ok(sc.motionOf(row.motion, content) && sc.motionOf(row.prop?.motion, content) && drawn(sc.propMarkup(id, content)) >= 1,
+      `the ${id} exit moves its fighter and draws its prop`);
+  }
+
+  // 4. A new tag's effect, a new region's backdrop and a new unit's exit are
+  //    each one JSON row: nothing here is told their names.
+  const grown = {
+    ...content,
+    regions: { ...content.regions, moon: { id: 'moon', name: 'The Moon', nodes: [{ id: 'crater' }] } },
+    enemies: { ...content.enemies, moon_man: { id: 'moon_man', exit: 'blink' } },
+    arena: {
+      ...arena,
+      effects: { ...arena.effects, Psychic: { motion: 'ring', shapes: [{ type: 'circle', cx: 0, cy: 0, r: 30, fill: '#ff00ff' }] } },
+      backdrops: { ...arena.backdrops, moon: { shapes: [{ type: 'circle', cx: 240, cy: 60, r: 30, fill: '#f2f0ea' }] } },
+      exits: { ...arena.exits, blink: { motion: 'nap', prop: { motion: 'pop', shapes: [{ type: 'circle', cx: 0, cy: 0, r: 9, fill: '#00ffff' }] } } },
+    },
+  };
+  assert.ok(sc.effectsOf({ kind: 'damage', tags: ['Psychic'] }, grown)[0] === 'Psychic' && sc.effectMarkup('Psychic', grown).includes('#ff00ff'),
+    "a new tag's effect is a JSON row");
+  assert.ok(sc.backdropFor({ context: { kind: 'assault', nodeId: 'crater' } }, grown) === 'moon', "a new region's backdrop is a JSON row");
+  assert.ok(sc.exitOf('enemy', { enemy: { refId: 'moon_man' } }, {}, grown) === 'blink' && sc.propMarkup('blink', grown).includes('#00ffff'),
+    "a new unit's exit is a JSON row");
+
+  // 5. The effects read the beat stream R2 built: a real fight, and every
+  //    beat a move made says which move's tags it carried and whether it was
+  //    a crit, every one of them draws, and every knockout has a way out.
+  const lab = { ...newGameState(), seed: 209 };
+  const f = makeChimera(lab, 'M', {
+    cobra_head: 'apex', bear_forelimbs: 'standard', goat_hindlimbs: 'standard',
+    cobra_organ: 'standard', bear_hide: 'standard', goat_tail: 'standard',
+  }, t0);
+  const b = createBattle([f], content.encounters.patrol_1, content, 209, f.settleUntil);
+  const beats = [];
+  for (let guard = 0; !b.over && guard < 200; guard++) {
+    const acts = playerActions(b);
+    beats.push(...step(b, acts.find((a) => a.type === 'move') ?? acts[0], content));
+  }
+  const moveBeats = beats.filter((e) => e.move);
+  assert.ok(moveBeats.length >= 4 && moveBeats.every((e) => Array.isArray(e.tags)), `every beat a move made carries its tags (${moveBeats.length})`);
+  assert.ok(moveBeats.filter((e) => e.kind === 'damage').every((e) => typeof e.crit === 'boolean'), 'and every hit says whether it was a crit');
+  assert.ok(moveBeats.every((e) => sc.effectsOf(e, content).length), 'and every one of them draws');
+  const kos = beats.filter((e) => e.kind === 'ko');
+  assert.ok(kos.length && kos.every((e) => sc.exitOf(e.target, e.snap, b, content)), `every knockout in it has a way out (${kos.length})`);
+
+  // 6. The arena: it stands the fight on its region's backdrop, and a
+  //    creature still down when it redraws is drawn asleep.
+  const stageRoot = recordingRoot();
+  const restore = installDom({ overlay: recordingRoot(), storage: memoryStorage() });
+  try {
+    const node = regions.find((r) => r.id !== arena.homeBackdrop).nodes[0];
+    const owner = { ...newGameState(), seed: 209 };
+    owner.chimeras.push(makeChimera(owner, 'M', { goat_head: 'standard', goat_hindlimbs: 'standard' }, t0));
+    owner.battle = createBattle(owner.chimeras, content.encounters[node.encounter], content, 209, t0, { kind: 'assault', nodeId: node.id });
+    const ctx = { state: owner, content, now: () => t0, save() {} };
+    renderArena(stageRoot.host, ctx, () => {});
+    assert.equal(stageRoot.host.innerHTML.match(/class="scene scene-([a-z]+)"/)?.[1], regionOfNode(content, node.id).id,
+      "the arena stands the fight on its region's backdrop");
+    playerActive(owner.battle).hp = 0;
+    owner.battle.pendingReplace = true;
+    renderArena(stageRoot.host, ctx, () => {});
+    assert.ok(/class="slot slot-me is-exiting"/.test(stageRoot.host.innerHTML) && stageRoot.host.innerHTML.includes(`class="exit-prop exit-${arena.chimeraExit}"`)
+      && /class="actor" style="transform:/.test(stageRoot.host.innerHTML), 'a creature down and waiting to be replaced is drawn napping');
+  } finally {
+    restore();
+  }
+
+  // 7. Reduced motion stills it, in the source: every Web Animation the game
+  //    starts is behind the reduced-motion guard. This is the R99 rule for
+  //    motion the stylesheet's off-switch cannot reach — it is played from
+  //    data, not declared in CSS. The a11y gate is the half that watches.
+  const waapi = [];
+  const js = [];
+  const tree = (dir) => {
+    for (const entry of readdirSync(join(root, dir), { withFileTypes: true })) {
+      const rel = dir ? `${dir}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) { if (!['tools', 'docs', 'node_modules', '.git'].includes(rel)) tree(rel); }
+      else if (entry.name.endsWith('.js')) js.push(rel);
+    }
+  };
+  tree('');
+  for (const file of js) {
+    const src = readFileSync(join(root, file), 'utf8');
+    for (let i = src.indexOf('.animate('); i !== -1; i = src.indexOf('.animate(', i + 1)) {
+      const head = src.slice(0, i);
+      waapi.push({ file, guarded: /reducedMotion\(\)/.test(head.slice(head.lastIndexOf('function '))) });
+    }
+  }
+  assert.ok(waapi.length >= 1, `the arena's motion is found where it is played (${waapi.length})`);
+  assert.deepEqual(waapi.filter((w) => !w.guarded).map((w) => w.file), [],
+    'every Web Animation is behind the reduced-motion guard');
+  console.log(`   R209 arena: ${tags.size} tags drawn, ${regions.length} regions and the Gauntlet on their own ground,`
+    + ` ${units.length} units leaving by ${used.size} exits`);
 }
 
 // R71, second half: save slots. Multiple independent labs on one device —
