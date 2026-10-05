@@ -62,7 +62,7 @@ export function aliveMarkup(genome, content, { still = false } = {}) {
         ${fx(front)}
       </div>
       <h3 class="alive-title">${copy(content, 'theater.alive_title')}</h3>
-      <button type="button" id="alive-skip" class="big-btn">${copy(content, still ? 'theater.alive_continue' : 'theater.alive_skip')}</button>
+      <button type="button" id="alive-skip" class="big-btn">${still ? copy(content, 'theater.alive_continue') : copy(content, 'theater.alive_skip')}</button>
     </div>`;
 }
 

@@ -7857,7 +7857,7 @@ const BREAKS = [
     file: 'render/thumb.js',
     anchor: "  .filter((name) => name.replace(/_(near|far)$/, 's') === socketId);",
     to: "  .filter((name) => name.replace(/_(near|far)$/, 's') === 'head');",
-    expect: 'a decorative thumbnail with a real viewBox',
+    expect: 'the crop frames the socket the part hangs from',
   },
   {
     // R208 — THE SLAB STAYS STILL. The renderer stops marking the part that

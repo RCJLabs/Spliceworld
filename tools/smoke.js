@@ -15095,6 +15095,15 @@ if (inShard('spar')) {
           `${part.id} in ${frame.id}/${socketId}: a decorative thumbnail with a real viewBox (${viewBox})`);
         assert.ok(thumb.replace(/pt\d+-torso-clip/g, '').length > ghost.replace(/gh-torso-clip/g, '').length + 40,
           `${part.id} in ${frame.id}/${socketId}: the thumbnail draws the part, not just the chassis`);
+        // …and frames it: the crop holds the point the part hangs from, read
+        // here from the frame rather than from the module under test.
+        const at = frame.sockets[`${socketId.replace(/s$/, '')}_near`] ?? frame.sockets[socketId];
+        if (socketId !== 'hide') {
+          const [x, y, w, h] = viewBox.split(' ').map(Number);
+          const k = frame.scale ?? 1;
+          assert.ok(at && at.x * k >= x && at.x * k <= x + w && at.y * k >= y && at.y * k <= y + h,
+            `${part.id} in ${frame.id}/${socketId}: the crop frames the socket the part hangs from (${viewBox})`);
+        }
         drawn++;
       }
     }
