@@ -8137,6 +8137,17 @@ written so that it has something on screen when it ships.
     refusal's reason, the panel row, the far middle leg, the vat, the pool's
     third limb and the planner's frame list. Breaks 49, 231, 273 and 545
     were re-aimed at the lines R207 rewrote.
+  * **The rot check (full battery, owed since R202): 539 of 539 caught**,
+    after three breaks were found MISSED and fixed:
+    - **519**: at $20, seed 91 swaps to Nurse Gauze on day 175, so she is on
+      the books at day 180. Already MISSED on `main`. It bills $25 now,
+      which prices her out of all eight census campaigns.
+    - **433**: smoke's payroll walks halt at dominion, around day 28, before
+      a kept hand falls behind. Already MISSED on `main`. The rule now asks
+      the day-180 save too, where she has missed 1,862 meals to 1,401.
+    - **249**: Tier III's own doing. Its three stalls open on the day it is
+      bought, and the Wing graduates two captives in them past the diet
+      gate's floor of one. The rehab floor is five (clean reads 12).
 
   **Done when, checked.**
   * **Buying Theater Tier III unlocks the Hexapod:** at 380px on the

@@ -79,7 +79,14 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (4h45m to 6h30m. R202 is the SIXTEENTH reading, and it is
+**The full battery (4h45m to 6h30m. R207 is the SEVENTEENTH reading and is
+not comparable: two container restarts, one onto a host that walked at half
+speed, cost two runs and pushed it to TWELVE chunks of at most 104 minutes
+(a background command stops at two hours, and chunk 3 overran it). The
+complete runs sum to 623 minutes with twelve baselines, all green; 539 of
+539 caught, none CRASHED or ELSEWHERE, after three MISSED were fixed (519
+and 433 already rotten on `main`, 249 blunted by R207's own stalls). Do not
+move the range for it. R202 is the SIXTEENTH reading, and it is
 NOT on the same host: 523 breaks at 28m, 108m, 184m and 144m, which is 464
 minutes. The container restarted onto a machine where the unchanged R201 tree
 read `npm test` 1,473 and 1,456 CPU-s against 1,117 the day before, about 30%
