@@ -9338,8 +9338,13 @@ if (inShard('frames')) {
   // cells before and after — which is what says R32 did not move the ladder.
   // 48 costs 5.3s against 2.0s; a gate that resolves on coin flips costs more.
   const SEEDS = 48;
+  // R207 — a frame with a middle pair is fielded wearing one: the same body
+  // and its own forelimbs again. Without it the Hexapod is a Trotter with a
+  // worse chassis and an empty bay, which is not the frame anyone buys.
   const rate = (frameId, arch, region, node, grade, team) => {
-    const ids = partsOnFrame(content, frameId, arch.partIds);
+    const own = partsOnFrame(content, frameId, arch.partIds);
+    const ids = frameHasSocket(content.frames[frameId], 'midlimbs')
+      ? [...own, own.find((id) => content.parts[id]?.slot === 'forelimbs')].filter(Boolean) : own;
     let w = 0;
     for (let i = 0; i < SEEDS; i++) {
       const c = makeSimChimera(frameId, ids, grade, content);
@@ -25244,19 +25249,19 @@ if (inShard('wire')) {
 // already greys out a held creature and names where it is. 1,221 bytes
 // became 898, and the comments that explained it went to data/notes/scars.md
 // (PROSE_CAP stays where it was: +9 bytes).
-// R207 — 336 -> 338, measured at 337.20 on a tree that read 335.88 before
+// R207 — 336 -> 338, measured at 337.35 on a tree that read 335.88 before
 // it. The Hexapod's middle pair takes two kinds of part and exists only on a
 // frame that can draw it, and every reader of a socket is eager: the renderer
 // states both rules once (506 bytes), the panel row that explains the pair is
-// in `analyze` because the battle reads the same report (650), and the vat
-// and the grant ask the geometry (193).
+// in `analyze` because the battle reads the same report (802), and the vat
+// and the grant ask the geometry (199).
 //
 // Paid down before it was raised: the row's wording went to data/copy.json
-// and its arithmetic into one templated call (865 bytes became 650), and the
-// A9 essay on `theaterGrants` became a pointer to data/notes/frames.md, which
-// already said it. PROSE_CAP stays where it was: the eager graph carries
-// 0.2 KB LESS prose than before R207.
-const KB_CAP = 338;        // CODE only, measured at 337.20
+// (its four ids are spelled out, because the copy gate reads literal calls),
+// and the A9 essay on `theaterGrants` became a pointer to
+// data/notes/frames.md, which already said it. PROSE_CAP stays where it was:
+// the eager graph carries 0.2 KB LESS prose than before R207.
+const KB_CAP = 338;        // CODE only, measured at 337.35
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.

@@ -8124,10 +8124,14 @@ written so that it has something on screen when it ships.
     buy it.
   * **The worn-chassis rule** asks only of the frames its dominion-halted
     walks bought.
+  * **A9's "every chassis is the best answer somewhere"** fields the
+    Hexapod wearing its middle pair (the archetype's own forelimbs again).
+    Fielded with an empty bay it is a Trotter with a worse chassis and
+    could never win a cell.
   * **R152's empire band, 5 -> 7.5pp**, re-derived R186's way: the clean
     game reads +5.88 (fixed costs from the three new stalls), break 242
     +9.27, break 243 about +23. The table is in the rule.
-  * **KB_CAP 336 -> 338** (measured 337.20), paid down first. The eager
+  * **KB_CAP 336 -> 338** (measured 337.35), paid down first. The eager
     graph carries 0.2 KB less prose than before.
   * **Breaks 541-548:** the two-kind socket, the frame-geometry grant, the
     refusal's reason, the panel row, the far middle leg, the vat, the pool's
