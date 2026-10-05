@@ -1,5 +1,86 @@
 # PROGRESS
 
+## Session 234 — R210: the ranch through the window ✅
+
+**The Ranch opens on a field under the header's sky: a fence, a barn with
+the incubator's eggs glowing in its window, a trough, two lamps, and the
+player's own animals grazing in a row, each opening its own card. The
+season is the grass, the calendar's weather falls on it, and the lamps come
+on after dark. Fed animals munch and groomed ones shine. It arrives after the
+first paint, so the boot budget did not move, and the Ranch's budgets moved
+by exactly its height.**
+
+### What shipped
+
+- **`ranch/pasture.js`** (pure, lazy): `pastureScene` decides what is in
+  the field; `pastureMarkup` draws it. Fetched by `main.js` beside the sky
+  and handed to the Ranch as `ctx.pasture`.
+- **`data/pasture.json`** (deferred with the shape files): the spots, the
+  cap, the crop, four seasons, five weathers, the scenery, the lamps, the
+  egg slots and the care windows. Its note is `data/notes/pasture.md`.
+- **The animals are buttons** carrying the agenda rows' `data-open-fold`, so
+  the Ranch's own handler opens the card. No new control, nothing new for
+  the handlers gate to press.
+- **CSS** for the field and its motion, paid for by moving four comment
+  essays from `style.css` to `docs/STYLE.md`. Three lines of copy.
+- **The Ranch's height budgets** moved by the pasture's 174px, with the
+  arithmetic beside them in `tools/height.js`.
+- **Gates:** an R210 smoke block. **Breaks 574-584.**
+
+### Found on the way
+
+- **The overflow line wrapped** at 380px. It was cut to one line rather
+  than budgeted.
+- **The animals were half their buttons** in a portrait's crop; the
+  pasture asks for a tighter one, from data.
+- **The hay tuft was as wide as the animal**, because `.pasture-animal svg`
+  outranked `.pasture-hay`. The creature rule names its own wrapper now.
+- **The orphan gate called `pastureMarkup` dead** on the first battery run:
+  the Ranch read it as `ctx.pasture.pastureMarkup`, a property access the
+  gate cannot follow. The shell now destructures it in the
+  `.then(({ pastureMarkup }) => …)` form the gate reads, and hands the
+  function itself to the Ranch. My shard-z runs never ran that block (it is
+  shard c's), which is how it reached the battery.
+- **My first fresh-founding probe was not fresh**: it ran after a loaded
+  save, and the page saved on its way out after the storage was cleared. It
+  runs first now.
+
+### Verification
+
+- **`npm test`, run alone:** 11 of 11 jobs green. 1,398 CPU-seconds of
+  1,641, 450s wall.
+- **Battery:**
+  - `--anchors`: 575 of 575.
+  - `--only` over breaks 574-584 and the twenty-nine aimed near R210's code
+    (the Ranch, the shell's after-paint block, the loader, the copy, the
+    height budgets): 40 of 40 caught, behind a 41-of-41 green baseline, in
+    34 minutes. The first attempt's baseline went red on the orphan gate
+    (above) and was stopped and re-run after the fix.
+- **Boot:** first paint 1,195 KB before and after, against an unchanged
+  1,197. Eager code is 337.9 KB against an unchanged 338, prose 260.9
+  against 261, and there are still 51 eager modules. The pasture's module
+  and data arrive after the paint.
+- **Height:** green on the re-derived Ranch budgets: shut 2,014 of 2,154,
+  chrome 1,169 of 1,224.
+- **a11y, wide, handlers, scope and release gates green.** The a11y gate
+  measured the pasture's buttons: 122 distinct controls, up from 121.
+- **At 380px** (scratchpad probe, real UI):
+  - zero console errors on a fresh founding, on a v63 save migrated to v64,
+    and on the day-180 save across eight scenes;
+  - a fresh lab's pasture holds its own three animals and nothing past the
+    fence;
+  - the day-180 pasture shows six of 18 and counts the other 12;
+  - all four seasons and all five weathers, lamps lit at night and dusk and
+    dark by day;
+  - tapping an animal opens its card and scrolls to it, and the card is
+    still open after a reload;
+  - under reduced motion nothing in the pasture animates;
+  - nothing scrolls sideways.
+
+### Next session
+
+R211: the county on a map. The next full battery is due around R212.
+
 ## Session 233 — R209: battles you can feel ✅
 
 **A fight now looks like the move that was thrown, happens somewhere, and

@@ -8445,6 +8445,10 @@ written so that it has something on screen when it ships.
   * **`.pasture-animal svg` outranked the hay's own width**, so the tuft
     was drawn as wide as the animal. The creature rule now names its own
     wrapper.
+  * **The orphan gate called `pastureMarkup` dead:** the Ranch read it as a
+    property of the module, which the gate cannot follow. The shell now
+    destructures it in the `.then(({ … }))` form the gate reads, and hands
+    the function itself to the Ranch.
   * **Breaks 574-584:**
     - the count past the cap dropped;
     - an animal that opens nothing;
