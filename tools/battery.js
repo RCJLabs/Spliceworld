@@ -7461,10 +7461,15 @@ const BREAKS = [
     // BLIND AGAIN IF the census seed that keeps her (99 until R205, 91 since)
     // leaves VET_SEEDS, or the rule reads the hire log (which a cached save
     // does not carry) instead of the books.
+    // R207's rot check found it MISSED, on `main` as well: at $20 seed 91
+    // hires Doc on day 41 and swaps to her on day 175, so she is on the books
+    // at day 180 after five days' work. $20 no longer prices her out of
+    // every campaign; $25 does (8 of 8 keep Doc, measured), so the break
+    // bills $25.
     n: 519, gate: DIET, name: 'Nurse Gauze is priced out of every campaign, and no gate that reads a whole one notices',
     file: 'data/henchmen.json',
     anchor: '      "fee": 8,',
-    to: '      "fee": 20,',
+    to: '      "fee": 25,',
   },
   {
     // R198 — THE ODDS CLAUSE ITSELF. Without it the agent goes only where a
