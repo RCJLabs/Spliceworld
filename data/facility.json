@@ -59,6 +59,39 @@
             "tableHours": 3.333333,
             "dismantleHours": 0.166667
           }
+        },
+        {
+          "level": 3,
+          "name": "Tier III — The Middle Management Wing",
+          "cost": 165000,
+          "requiresNodes": [
+            "boardroom"
+          ],
+          "blurb": "A slab long enough to need a middle, and three more stalls to keep what comes off it. Unlocks the H-class Hexapod: a third pair of limbs that takes arms or legs, so one creature can carry scythes, wings and goat legs at once. Every limb is mass the frame pays for in speed, and every limb votes on the creature's class.",
+          "unlockLine": "Surgery Theater upgraded to Tier III. The new slab arrived in three sections and the middle one has been asking questions.",
+          "news": "Shoe wholesaler reports a bulk order for boots in sets of six. \"Above our pay grade,\" says wholesaler.",
+          "grants": {
+            "frames": [
+              "A",
+              "S",
+              "M",
+              "L",
+              "H"
+            ],
+            "sockets": [
+              "head",
+              "forelimbs",
+              "hindlimbs",
+              "tail",
+              "hide",
+              "organ",
+              "organ2",
+              "midlimbs"
+            ],
+            "stable": 15,
+            "tableHours": 3.333333,
+            "dismantleHours": 0.166667
+          }
         }
       ]
     },
@@ -409,7 +442,8 @@
       "S": 3,
       "M": 5,
       "L": 9,
-      "A": 4
+      "A": 4,
+      "H": 6
     },
     "frameFallback": 5,
     "gradeCost": {

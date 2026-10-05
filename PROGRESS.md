@@ -1,5 +1,90 @@
 # PROGRESS
 
+## Session 231 — R207: the Hexapod ✅
+
+**Surgery Theater Tier III sells a fifth frame with a third pair of limbs.
+The middle pair takes arms or legs, so one creature can carry mantis
+scythes, eagle wings and goat kickers at once. The day-180 walk buys the
+tier and builds three. The full battery ran as the rot check owed since
+R202: 539 of 539 caught, after three rotten breaks were fixed.**
+
+### What shipped
+
+- **Theater Tier III** (`data/facility.json`): $165,000 and the Boardroom.
+  It sells the Hexapod, the `midlimbs` socket and three more stalls
+  (12 -> 15).
+- **The Hexapod Frame** (`data/frames.json`): six limb positions on a long
+  waisted body. Its chassis pays for the third pair: 150 mass, 18 hp,
+  44 stamina, 7 regen (the Trotter is 80/30/48/9). Upkeep frame base 6.
+- **One engine lesson, learned once** (`render/renderer.js`):
+  - a socket may take two kinds of part (`SOCKET_SLOTS`, `socketFits`);
+  - a frame takes a socket only where it can draw it (`frameHasSocket`).
+
+  The grant, `validateSplice`, the picker, the vat, the panel and the
+  planner read those two helpers. The reasoning is in
+  `data/notes/frames.md`.
+- **The physiology panel's Third pair row.** Its words are in
+  `data/copy.json`.
+- **Breaks 541-548.**
+
+### Found on the way
+
+- **The first chassis was simply better.** Priced near a Trotter, Hexapods
+  topped 6 of 24 balance pools and drew an OP flag at Apex. It was swept to
+  150/18/44/7: median rank 45 of 90, no flag, no pool topped.
+- **The balance pool sampled Hexapods without a middle pair.** A random
+  build missing a hindlimb put its "third" limb in the empty hind bay. The
+  new pool rule caught this the first time it ran. Dressing now fills both
+  ordinary pairs, then the middle one.
+- **Gates that assumed four frames or one stable grant**, each re-derived and
+  written up in ROADMAP R207:
+  - diet's bay floor and stable rule;
+  - smoke's paddock, worn-chassis and A9 best-chassis rules;
+  - R152's empire band (5 -> 7.5pp, R186's method, breaks 242 and 243
+    measured);
+  - KB_CAP 336 -> 338, paid down first.
+- **The copy gate reads literal calls only**, so the panel row's four ids
+  are spelled out rather than templated.
+- **The probe's vault was full**, and the world tick rendered the spare
+  Eagle Wings down before the Theater saw them. That is the game working.
+  The probe now makes room first.
+- **The rot check found three MISSED breaks:**
+  - 519 and 433 were already MISSED on `main`;
+  - 249 was blunted by R207's new stalls.
+
+  All three are fixed (ROADMAP R207 has the numbers) and were re-run caught
+  inside complete chunks.
+- **Two container restarts**, one onto a host walking at half speed, and a
+  two-hour cap on background commands, so the battery ran as twelve chunks.
+
+### Verification
+
+- **`npm test`, run alone, on the final tree:** 11 of 11 jobs green.
+  1,315 CPU-seconds of 1,425, 346s wall, warm cache.
+- **Battery:**
+  - `--anchors`: 539 of 539.
+  - Full battery: twelve complete chunks, twelve green baselines (41 of 41
+    each), 539 of 539 caught, none CRASHED or ELSEWHERE.
+- **At 380px** (scratchpad probe, real UI, zero console errors, no sideways
+  scroll):
+  - fresh founding;
+  - `main`'s own day-180 save (v64, 13 chimeras) loads and reloads with
+    every body unchanged, and the Hexapod is locked at Tier II;
+  - on the day-180 save set back to Tier II, buying Tier III on screen
+    charges $165,000, shows the unlock line and unlocks the frame;
+  - the middle-pair picker offers arms and legs together;
+  - all six limb positions draw on the slab, and the panel reads "Third
+    pair: Six limbs";
+  - the splice survives a reload, wins a spar (+7 xp, warRecord +1) and
+    survives another reload.
+- **The day-180 walk:** Tier III on day 118.75 and three Hexapods by day
+  122.92. 11 of 14 cached seeds buy the tier, and each keeps 1 to 4.
+
+### Next session
+
+R208: the Surgery Theater you can see. The battery is fresh as of R207, so
+the next rot check is due around R212.
+
 ## Session 230 — R206: four animals nature spliced first ✅
 
 **Elephant, Platypus, Mantis Shrimp and Cuttlefish are in the game, on four

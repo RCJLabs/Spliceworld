@@ -21,7 +21,7 @@
 // seen and never a gift from the end of the game.
 
 import { rngStream, pick, pickFresh } from '../util/rng.js';
-import { SOCKETS, slotOfSocket } from '../render/renderer.js';
+import { SOCKETS, slotOfSocket, slotsOfSocket, frameHasSocket } from '../render/renderer.js';
 import { GRADES, gradeIndexOf } from './extract.js';
 import { analyze } from './physiology.js';
 import { isSettled } from './chimera.js';
@@ -138,7 +138,7 @@ function conceive(plan, state, content, rng, t) {
 
     let partId = token.partId;
     let grade = token.grade;
-    const pool = knownBySlot[slotOfSocket(socketId)] ?? [];
+    const pool = slotsOfSocket(socketId).flatMap((s) => knownBySlot[s] ?? []);
     if (pool.length && rng() < t.chaosChance) {
       partId = pick(rng, pool);
       if (partId !== token.partId) chaosParts.push(partId);
@@ -179,10 +179,12 @@ function conceive(plan, state, content, rng, t) {
   // hindquarters). The vat is allowed to be a lunatic, not to violate
   // geometry — a part in a socket the chassis lacks would draw nowhere and
   // still pay its stats, which is a free limb rather than a joke.
-  const slots = content.frames?.[frame]?.slots;
-  if (slots) {
+  // R207 — nor a middle pair on a chassis without one.
+  const chassis = content.frames?.[frame];
+  const slots = chassis?.slots;
+  if (chassis) {
     for (const socketId of Object.keys(parts)) {
-      if (!slots.includes(slotOfSocket(socketId))) delete parts[socketId];
+      if ((slots && !slots.includes(slotOfSocket(socketId))) || !frameHasSocket(chassis, socketId)) delete parts[socketId];
     }
   }
 

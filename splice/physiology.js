@@ -6,6 +6,8 @@
 import { gradeOf } from './extract.js';
 import { renderIcon } from '../ui/icons.js';
 import { frameOf, speciesOf, isRetired } from '../data/catalog.js';
+import { frameHasSocket, socketFits } from '../render/renderer.js';
+import { copy } from '../util/text.js';
 
 export const PHYS_TUNING = {
   massSpeedPenaltyPer: 50, // -1 speed per this much mass
@@ -260,6 +262,16 @@ export function analyze(frameId, tokens, content, socketCount = 6) {
           ? `${emptySockets} empty sockets — survivable, but you are leaving stats on the table.`
           : 'One empty socket. Close enough for government work.',
     });
+  }
+
+  // R207 — data/notes/frames.md.
+  if (frameHasSocket(frame, 'midlimbs')) {
+    const limbs = tokens.map((t) => content.parts[t.partId]).filter((p) => socketFits('midlimbs', p?.slot));
+    const v = { limbs: limbs.length * 2, frame: frame.name, mass: limbs.reduce((m, p) => m + p.phys.mass, 0),
+      votes: limbs.filter((p) => content.classes?.[p.classAffinity]).length };
+    rows.push(limbs.length > 2
+      ? { label: copy(content, 'theater.pair_label'), value: copy(content, 'theater.pair_full_value'), note: copy(content, 'theater.pair_full_note', v) }
+      : { label: copy(content, 'theater.pair_label'), value: copy(content, 'theater.pair_some_value', v), note: copy(content, 'theater.pair_some_note', v) });
   }
 
   // Combos present in this build

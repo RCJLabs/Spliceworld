@@ -18,10 +18,19 @@ export const SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ']
 // Surgery Theater Tier II opens `organ2` (ROADMAP §3.4: "Organ ×1, ×2 at
 // Theater Tier 2"). Keeping socket ids string-keyed means every genome ever
 // saved is still a valid genome: old saves simply never mention organ2.
-export const SOCKETS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ', 'organ2'];
+export const SOCKETS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ', 'organ2', 'midlimbs'];
 
 export function slotOfSocket(socketId) {
   return socketId.replace(/\d+$/, '');
+}
+
+// R207 — data/notes/frames.md, frames[].sockets.
+const SOCKET_SLOTS = { midlimbs: ['forelimbs', 'hindlimbs'] };
+export function slotsOfSocket(socketId) {
+  return SOCKET_SLOTS[socketId] ?? [slotOfSocket(socketId)];
+}
+export function socketFits(socketId, slot) {
+  return slotsOfSocket(socketId).includes(slot);
 }
 
 const OUTLINE = '#2b2440';
@@ -35,6 +44,7 @@ const STROKE_DEFAULT = 5;
 // creature's depth order, back to front.
 const LAYERS = [
   ['forelimbs', 'forelimb_far'],
+  ['midlimbs', 'midlimb_far'],
   ['hindlimbs', 'hindlimb_far'],
   ['tail', 'tail'],
   ['torso', null],
@@ -42,9 +52,14 @@ const LAYERS = [
   ['organ2', 'organ2'],
   ['organ', 'organ'],
   ['hindlimbs', 'hindlimb_near'],
+  ['midlimbs', 'midlimb_near'],
   ['forelimbs', 'forelimb_near'],
   ['head', 'head'],
 ];
+
+export function frameHasSocket(frame, socketId) {
+  return LAYERS.filter(([s, at]) => s === socketId && at).every(([, at]) => !!frame?.sockets?.[at]);
+}
 
 export function indexContent(raw) {
   const byId = (arr) => Object.fromEntries(arr.map((x) => [x.id, x]));
@@ -442,8 +457,8 @@ export function validateGenome(genome, content) {
     if (partId == null) continue;
     const part = content.parts[partId];
     if (!part) errors.push(`Unknown part: ${partId}`);
-    else if (part.slot !== slotOfSocket(socketId)) {
-      errors.push(`${partId} is a ${part.slot} part, not ${slotOfSocket(socketId)}`);
+    else if (!socketFits(socketId, part.slot)) {
+      errors.push(`${partId} is a ${part.slot} part, not ${slotsOfSocket(socketId).join(' or ')}`);
     }
   }
   return errors;

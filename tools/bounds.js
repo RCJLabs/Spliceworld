@@ -33,8 +33,9 @@ function ext(shapes) {
 // adding a bay (Theater Tier II's organ2) is covered without a code edit.
 const SOCK = {
   head: ['head'],
-  forelimbs: ['forelimb_far', 'forelimb_near'],
-  hindlimbs: ['hindlimb_far', 'hindlimb_near'],
+  // R207 — either kind of limb may sit in the Hexapod's middle pair.
+  forelimbs: ['forelimb_far', 'forelimb_near', 'midlimb_far', 'midlimb_near'],
+  hindlimbs: ['hindlimb_far', 'hindlimb_near', 'midlimb_far', 'midlimb_near'],
   tail: ['tail'],
   organ: ['organ', 'organ2'],
 };

@@ -381,6 +381,12 @@ const SHARD_A = ['node', '-e',
 const SHARD_B = ['node', '-e',
   "process.env.SW_SHARD = 'b'; await import('./tools/smoke.js');"];
 
+// R207 — THE HEXAPOD. Tier III's rules live in the Theater tier block, which
+// every shard runs, so its breaks pay for the common path alone: `z` names no
+// block, which is how R90 measured that path.
+const HEXAPOD = ['node', '-e',
+  "process.env.SW_SHARD = 'z'; await import('./tools/smoke.js');"];
+
 // Shard d, per SHARD_OF. R145 opened this lane (a fight ends, and it ends the
 // right way: six seeds x 3,536 scripted fights, median 9 on every one, against
 // two on seed 11 that never ended at all before it) and named the constant
@@ -2301,7 +2307,7 @@ const BREAKS = [
     // CHASSIS_SLOTS and still shipped a dead bay.
     n: 273, gate: DIET, name: 'sockets are matched by name rather than by the slot they take',
     file: 'tools/sim.js',
-    anchor: '        const socketId = granted.find((sid) => slotOfSocket(sid) === part.slot && !slots[sid]);',
+    anchor: '        const socketId = granted.find((sid) => socketFits(sid, part.slot) && !slots[sid]);',
     to: '        const socketId = granted.find((sid) => sid === part.slot && !slots[sid]);',
   },
   {
@@ -2479,6 +2485,9 @@ const BREAKS = [
     // R157 — the other half of 152. THEATER_STALLS reserves the room; this is
     // the rule that stops the splice policy taking it. Break it and the walker
     // splices to the whole grant, both clocks starve, and coverage says so.
+    // R207's rot check found it MISSED: Tier III's new stalls let the Wing
+    // graduate two captives on the day it is bought, past a floor of one.
+    // The diet gate's rehab floor is five now; this break reads 2.
     n: 249, gate: DIET, name: 'the splice policy takes the whole grant again, so the vat and the Wing never get a stall',
     file: 'tools/sim.js',
     anchor: '      const cap = Math.min(room.cap - THEATER_STALLS, opts.stableCap ?? Infinity);',
@@ -3147,7 +3156,7 @@ const BREAKS = [
     // The shape R77 found: a number in the spec drifts from the data and
     // nothing can fail, because prose does not run.
     n: 49, gate: ROADMAP, name: 'a number the roadmap states drifts from the data',
-    file: 'ROADMAP.md', anchor: '- frames: 4', to: '- frames: 3',
+    file: 'ROADMAP.md', anchor: '- frames: 5', to: '- frames: 4',
   },
   {
     n: 50, gate: ROADMAP, name: 'SAVE_VERSION goes stale in the spec',
@@ -5755,7 +5764,7 @@ const BREAKS = [
     // matches, the patch applies, and the defect no longer manifests.
     n: 231, gate: KITE, name: 'the planner dresses every chassis from the whole vault, and the Kite is refused for owning a leg',
     file: 'splice/facility.js',
-    anchor: '    sockets: frameSlots ? sockets.filter((s) => frameSlots.includes(slotOfSocket(s))) : sockets,',
+    anchor: '    sockets: sockets.filter((s) => (!frameSlots || frameSlots.includes(slotOfSocket(s))) && (!frame || frameHasSocket(frame, s))),',
     to: '    sockets,',
   },
   {
@@ -6606,6 +6615,10 @@ const BREAKS = [
     // R190 split rule 3 into a coverage half and a bill half (`worse`), so
     // this aims at the coverage half alone: the vet's rule is untouched and
     // only the hand's swap stops.
+    // R207's rot check found it MISSED, on `main` as well: smoke's walks halt
+    // at dominion, around day 28, when the kept hand still covers most of
+    // the herd. The rule now asks the day-180 save too, where she has missed
+    // 1,862 meals to 1,401 given.
     n: 433, gate: SHARD_B, name: 'a hand hired for a small herd keeps the job long after the herd has outgrown her',
     file: 'tools/sim.js',
     anchor: '  const worse = (held, want) => (bill(held) === null ? coverage(held) < coverage(want)',
@@ -7455,10 +7468,15 @@ const BREAKS = [
     // BLIND AGAIN IF the census seed that keeps her (99 until R205, 91 since)
     // leaves VET_SEEDS, or the rule reads the hire log (which a cached save
     // does not carry) instead of the books.
+    // R207's rot check found it MISSED, on `main` as well: at $20 seed 91
+    // hires Doc on day 41 and swaps to her on day 175, so she is on the books
+    // at day 180 after five days' work. $20 no longer prices her out of
+    // every campaign; $25 does (8 of 8 keep Doc, measured), so the break
+    // bills $25.
     n: 519, gate: DIET, name: 'Nurse Gauze is priced out of every campaign, and no gate that reads a whole one notices',
     file: 'data/henchmen.json',
     anchor: '      "fee": 8,',
-    to: '      "fee": 20,',
+    to: '      "fee": 25,',
   },
   {
     // R198 — THE ODDS CLAUSE ITSELF. Without it the agent goes only where a
@@ -7708,6 +7726,87 @@ const BREAKS = [
     anchor: '.shift-c { animation: mantle-shift 6s ease-in-out -4s infinite; }\n',
     to: '',
     expect: 'a part that moves has a stylesheet that moves it',
+  },
+  {
+    // R207 — THE MIDDLE PAIR FORGETS IT TAKES TWO KINDS OF PART. The socket
+    // falls back to its own name, so it takes a part of slot `midlimbs`,
+    // which nothing is. The first rule to notice is the content-coherence
+    // one: the Hexapod draws a middle pair it can no longer fill.
+    // BLIND AGAIN IF the coherence rule stops reading the renderer's helper.
+    n: 541, gate: HEXAPOD, name: 'the middle pair takes neither arms nor legs, and the Hexapod is a Trotter with a gap',
+    file: 'render/renderer.js',
+    anchor: "const SOCKET_SLOTS = { midlimbs: ['forelimbs', 'hindlimbs'] };",
+    to: 'const SOCKET_SLOTS = {};',
+    expect: 'draws a midlimb_near socket but supports none of midlimbs',
+  },
+  {
+    // R207 — EVERY FRAME IS OFFERED THE MIDDLE PAIR. The grant stops asking
+    // the frame where it would draw one, so a Trotter takes a third limb the
+    // renderer skips: a free limb that pays its stats and draws nowhere.
+    // BLIND AGAIN IF the smoke rule asks only the Hexapod.
+    n: 542, gate: HEXAPOD, name: 'the Theater offers every chassis a middle pair it has nowhere to draw',
+    file: 'splice/facility.js',
+    anchor: '    sockets: sockets.filter((s) => (!frameSlots || frameSlots.includes(slotOfSocket(s))) && (!frame || frameHasSocket(frame, s))),',
+    to: '    sockets: sockets.filter((s) => (!frameSlots || frameSlots.includes(slotOfSocket(s)))),',
+    expect: 'only the frame with positions for it is offered the middle pair',
+  },
+  {
+    // R207 — THE REFUSAL GIVES THE WRONG REASON. A Trotter owner who tries the
+    // middle pair is told to upgrade a Theater they have already upgraded.
+    // BLIND AGAIN IF the smoke rule stops reading the message for the frame.
+    n: 543, gate: HEXAPOD, name: 'a Trotter is refused the middle pair and told to buy a tier it owns',
+    file: 'splice/theater.js',
+    anchor: '        chassis && ((slots && !slots.includes(slotOfSocket(socketId))) || !frameHasSocket(chassis, socketId))',
+    to: '        chassis && slots && !slots.includes(slotOfSocket(socketId))',
+    expect: 'a frame without the positions refuses it, and says which reason',
+  },
+  {
+    // R207 — THE PANEL SAYS NOTHING ABOUT THE THIRD PAIR. Mass and votes still
+    // move the Speed and Class rows, and nothing says why.
+    n: 544, gate: HEXAPOD, name: 'the physiology panel stops explaining the third pair',
+    file: 'splice/physiology.js',
+    anchor: "  if (frameHasSocket(frame, 'midlimbs')) {",
+    to: '  if (false) {',
+    expect: 'the panel explains the third pair',
+  },
+  {
+    // R207 — THE FAR MIDDLE LEG IS NEVER DRAWN. The renderer loses one layer;
+    // the Hexapod still owns the socket, because the near position is enough
+    // for the grant, so only a rule that looks at the picture can see it.
+    n: 545, gate: HEXAPOD, name: 'the renderer stops drawing the far middle leg',
+    file: 'render/renderer.js',
+    anchor: "  ['midlimbs', 'midlimb_far'],\n",
+    to: '',
+    expect: 'all six limbs draw: midlimb_far',
+  },
+  {
+    // R207 — THE VAT KEEPS A MIDDLE PAIR ON A CHASSIS WITHOUT ONE. A Hexapod
+    // parent's third limb rides into a Trotter child, where it draws nowhere.
+    n: 546, gate: HEXAPOD, name: "the vat bolts a Hexapod's middle pair to a chassis that has none",
+    file: 'splice/chaos.js',
+    anchor: '      if ((slots && !slots.includes(slotOfSocket(socketId))) || !frameHasSocket(chassis, socketId)) delete parts[socketId];',
+    to: '      if (slots && !slots.includes(slotOfSocket(socketId))) delete parts[socketId];',
+    expect: 'which has no position for it',
+  },
+  {
+    // R207 — THE BALANCE POOL'S HEXAPODS GO OUT WITH TWO PAIRS. The gate then
+    // measures a heavier Trotter and calls the Hexapod balanced.
+    // BLIND AGAIN IF the smoke rule stops counting limbs on the pool's builds.
+    n: 547, gate: HEXAPOD, name: 'the balance pool samples Hexapods without a third limb',
+    file: 'tools/sim.js',
+    anchor: '    return [...ids, pick(rng, limbs.filter((id) => !ids.includes(id)))];',
+    to: '    return ids;',
+    expect: 'the pool samples every Hexapod wearing three pairs',
+  },
+  {
+    // R207 — THE PLANNER FORGETS THE FRAMES THE DATA ADDS. It goes back to its
+    // own four-letter list, the walk buys Tier III and never builds what it
+    // paid for, and the middle pair starves.
+    n: 548, gate: DIET, name: 'the walker buys the Hexapod and never builds one',
+    file: 'tools/sim.js',
+    anchor: "  for (const frameId of new Set(['M', 'S', 'L', 'A', ...Object.keys(content.frames)])) {",
+    to: "  for (const frameId of ['M', 'S', 'L', 'A']) {",
+    expect: 'and never built Hexapod Frame',
   },
 ];
 

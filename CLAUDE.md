@@ -79,7 +79,14 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (4h45m to 6h30m. R202 is the SIXTEENTH reading, and it is
+**The full battery (4h45m to 6h30m. R207 is the SEVENTEENTH reading and is
+not comparable: two container restarts, one onto a host that walked at half
+speed, cost two runs and pushed it to TWELVE chunks of at most 104 minutes
+(a background command stops at two hours, and chunk 3 overran it). The
+complete runs sum to 623 minutes with twelve baselines, all green; 539 of
+539 caught, none CRASHED or ELSEWHERE, after three MISSED were fixed (519
+and 433 already rotten on `main`, 249 blunted by R207's own stalls). Do not
+move the range for it. R202 is the SIXTEENTH reading, and it is
 NOT on the same host: 523 breaks at 28m, 108m, 184m and 144m, which is 464
 minutes. The container restarted onto a machine where the unchanged R201 tree
 read `npm test` 1,473 and 1,456 CPU-s against 1,117 the day before, about 30%
@@ -156,7 +163,7 @@ R116 before chunking: one to a tree edited underneath it, one to a restart
 twenty-five minutes in. Build the id list from the file, because break
 numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327, 347
 are retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
-531 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
+539 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
 gene probe, R183 added 399-401 for the job headline, R185 added 402-404 for
 the Dex tab list, R176 added 405-407 for the lazy synth, R179 added 408-412
 for the expedition, R180 added 413-422 for the mission board, R181 added
@@ -178,9 +185,10 @@ for the height and keyboard gates refusing it too, R202 added
 R203 added 533-534 for the Dex drawing what it held back, and R204
 added 535-536 for the roster holding room for it, and R205 added
 537 for the Rumbler's grind on the bodies it does not ground, and R206
-added 538-540 for the cuttlefish's coat holding still when asked.
+added 538-540 for the cuttlefish's coat holding still when asked, and R207
+added 541-548 for the Hexapod's middle pair.
 The count and the top id have
-not agreed since the retirements: 531 breaks, numbered to 540. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
+not agreed since the retirements: 539 breaks, numbered to 548. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
 against a tree carrying 410, because a milestone that adds breaks has to
 remember to come back here and nobody had. Trust `--anchors`, which prints
 the real total, over this sentence. Count with `--anchors`, which

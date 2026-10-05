@@ -133,7 +133,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 
 - species: 52
 - parts: 306
-- frames: 4
+- frames: 5
 - regions: 5
 - nodes: 23
 - keywords: 30
@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**8 entries queued.** R207, R208, R209, R210, R211, R212, R213, R214.
+**7 entries queued.** R208, R209, R210, R211, R212, R213, R214.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -8063,8 +8063,8 @@ written so that it has something on screen when it ships.
   * **The gates:** the suite is green. The balance pools are clean at every
     grade, and the part pool's class spread is 1.15x (49 / 54 / 47).
 
-- **R207 — The Hexapod: Theater Tier III and a third pair of limbs.** Every
-  chimera has at most two pairs of limbs, and on a day-180 save there is
+- **R207 — The Hexapod: Theater Tier III and a third pair of limbs.** ✅
+  Every chimera has at most two pairs of limbs, and on a day-180 save there is
   nothing left to buy. Surgery Theater Tier III sells a fifth frame with a
   third limb pair. Its `midlimb_near` and `midlimb_far` sockets take either a
   forelimb or a hindlimb part, so one creature can carry scythes, eagle wings
@@ -8077,6 +8077,98 @@ written so that it has something on screen when it ships.
   saves load untouched; the balance gate passes at every grade with Hexapod
   builds in the pool; the physiology panel explains the third pair; and the
   day-180 walk buys the tier and builds one.*
+
+  **Shipped: a fifth frame, a third pair of limbs, and the top of the
+  Theater.**
+  * **Theater Tier III, "The Middle Management Wing"** (`facility.json`):
+    $165,000 and the Boardroom. It sells the H-class Hexapod, the `midlimbs`
+    socket and three more stalls (12 -> 15). It has an unlock line and a
+    news line.
+  * **The Hexapod Frame** (`frames.json`): a long two-lobed body with a
+    waist, and six limb positions. Its chassis pays for the third pair:
+    150 mass, 18 hp, 44 stamina, 7 regen, against the Trotter's 80, 30, 48
+    and 9. Upkeep frame base 6, between the Trotter's 5 and the Rumbler's 9.
+  * **The engine learns one thing, once** (`render/renderer.js`):
+    - a socket may take more than one kind of part. `midlimbs` takes a
+      forelimb or a hindlimb, and every "does this part fit" reads
+      `socketFits`;
+    - a frame takes a socket only where it has every position the renderer
+      draws it into (`frameHasSocket`). Only the Hexapod has a middle pair,
+      so no other chassis is ever offered one.
+
+    The grant, `validateSplice` (which names the right reason when it
+    refuses), the Theater's picker, the vat and the walker's planner all
+    read those two helpers. The reasoning is in `data/notes/frames.md`.
+  * **The physiology panel** has a Third pair row on any frame with a middle
+    pair: how many limbs, what they weigh and how many class votes they
+    cast. Its words are in `data/copy.json`.
+  * **The harness:**
+    - the planner reads every frame the data adds;
+    - a sim chimera's third limb lands in `midlimbs`;
+    - the balance pool samples every Hexapod with all three pairs.
+  * **Older saves are untouched.** A creature's parts are a map by socket
+    id, so nothing about a save changed and `SAVE_VERSION` stays 64.
+
+  **The gates it moved:**
+  * **The first chassis drafts were simply better.** Priced like a Trotter
+    (120/28/50/9), Hexapod builds topped 6 of the 24 balance pools and drew
+    an OP flag at Apex. At 150/18/44/7 the 200 Hexapod builds sit at median
+    rank 45 of 90, 24 in a top ten, with no flag and no pool topped.
+  * **The diet gate's bay floor** gets the per-socket exception its own
+    comment asked for. The bay is counted on the campaigns that bought it,
+    against a tenth (measured 19 of 97, 19.6%; worst seed 17.6%).
+  * **A new diet rule:** the day-180 walk buys the top of the Theater and
+    builds the frame it adds.
+  * **Stable rules compare each campaign with the grant it bought** (diet
+    and smoke). Tier III adds stalls, and three of fourteen campaigns never
+    buy it.
+  * **The worn-chassis rule** asks only of the frames its dominion-halted
+    walks bought.
+  * **A9's "every chassis is the best answer somewhere"** fields the
+    Hexapod wearing its middle pair (the archetype's own forelimbs again).
+    Fielded with an empty bay it is a Trotter with a worse chassis and
+    could never win a cell.
+  * **R152's empire band, 5 -> 7.5pp**, re-derived R186's way: the clean
+    game reads +5.88 (fixed costs from the three new stalls), break 242
+    +9.27, break 243 about +23. The table is in the rule.
+  * **KB_CAP 336 -> 338** (measured 337.35), paid down first. The eager
+    graph carries 0.2 KB less prose than before.
+  * **Breaks 541-548:** the two-kind socket, the frame-geometry grant, the
+    refusal's reason, the panel row, the far middle leg, the vat, the pool's
+    third limb and the planner's frame list. Breaks 49, 231, 273 and 545
+    were re-aimed at the lines R207 rewrote.
+  * **The rot check (full battery, owed since R202): 539 of 539 caught**,
+    after three breaks were found MISSED and fixed:
+    - **519**: at $20, seed 91 swaps to Nurse Gauze on day 175, so she is on
+      the books at day 180. Already MISSED on `main`. It bills $25 now,
+      which prices her out of all eight census campaigns.
+    - **433**: smoke's payroll walks halt at dominion, around day 28, before
+      a kept hand falls behind. Already MISSED on `main`. The rule now asks
+      the day-180 save too, where she has missed 1,862 meals to 1,401.
+    - **249**: Tier III's own doing. Its three stalls open on the day it is
+      bought, and the Wing graduates two captives in them past the diet
+      gate's floor of one. The rehab floor is five (clean reads 12).
+
+  **Done when, checked.**
+  * **Buying Theater Tier III unlocks the Hexapod:** at 380px on the
+    day-180 save set back to Tier II, the Hexapod button is locked. Buying
+    the tier on screen charges $165,000, shows the unlock line and enables
+    the button.
+  * **A six-limbed chimera splices, renders, fights and survives a reload:**
+    Mantis Scythes, Eagle Wings in the middle pair and Goat Kickers. All six
+    limb positions draw on the slab and in the Pens. It survives a reload,
+    wins a spar (+7 xp) and survives another reload, with 0 console errors
+    and no sideways scroll.
+  * **Older saves load untouched:** `main`'s own day-180 save (v64, 13
+    chimeras) loads and reloads with every chimera's frame and parts
+    unchanged. The Hexapod is locked at its Tier II.
+  * **The balance gate passes at every grade with Hexapods in the pool:**
+    5 to 11 per pool across all 24.
+  * **The panel explains the third pair:** "Third pair: Six limbs", with
+    their mass and their three class votes.
+  * **The day-180 walk buys the tier and builds one:** day 118.75, then
+    three Hexapods on days 118.83, 121.08 and 122.92, all kept. 11 of 14
+    cached seeds buy the tier, and every one of them keeps 1 to 4.
 
 - **R208 — The Surgery Theater you can see.** Three changes:
   * **Parts you can see.** A `partThumbnail` in the renderer draws one part on

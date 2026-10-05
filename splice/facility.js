@@ -5,7 +5,7 @@
 // systems that care read them. The Surgery Theater asks this module what it
 // is allowed to build with; it does not know what a "tier" is.
 
-import { SOCKETS, slotOfSocket } from '../render/renderer.js';
+import { SOCKETS, slotOfSocket, frameHasSocket } from '../render/renderer.js';
 import { fmtMoney } from '../util/text.js';
 
 export function tracks(content) {
@@ -71,7 +71,7 @@ export const HOLD = 'detained';
 export const isHold = (injury) => injury?.reason === HOLD;
 
 const UPKEEP_DEFAULTS = {
-  frameBase: { A: 4, S: 3, M: 5, L: 9 },
+  frameBase: { A: 4, S: 3, M: 5, L: 9, H: 6 },
   frameFallback: 5,
   gradeCost: { standard: 1, prime: 5, apex: 12, prismatic: 22 },
   drawCost: 0.35,
@@ -131,24 +131,19 @@ export function facilityUpkeepPerDay(state, content) {
     .reduce((m, l) => m + (l.cost ?? 0) * f, 0), 0);
 }
 
-// What the Surgery Theater may build with right now.
-//
-// A9: the chassis gets a vote. The facility says which bays you have
-// INSTALLED; the frame says which ones it has anywhere to bolt them. The
-// Kite is a flying wing with no hindquarters, so `hindlimbs` is not a
-// purchase it is missing, it is geometry it does not have. A frame that
-// declares no `slots` supports all of them, so S, M and L — and every save
-// that predates the Kite — behave exactly as they always did.
+// What the Surgery Theater may build with right now: the bays installed, cut
+// to what this chassis has (A9, R207; data/notes/frames.md).
 export function theaterGrants(state, content, frameId = null) {
   const g = grantsOf(state, content, 'theater');
   const sockets = g.sockets ?? SOCKETS;
-  const frameSlots = frameId ? content.frames?.[frameId]?.slots : null;
+  const frame = frameId ? content.frames?.[frameId] : null;
+  const frameSlots = frame?.slots;
   return {
     // No facility data at all (a Node tool with a partial content bundle)
     // means "everything" rather than "nothing" — never lock a player out
     // because a file failed to load.
     frames: g.frames ?? Object.keys(content.frames ?? {}),
-    sockets: frameSlots ? sockets.filter((s) => frameSlots.includes(slotOfSocket(s))) : sockets,
+    sockets: sockets.filter((s) => (!frameSlots || frameSlots.includes(slotOfSocket(s))) && (!frame || frameHasSocket(frame, s))),
     // R91 — the Theater builds the creatures, so the Theater houses them,
     // and its one table decides how often it can change its mind.
     stable: g.stable ?? 12,

@@ -31,7 +31,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadSimContent, campaignWalk, WALK_INJURY_MIX, infirmaryClock } from './sim.js';
-import { infirmaryGrants } from '../splice/facility.js';
+import { infirmaryGrants, theaterGrants } from '../splice/facility.js';
 import { walkedSave, primeWalkCache, walkedAgentCampaign } from './fixtures.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -64,7 +64,12 @@ const SYSTEMS = {
   traits:      { key: 'traitsSeen',    what: 'a heritable trait expressed on a creature' },
   breeding:    { key: 'eggs',          what: 'an egg laid and hatched' },
   gauntlet:    { key: 'gauntletsWon',  what: 'a Gauntlet stage cleared' },
-  rehab:       { key: 'rehabbedEver',  what: 'a captive talked onto the roster' },
+  // R207 raises the floor from 1 to 5, combos' argument again. Break 249
+  // takes the Theater's reserved stalls away, and Tier III used to be the end
+  // of that: the three stalls it adds open on the day it is bought, the Wing
+  // enrols two captives in them before the splice policy fills them, and two
+  // graduations passed a floor of one. Clean: 12 here, 10 on R206.
+  rehab:       { key: 'rehabbedEver', min: 5, what: 'a captive talked onto the roster' },
 };
 
 const content = loadSimContent();
@@ -157,6 +162,15 @@ const COMBO_SEEDS = [2026, 7, 101, 4242, 55, 900, 31];
 // sells. One home, so the rule below and its failure text read the same
 // number; see the derivation beside that rule.
 const BAY_FLOOR = 1 / 3;
+// R207 — THE ONE EXCEPTION THE RULE BELOW ASKS FOR, with its derivation.
+// `midlimbs` is sold by Theater Tier III, which the walk buys on day 104-135,
+// long after the roster is built, and only the Hexapod has the positions.
+// What fills it is the three stalls Tier III adds, so a full share is about
+// 3 of 16. On the six of seven seeds that own the tier: 2026 3/16, 7 3/17,
+// 4242 3/16, 55 3/16, 900 4/16, 31 3/16 — worst 17.6%, pooled 19/97 = 19.6%.
+// Break 273 reads 0. A tenth sits under the worst clean seed and far above
+// zero.
+const BAY_FLOORS = { midlimbs: 1 / 10 };
 // Measured 32.6%; break 151 puts it at 1.2%. The floor sits between them and
 // near enough to today's number that drift fails.
 const COMBO_REACH = 0.22;
@@ -251,11 +265,16 @@ const COMBO_REACH = 0.22;
   // derivation, not to lower it for everything.
   {
     const worn = new Map();
+    // R207 — counted on the campaigns that BOUGHT the bay, which until Tier
+    // III was every campaign for every bay.
+    const owners = new Map();
     let bodies = 0;
     for (const seed of COMBO_SEEDS) {
       const save = seed === 2026 ? walk.save : walkedSave({ seed, days: 180 });
+      const owned = theaterGrants(save, content).sockets;
       for (const c of save.chimeras ?? []) {
         bodies++;
+        for (const socketId of owned) owners.set(socketId, (owners.get(socketId) ?? 0) + 1);
         for (const socketId of Object.keys(c.tokens ?? {})) {
           worn.set(socketId, (worn.get(socketId) ?? 0) + 1);
         }
@@ -266,19 +285,21 @@ const COMBO_REACH = 0.22;
     const sellable = new Set(
       (content.facility?.theater?.levels ?? []).flatMap((lv) => lv.grants?.sockets ?? [])
     );
-    const share = (socketId) => (bodies ? (worn.get(socketId) ?? 0) / bodies : 0);
-    const starved = [...sellable].filter((socketId) => share(socketId) < BAY_FLOOR);
+    const of = (socketId) => owners.get(socketId) ?? 0;
+    const share = (socketId) => (of(socketId) ? (worn.get(socketId) ?? 0) / of(socketId) : 0);
+    const floor = (socketId) => BAY_FLOORS[socketId] ?? BAY_FLOOR;
+    const starved = [...sellable].filter((socketId) => share(socketId) < floor(socketId));
     if (REPORT) {
       console.log(`
 sockets across ${bodies} kept chimeras: `
-        + [...sellable].map((k) => `${k} ${worn.get(k) ?? 0} (${(100 * share(k)).toFixed(1)}%)`).join(', '));
+        + [...sellable].map((k) => `${k} ${worn.get(k) ?? 0}/${of(k)} (${(100 * share(k)).toFixed(1)}%)`).join(', '));
     }
     if (starved.length) {
       fails.push('starved bay: the Surgery Theater sells '
-        + starved.map((k) => `${k} (${worn.get(k) ?? 0} of ${bodies}, `
-          + `${(100 * share(k)).toFixed(1)}%)`).join(', ')
-        + ` and under ${(100 * BAY_FLOOR).toFixed(0)}% of the chimeras these campaigns kept`
-        + ' is wearing it — a bay the balance model cannot fill makes every number it'
+        + starved.map((k) => `${k} (${worn.get(k) ?? 0} of ${of(k)}, `
+          + `${(100 * share(k)).toFixed(1)}%, under ${(100 * floor(k)).toFixed(0)}%)`).join(', ')
+        + ' and too few of the chimeras these campaigns kept'
+        + ' are wearing it — a bay the balance model cannot fill makes every number it'
         + ' derives a measurement of a different game');
     }
   }
@@ -316,10 +337,14 @@ sockets across ${bodies} kept chimeras: `
 // where a majority is two campaigns.
 {
   const { stableRoom } = await import('../splice/facility.js');
-  const grant = Math.max(...(content.facility.theater.levels ?? []).map((l) => l.grants?.stable ?? 0));
+  // R207 — each campaign against the grant IT bought, since Tier III adds
+  // stalls and three of fourteen campaigns never buy it.
+  const saves = COMBO_SEEDS.map((seed) => (seed === 2026 ? walk.save : walkedSave({ seed, days: 180 })));
+  const grants = saves.map((save) => theaterGrants(save, content).stable);
+  const grant = theaterGrants(walk.save, content).stable;
   const cap = stableRoom(walk.save, content).cap;
-  const rosters = COMBO_SEEDS.map((seed) => (seed === 2026 ? walk.save : walkedSave({ seed, days: 180 })).chimeras?.length ?? 0);
-  const over = rosters.filter((n) => n > grant).length;
+  const rosters = saves.map((save) => save.chimeras?.length ?? 0);
+  const over = rosters.filter((n, i) => n > grants[i]).length;
   if (REPORT) {
     console.log(`\n  stable: Theater grants ${grant}, paddock took it to ${cap};`
       + ` rosters ${COMBO_SEEDS.map((s, i) => `${s}: ${rosters[i]}`).join(', ')} — ${over} of ${COMBO_SEEDS.length} over`);
@@ -333,7 +358,30 @@ sockets across ${bodies} kept chimeras: `
   // feature shipping as a number on a screen.
   if (over * 2 <= COMBO_SEEDS.length) {
     fails.push(`the stable grew to ${cap} and ${over} of ${COMBO_SEEDS.length} campaigns finished over`
-      + ` the Theater's own ${grant} (${rosters.join(', ')}) — so the stalls a paddock bought went unused`);
+      + ` the Theater's own ${grants.join('/')} (${rosters.join(', ')}) — so the stalls a paddock bought went unused`);
+  }
+}
+
+// ---- 4b. R207: the day-180 walk buys the top of the Theater and builds what it adds
+//
+// Tier III exists because a day-180 save had nothing left to buy. The walk
+// buys it on day 118.75 and splices three Hexapods into the stalls it adds;
+// a walker that never buys it, or buys it and never builds one, has made the
+// tier decoration. The frames the top tier ADDS are the claim, read from the
+// track, so the Kite (rare by design, see smoke R150) is not asked.
+{
+  const levels = content.facility?.theater?.levels ?? [];
+  const level = walk.save.facility?.theater ?? 1;
+  const added = (levels.at(-1)?.grants?.frames ?? []).filter((f) => !(levels.at(-2)?.grants?.frames ?? []).includes(f));
+  const unbuilt = added.filter((f) => !((walk.framesBuilt ?? {})[f] > 0));
+  if (REPORT) {
+    console.log(`\n  theater: the day-180 walk ends at tier ${level} of ${levels.length}; frames built `
+      + Object.entries(walk.framesBuilt ?? {}).map(([f, n]) => `${f} ${n}`).join(', '));
+  }
+  if (level < levels.length) {
+    fails.push(`theater: the day-180 walk ends at tier ${level} of ${levels.length} — the top of the Theater is a purchase nobody makes`);
+  } else if (unbuilt.length) {
+    fails.push(`theater: the day-180 walk bought tier ${level} and never built ${unbuilt.map((f) => content.frames[f]?.name ?? f).join(', ')}`);
   }
 }
 

@@ -474,6 +474,153 @@
           "opacity": 0.12
         }
       ]
+    },
+    {
+      "id": "H",
+      "name": "Hexapod Frame",
+      "sizeClass": "H",
+      "flavor": "Six limbs, one waist, no plan for the shoes. The middle pair takes arms or legs and has never been asked which.",
+      "scale": 1.04,
+      "torso": [
+        {
+          "type": "path",
+          "d": "M -112 6 C -116 -26 -84 -44 -40 -44 C -18 -44 -10 -38 2 -38 C 14 -38 24 -46 48 -46 C 92 -46 114 -26 112 4 C 110 34 86 56 46 56 C 24 56 14 50 2 50 C -10 50 -20 56 -40 56 C -84 56 -110 40 -112 6 Z",
+          "fill": "@primary",
+          "stroke": "@outline"
+        },
+        {
+          "type": "ellipse",
+          "cx": -40,
+          "cy": 34,
+          "rx": 44,
+          "ry": 16,
+          "fill": "@secondary",
+          "stroke": "none",
+          "opacity": 0.5
+        },
+        {
+          "type": "ellipse",
+          "cx": 48,
+          "cy": 34,
+          "rx": 44,
+          "ry": 16,
+          "fill": "@secondary",
+          "stroke": "none",
+          "opacity": 0.5
+        },
+        {
+          "type": "path",
+          "d": "M 2 -38 C -4 -10 -4 22 2 50",
+          "fill": "none",
+          "stroke": "@outline",
+          "opacity": 0.45
+        }
+      ],
+      "silhouette": [
+        {
+          "type": "path",
+          "d": "M -112 6 C -116 -26 -84 -44 -40 -44 C -18 -44 -10 -38 2 -38 C 14 -38 24 -46 48 -46 C 92 -46 114 -26 112 4 C 110 34 86 56 46 56 C 24 56 14 50 2 50 C -10 50 -20 56 -40 56 C -84 56 -110 40 -112 6 Z"
+        }
+      ],
+      "sockets": {
+        "head": {
+          "x": 100,
+          "y": -28,
+          "angle": -8,
+          "scale": 1
+        },
+        "forelimb_near": {
+          "x": 64,
+          "y": 48,
+          "angle": 0,
+          "scale": 0.92
+        },
+        "forelimb_far": {
+          "x": 78,
+          "y": 41,
+          "angle": 0,
+          "scale": 0.92,
+          "shade": true
+        },
+        "midlimb_near": {
+          "x": 6,
+          "y": 46,
+          "angle": 0,
+          "scale": 0.92
+        },
+        "midlimb_far": {
+          "x": 20,
+          "y": 39,
+          "angle": 0,
+          "scale": 0.92,
+          "shade": true
+        },
+        "hindlimb_near": {
+          "x": -56,
+          "y": 48,
+          "angle": 0,
+          "scale": 0.92
+        },
+        "hindlimb_far": {
+          "x": -70,
+          "y": 41,
+          "angle": 0,
+          "scale": 0.92,
+          "shade": true
+        },
+        "tail": {
+          "x": -106,
+          "y": 0,
+          "angle": 6,
+          "scale": 1
+        },
+        "organ": {
+          "x": 46,
+          "y": 28,
+          "angle": 0,
+          "scale": 0.9
+        },
+        "organ2": {
+          "x": -40,
+          "y": 20,
+          "angle": 0,
+          "scale": 0.8
+        }
+      },
+      "phys": {
+        "mass": 150,
+        "hp": 18,
+        "stamina": 44,
+        "regen": 7,
+        "speed": 2
+      },
+      "shadow": {
+        "cy": 116,
+        "rx": 126,
+        "ry": 16
+      },
+      "form": [
+        {
+          "type": "ellipse",
+          "cx": 4,
+          "cy": 92,
+          "rx": 126,
+          "ry": 48,
+          "fill": "#2b2440",
+          "stroke": "none",
+          "opacity": 0.16
+        },
+        {
+          "type": "ellipse",
+          "cx": -20,
+          "cy": -30,
+          "rx": 76,
+          "ry": 24,
+          "fill": "#ffffff",
+          "stroke": "none",
+          "opacity": 0.12
+        }
+      ]
     }
   ]
 }

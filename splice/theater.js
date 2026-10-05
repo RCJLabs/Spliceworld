@@ -3,7 +3,7 @@
 // combo discoveries. Presentation lives in theater-ui.js.
 
 import { rngStream, pick, pickFresh } from '../util/rng.js';
-import { SOCKETS, slotOfSocket } from '../render/renderer.js';
+import { SOCKETS, slotOfSocket, socketFits, frameHasSocket } from '../render/renderer.js';
 import { analyze } from './physiology.js';
 import { theaterGrants, stableRoom, theaterFree, occupyTheater, theaterBusyMsg, stallRule } from './facility.js';
 import { driftFromTraining } from './temperament.js';
@@ -74,10 +74,11 @@ export function validateSplice(state, frameId, slotTokens, content) {
       // Two different "no": the facility has not bought the bay, or this
       // chassis has nowhere to put it. Say which, or the player upgrades
       // the Theater and nothing changes.
-      const chassis = content.frames[frameId]?.slots;
+      const chassis = content.frames[frameId];
+      const slots = chassis?.slots;
       errors.push(
-        chassis && !chassis.includes(slotOfSocket(socketId))
-          ? `The ${content.frames[frameId].name} has no ${slotOfSocket(socketId)} to bolt that to.`
+        chassis && ((slots && !slots.includes(slotOfSocket(socketId))) || !frameHasSocket(chassis, socketId))
+          ? `The ${chassis.name} has no ${slotOfSocket(socketId)} to bolt that to.`
           : `The ${socketId} bay is not installed yet — upgrade the Surgery Theater.`
       );
     }
@@ -94,7 +95,7 @@ export function validateSplice(state, frameId, slotTokens, content) {
     // cannot be bolted to anything.
     else if (!content.parts[token.partId]) {
       errors.push(`That ${socketId} part is no longer in the catalogue — the lab cannot source it.`);
-    } else if (content.parts[token.partId].slot !== slotOfSocket(socketId)) {
+    } else if (!socketFits(socketId, content.parts[token.partId].slot)) {
       errors.push(`${content.parts[token.partId].name} does not fit the ${socketId} socket.`);
     }
   }

@@ -6,7 +6,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { indexContent, renderCreatureSVG, creaturePortrait, validateGenome, drawableGenome, SLOTS, SOCKETS, slotOfSocket } from '../render/renderer.js';
+import { indexContent, renderCreatureSVG, creaturePortrait, validateGenome, drawableGenome, SLOTS, SOCKETS, slotOfSocket, slotsOfSocket, frameHasSocket } from '../render/renderer.js';
 import { renderIcon, iconIds } from '../ui/icons.js';
 import { walkSurfaces, shellScreenMap } from './handlers.js';
 import { checkTree, runSelfTests, runLinkTests, moduleFiles, SELF_TESTS, LINK_TESTS } from './scopecheck.js';
@@ -324,10 +324,12 @@ for (const frame of Object.values(content.frames)) {
   }
   // ...and nothing drawn that the frame says it does not have, or the
   // renderer puts a part somewhere the Theater would never let you bolt one.
+  // R207 — a position names a genome socket, and the Hexapod's middle pair
+  // takes either kind of limb, so it is supported when either kind is.
   for (const name of Object.keys(frame.sockets)) {
-    const slot = name.replace(/_(near|far)$/, 's').replace(/\d+$/, '');
-    assert.ok(supported.includes(slot),
-      `frame ${frame.id} draws a ${name} socket but does not support ${slot}`);
+    const socket = name.replace(/_(near|far)$/, 's');
+    assert.ok(slotsOfSocket(socket).some((slot) => supported.includes(slot)),
+      `frame ${frame.id} draws a ${name} socket but supports none of ${slotsOfSocket(socket).join(', ')}`);
   }
   assert.ok(frame.sockets.head, `frame ${frame.id}: a head is mandatory, company policy`);
 }
@@ -4415,7 +4417,7 @@ if (inShard('team')) {
   assert.ok(SOCKETS.includes('organ2'), 'the second organ bay exists as a socket');
   assert.equal(slotOfSocket('organ2'), 'organ', 'and an organ part is what fits it');
   for (const socketId of SOCKETS) {
-    assert.ok(SLOTS.includes(slotOfSocket(socketId)), `${socketId} resolves to a real slot type`);
+    assert.ok(slotsOfSocket(socketId).every((slot) => SLOTS.includes(slot)), `${socketId} resolves to real slot types`);
   }
   for (const frame of Object.values(content.frames)) {
     assert.ok(frame.sockets.organ2, `${frame.id} carries the organ2 bay — geometry is not the gate`);
@@ -4443,7 +4445,8 @@ if (inShard('team')) {
   assert.ok(bought.ok, bought.msg);
   assert.equal(fresh.funds, 5, 'and it charges you');
   assert.equal(facilityLevel(fresh, 'theater'), 2);
-  assert.equal(nextUpgrade(fresh, content, 'theater'), null, 'Tier II is the top of the track for now');
+  assert.ok(nextUpgrade(fresh, content, 'theater').blockers.some((b) => b.kind === 'node'),
+    'Tier III is bought with territory as well as money (R207)');
 
   const tier2 = theaterGrants(fresh, content);
   assert.ok(tier2.frames.includes('L'), 'Tier II buys the Rumbler chassis');
@@ -4501,6 +4504,94 @@ if (inShard('team')) {
   assert.equal(new Set(names).size, names.length, 'no duplicated move buttons');
   const single = combatantFromChimera({ ...twins, tokens: { head: tk('gorilla_head'), organ: tk('wolf_organ') } }, content, 1);
   assert.ok(cb.staminaMax > single.staminaMax, 'but the stats still stack');
+
+  // R207 — TIER III SELLS THE HEXAPOD, whose middle pair takes either kind of
+  // limb. Everything below is derived from the grant, never from the letter H.
+  assert.ok(!tier2.sockets.includes('midlimbs'), 'Tier II sells no middle pair');
+  const lv3 = levelData(content, 'theater', 3);
+  fresh.campaign.heldNodes = [...fresh.campaign.heldNodes, ...(lv3.requiresNodes ?? [])];
+  fresh.funds = lv3.cost;
+  const third = buyUpgrade(fresh, content, 'theater');
+  assert.ok(third.ok, third.msg);
+  assert.equal(nextUpgrade(fresh, content, 'theater'), null, 'Tier III is the top of the track for now');
+  const tier3 = theaterGrants(fresh, content);
+  const added = tier3.frames.filter((f) => !tier2.frames.includes(f));
+  assert.equal(added.length, 1, `Tier III unlocks one frame (${added.join(', ')})`);
+  const hexId = added[0];
+  assert.ok(tier3.sockets.includes('midlimbs'), 'and the middle pair');
+  for (const f of tier3.frames) {
+    assert.equal(theaterGrants(fresh, content, f).sockets.includes('midlimbs'), f === hexId,
+      `${f}: only the frame with positions for it is offered the middle pair`);
+  }
+  const hexStock = { ...newGameState(), seed: 207, facility: { theater: 3 } };
+  hexStock.inventory.parts = ['wolf_head', 'wolf_forelimbs', 'wolf_hindlimbs', 'eagle_forelimbs', 'goat_hindlimbs', 'wolf_tail']
+    .map((partId, i) => ({ id: `h${i}`, partId, grade: 'standard', donor: { name: 'Doris', species: partId.split('_')[0], stars: 3, extractedAt: 0 } }));
+  const sixLimbs = { head: 'h0', forelimbs: 'h1', hindlimbs: 'h2', midlimbs: 'h3', tail: 'h5' };
+  assert.deepEqual(validateSplice(hexStock, hexId, sixLimbs, content), [], 'a forelimb fits the middle pair');
+  assert.deepEqual(validateSplice(hexStock, hexId, { ...sixLimbs, midlimbs: 'h4' }, content), [], 'and so does a hindlimb');
+  assert.ok(validateSplice(hexStock, hexId, { head: 'h0', midlimbs: 'h5' }, content).some((e) => e.includes('does not fit')),
+    'and a tail does not');
+  assert.ok(validateSplice(hexStock, 'M', sixLimbs, content).some((e) => e.includes(`${content.frames.M.name} has no midlimbs`)),
+    'a frame without the positions refuses it, and says which reason');
+  const six = spliceChimera(clearTable(hexStock), hexId, sixLimbs, content, t0);
+  assert.ok(six.ok, six.msg);
+  assert.equal(six.chimera.tokens.midlimbs.partId, 'eagle_forelimbs', 'the third pair is stored under its own socket');
+  const hexGenome = chimeraGenome(six.chimera, content);
+  assert.deepEqual(validateGenome(hexGenome, content), []);
+  const hexSvg = renderCreatureSVG(hexGenome, content);
+  const at = (pos) => `translate(${content.frames[hexId].sockets[pos].x} ${content.frames[hexId].sockets[pos].y})`;
+  for (const pos of ['forelimb_near', 'forelimb_far', 'midlimb_near', 'midlimb_far', 'hindlimb_near', 'hindlimb_far']) {
+    assert.ok(hexSvg.includes(at(pos)), `all six limbs draw: ${pos}`);
+  }
+  const hexRows = analyze(hexId, Object.values(six.chimera.tokens), content, theaterGrants(hexStock, content, hexId).sockets.length).rows;
+  const pair = hexRows.find((r) => r.label === copy(content, 'theater.pair_label'));
+  assert.ok(pair && pair.value === copy(content, 'theater.pair_full_value'), 'the panel explains the third pair');
+  assert.ok(!analyze('M', Object.values(six.chimera.tokens).slice(0, 3), content).rows.some((r) => r.label === pair.label),
+    'and only on a frame that has one');
+  const four = { ...six.chimera, tokens: { ...six.chimera.tokens } };
+  delete four.tokens.midlimbs;
+  assert.ok(combatantFromChimera(six.chimera, content, 1).maxHp > combatantFromChimera(four, content, 1).maxHp,
+    'the third pair is more creature');
+  const bout = scriptedBattle(six.chimera, 'patrol_1', content, 207);
+  assert.ok(['win', 'loss'].includes(bout.outcome) && bout.turns > 0, `and it fights (${bout.outcome} in ${bout.turns})`);
+
+  // The balance gate measures the Hexapod it sells: every one the pool
+  // samples wears all three pairs.
+  const hexBuilds = sampleBuilds(content, 40, 2026).filter((b) => b.frame === hexId);
+  const pairsOf = (b) => ['forelimbs', 'hindlimbs', 'midlimbs']
+    .filter((sock) => makeSimChimera(b.frame, b.partIds, 'standard', content).tokens[sock]).length;
+  assert.ok(hexBuilds.length > 0 && hexBuilds.every((b) => pairsOf(b) === 3),
+    `the pool samples every Hexapod wearing three pairs (${hexBuilds.map(pairsOf).join(', ')})`);
+
+  // And the vat, which may hand you any chassis, carries a middle pair only
+  // onto one that can draw it (3b's rule, for the socket A9 never had).
+  const { startVat, tickVat } = await import('../splice/chaos.js');
+  let onHex = 0;
+  let offHex = 0;
+  for (let i = 0; i < 40 && !(onHex && offHex); i++) {
+    const s3 = freshRanchState();
+    ensureRanchSeeded(s3, content, t0);
+    Object.assign(s3, { seed: 9100 + i, facility: { theater: 3 }, funds: 99999 });
+    const mk = (sp, sockets) => Object.fromEntries(sockets.map(([sock, part]) => [sock,
+      { id: `x${i}-${sock}`, partId: part ?? `${sp}_${sock}`, grade: 'standard', donor: { name: 'Vat', species: sp, stars: 3, extractedAt: 0 } }]));
+    s3.chimeras = [
+      { id: 'xa', name: 'Alpha', frame: 'M', createdAt: t0, settleUntil: t0, instability: 5, bond: 100, temperament: null, injury: null,
+        tokens: mk('goat', [['head'], ['forelimbs'], ['hindlimbs'], ['tail'], ['hide'], ['organ']]) },
+      { id: 'xb', name: 'Beta', frame: hexId, createdAt: t0, settleUntil: t0, instability: 5, bond: 100, temperament: null, injury: null,
+        tokens: mk('wolf', [['head'], ['forelimbs'], ['hindlimbs'], ['midlimbs', 'bear_forelimbs'], ['tail'], ['hide'], ['organ']]) },
+    ];
+    s3.dex.parts = Object.keys(content.parts);
+    if (!startVat(s3, 'xa', 'xb', content, t0).ok) continue;
+    const child = tickVat(s3, content, t0 + 999 * HOUR).child;
+    if (!child) continue;
+    for (const socketId of Object.keys(child.tokens)) {
+      assert.ok(frameHasSocket(content.frames[child.frame], socketId),
+        `the vat bolted ${socketId} to the ${child.frame} chassis, which has no position for it`);
+    }
+    if (child.frame === hexId && child.tokens.midlimbs) onHex++;
+    if (child.frame !== hexId) offHex++;
+  }
+  assert.ok(onHex && offHex, `the vat made a Hexapod with a middle pair and a child without one (${onHex}/${offHex})`);
 }
 
 // --- AI Director (§3.7): the world studies you and answers. The tracking
@@ -9247,8 +9338,13 @@ if (inShard('frames')) {
   // cells before and after — which is what says R32 did not move the ladder.
   // 48 costs 5.3s against 2.0s; a gate that resolves on coin flips costs more.
   const SEEDS = 48;
+  // R207 — a frame with a middle pair is fielded wearing one: the same body
+  // and its own forelimbs again. Without it the Hexapod is a Trotter with a
+  // worse chassis and an empty bay, which is not the frame anyone buys.
   const rate = (frameId, arch, region, node, grade, team) => {
-    const ids = partsOnFrame(content, frameId, arch.partIds);
+    const own = partsOnFrame(content, frameId, arch.partIds);
+    const ids = frameHasSocket(content.frames[frameId], 'midlimbs')
+      ? [...own, own.find((id) => content.parts[id]?.slot === 'forelimbs')].filter(Boolean) : own;
     let w = 0;
     for (let i = 0; i < SEEDS; i++) {
       const c = makeSimChimera(frameId, ids, grade, content);
@@ -18709,6 +18805,16 @@ if (inShard('contest')) {
     const upkeep = upkeepPerDay(d180, content);
     assert.ok(hired180.length > 0 && wages > 0, `the day-180 save has a payroll (${hired180.length} hired, $${Math.round(wages)}/day)`);
     assert.ok(wages < upkeep - wages, `and it costs less than everything else the ranch pays for ($${Math.round(wages)} of $${Math.round(upkeep)}/day)`);
+    // R207 — RULE 3 OVER A WHOLE CAMPAIGN. The walks above halt at dominion,
+    // around day 28, when a hand hired for a three-animal herd still covers
+    // most of it: break 433 went MISSED in R207's battery, and on `main`. By
+    // day 180 a kept Mopsy has missed 1,862 meals to 1,401 given (seed 2026).
+    // Priced duties are judged on their bill above, so they are skipped here.
+    for (const r of hired180) {
+      const duty = content.henchmen?.[r.id]?.duty;
+      if (hireRoster(content).filter((x) => x.duty === duty).every((x) => hireBill(content, x, d180) !== null)) continue;
+      assert.ok(r.missed < r.done, `day 180: ${r.id} covers most of their duty (${Math.round(r.done)} done, ${Math.round(r.missed)} missed) — a hire who cannot is replaced`);
+    }
     console.log(`   R188 day 180: wages $${Math.round(wages)}/day = ${(100 * wages / upkeep).toFixed(1)}% of upkeep, `
       + `${(100 * wages / Math.max(1, incomePerDay(d180, content))).toFixed(1)}% of territory income · `
       + hired180.map((r) => `${r.id} done ${Math.floor(r.done)} missed ${Math.floor(r.missed)}`).join(' · '));
@@ -18847,13 +18953,15 @@ if (inShard('contest')) {
     // six they run 13-16. What is being checked is that SOMETHING in the
     // sample got past the grant — which is only possible if a pen bought it.
     {
-      const { stableRoom } = await import('../splice/facility.js');
-      const grant = Math.max(...(content.facility.theater.levels ?? [])
-        .map((l) => l.grants?.stable ?? 0));
+      const { stableRoom, theaterGrants: grantOf } = await import('../splice/facility.js');
+      // R207 — each against the grant IT bought: Tier III adds stalls of its
+      // own, and these walks halt at dominion, long before anyone buys it.
+      const grants = shapes.map((w) => grantOf(w.save, content).stable);
+      const grant = grants.join('/');
       const caps = shapes.map((w) => stableRoom(w.save, content).cap);
       const rosters = shapes.map((w) => w.chimeras);
       console.log(`   stable: grant ${grant}, caps ${caps.join('/')}, rosters ${rosters.join('/')}`);
-      assert.ok(caps.every((c) => c > grant),
+      assert.ok(caps.every((c, i) => c > grants[i]),
         `every campaign's paddock buys stable room past the Theater's ${grant} (caps ${caps.join(', ')})`);
       // THE OTHER HALF IS NOT ASSERTED HERE, AND THE REASON IS THE POINT.
       // "A stall nobody stands in is not a stall" wants `rosters.some(r > grant)`
@@ -18926,7 +19034,11 @@ if (inShard('contest')) {
     assert.equal(routine.length, Object.keys(content.frames).length - 1,
       `exactly one chassis trades a bay away, or the exemption above covers more than it says `
       + `(full-socket frames: ${routine.join(', ')} of ${Object.keys(content.frames).join(', ')})`);
-    for (const id of routine) {
+    // R207 — of the chassis these walks BOUGHT. They halt at dominion, and
+    // Tier III sells the Hexapod after it; tools/diet.js asks the day-180 walk.
+    const { theaterGrants: soldBy } = await import('../splice/facility.js');
+    const sold = new Set(shapes.flatMap((w) => soldBy(w.save, content).frames));
+    for (const id of routine.filter((f) => sold.has(f))) {
       assert.ok(shapes.some((w) => (w.framesBuilt[id] ?? 0) > 0),
         `every full-socket chassis the Theater sells gets worn by somebody — ${content.frames[id].name} never was (${frames})`);
     }
@@ -23817,7 +23929,23 @@ if (inShard('empire')) {
     // room on the clean side today, 1.6 on break 242's, thirteen on 243's.
     // `worse` is still computed and printed, because a reader should see the
     // count; it just no longer decides anything.
-    const MEDIAN_BAND = 0.05;   // 5pp: the readings above wander 4pp end to end
+    //
+    // R207 — AND THE STABLE GREW AGAIN. Tier III adds three stalls, the walk
+    // fills them with Hexapods at about $190 a day each, and its plant bills
+    // $66 a day more: fixed costs, which the doubled map dilutes, which is
+    // the held-node confound above with a bigger stable behind it. Same five
+    // walks each, fresh:
+    //
+    //                          seeds better off bigger   median    gaps
+    //   main before R207              3 of 5              +0.74    -3.07 .. +7.27
+    //   R207                          4 of 5              +5.88    -0.70 .. +18.03
+    //   BREAK 242 bonuses off          5 of 5              +9.27    +7.67 .. +10.80
+    //   BREAK 243 garrison flat        5 of 5             ~+23      (on R207's saves)
+    //
+    // So the band moves to sit between the game and break 242, R186's method:
+    // 1.6 points of room on the clean side, 1.8 on 242's, fifteen on 243's.
+    // The two high clean seeds are 2026 and 11, the two that end on 21 nodes.
+    const MEDIAN_BAND = 0.075;   // 7.5pp; see the R207 table above
     assert.ok(median <= MEDIAN_BAND,
       `and the typical empire is not much more profitable bigger: the median campaign keeps `
       + `${(median * 100).toFixed(2)}pp MORE of gross across ${everything.length} nodes than across its own, `
@@ -25131,7 +25259,19 @@ if (inShard('wire')) {
 // already greys out a held creature and names where it is. 1,221 bytes
 // became 898, and the comments that explained it went to data/notes/scars.md
 // (PROSE_CAP stays where it was: +9 bytes).
-const KB_CAP = 336;        // CODE only, measured at 335.82
+// R207 — 336 -> 338, measured at 337.35 on a tree that read 335.88 before
+// it. The Hexapod's middle pair takes two kinds of part and exists only on a
+// frame that can draw it, and every reader of a socket is eager: the renderer
+// states both rules once (506 bytes), the panel row that explains the pair is
+// in `analyze` because the battle reads the same report (802), and the vat
+// and the grant ask the geometry (199).
+//
+// Paid down before it was raised: the row's wording went to data/copy.json
+// (its four ids are spelled out, because the copy gate reads literal calls),
+// and the A9 essay on `theaterGrants` became a pointer to
+// data/notes/frames.md, which already said it. PROSE_CAP stays where it was:
+// the eager graph carries 0.2 KB LESS prose than before R207.
+const KB_CAP = 338;        // CODE only, measured at 337.35
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.
