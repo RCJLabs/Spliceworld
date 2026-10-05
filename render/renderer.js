@@ -557,7 +557,8 @@ function developingPortrait() {
 // extraScale multiplies the frame scale (juvenile portraits render small).
 export function renderCreatureSVG(
   genome, content,
-  { idPrefix = 'cw', condition = null, extraScale = 1, posture = null, scarMarks = '', idle = false } = {}
+  { idPrefix = 'cw', condition = null, extraScale = 1, posture = null, scarMarks = '', idle = false,
+    ghost = false, viewBox = '-230 -230 460 440', arrive = null } = {}
 ) {
   const errors = validateGenome(genome, content);
   if (errors.length) throw new Error('Bad genome: ' + errors.join('; '));
@@ -570,9 +571,11 @@ export function renderCreatureSVG(
   const torsoPalette = hidePart ? partPalette(hidePart, content) : NEUTRAL_PALETTE;
 
   const layers = [];
+  // R208 — `ghost`, `viewBox` and `arrive`: see ROADMAP R208.
+  const lay = (slot, g) => layers.push(slot === arrive ? `<g class="sw-arrive">${g}</g>` : g);
   for (const [slot, socketName] of LAYERS) {
     if (slot === 'torso') {
-      layers.push(`<g>${shapesToSVG(frame.torso, torsoPalette)}</g>`);
+      layers.push(`<g${ghost ? ' opacity=".2"' : ''}>${shapesToSVG(frame.torso, torsoPalette)}</g>`);
       // Volume shading: flat-vector form, not gradients — occlusion at the
       // belly, rim light along the back, clipped to the silhouette.
       if (frame.form) {
@@ -592,7 +595,7 @@ export function renderCreatureSVG(
 
     if (slot === 'hide') {
       // Hide overlays draw in torso space, clipped to the torso silhouette.
-      layers.push(`<g clip-path="url(#${clipId})">${shapesToSVG(part.shapes ?? [], palette)}</g>`);
+      lay(slot, `<g clip-path="url(#${clipId})">${shapesToSVG(part.shapes ?? [], palette)}</g>`);
       continue;
     }
     const socket = frame.sockets[socketName];
@@ -601,7 +604,7 @@ export function renderCreatureSVG(
     // Wraps the socket rather than editing it: far and near limb move together.
     const stance = posture?.[slot] ?? '';
     const body = `<g transform="${socketTransform(socket)}"${shade}>${shapesToSVG(part.shapes ?? [], palette)}</g>`;
-    layers.push(stance ? `<g transform="${stance}">${body}</g>` : body);
+    lay(slot, stance ? `<g transform="${stance}">${body}</g>` : body);
   }
 
   const scale = frame.scale * extraScale;
@@ -625,7 +628,7 @@ export function renderCreatureSVG(
   // switch is in style.css, where R99's gate can see it.
   const [idleOpen, idleClose] = idle ? ['<g class="sw-idle">', '</g>'] : ['', ''];
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-230 -230 460 440" role="img" aria-label="Spliced creature">` +
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" role="img" aria-label="Spliced creature">` +
     `<defs><clipPath id="${clipId}">${silhouetteToSVG(frame.silhouette)}</clipPath></defs>` +
     idleOpen +
     `<g${frameScale}>${groundShadow}${layers.join('')}` +

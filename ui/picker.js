@@ -20,14 +20,14 @@ let openSheet = null;
 // `aria-labelledby` REPLACES the accessible name, so naming the label and
 // the value without this would silently throw away "3 available" and
 // "Prime · Biscuit".
-export function pickerField({ id, label, value, hint, disabled = false, count = null }) {
+export function pickerField({ id, label, value, hint, disabled = false, count = null, thumb = '' }) {
   return `
     <div class="pick-field ${disabled ? 'is-disabled' : ''}">
       <span class="pick-label" id="pick-label-${id}">${label}${count != null ? ` <em>${count}</em>` : ''}</span>
-      <button type="button" class="pick-button" data-picker="${id}" ${disabled ? 'disabled' : ''}
+      <button type="button" class="pick-button${thumb ? ' has-thumb' : ''}" data-picker="${id}" ${disabled ? 'disabled' : ''}
               aria-labelledby="pick-label-${id} pick-value-${id}"
               ${hint ? `aria-describedby="pick-hint-${id}"` : ''}>
-        <span class="pick-value" id="pick-value-${id}">${value}</span>
+        ${thumb}<span class="pick-value" id="pick-value-${id}">${value}</span>
         ${hint ? `<span class="pick-hint" id="pick-hint-${id}">${hint}</span>` : ''}
         <span class="pick-caret" aria-hidden="true">▾</span>
       </button>
@@ -73,9 +73,9 @@ export function openPicker({ title, subtitle, groups, selectedId, onPick }) {
       const rows = g.options
         .map(
           (o) => `
-        <button type="button" class="pick-row ${o.id === selectedId ? 'is-selected' : ''}"
+        <button type="button" class="pick-row ${o.id === selectedId ? 'is-selected' : ''}${o.thumb ? ' has-thumb' : ''}"
                 data-value="${o.id}" ${o.disabled ? 'disabled' : ''}>
-          <span class="pick-row-main">
+          ${o.thumb ?? ''}<span class="pick-row-main">
             ${o.mark ? `<span class="pick-mark">${o.mark}</span>` : ''}
             <span class="pick-row-label">${o.label}</span>
             ${o.badge ?? ''}

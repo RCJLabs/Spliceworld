@@ -7631,6 +7631,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'splice/extract-ui.js': null,
     'splice/pens-ui.js': null,
     'splice/theater-ui.js': null,
+    'splice/alive-ui.js': null,
     'splice/vault-ui.js': null,
 
     // --- The battle engine and the things that read it out. R28's whole
@@ -7649,6 +7650,7 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // Pens, never as a system of its own.
     'battle/move-text.js': null,
   'render/mood.js': null,
+  'render/thumb.js': null,
   'ui/patch.js': null,
     // R117 — the wide-screen rail. Exempt because it teaches NOTHING NEW: it
     // is the Right Now agenda and the county wire, both of which the player
@@ -15040,6 +15042,11 @@ if (inShard('spar')) {
     press(root, (b) => b.el?.id === 'thtr-splice');
 
     assert.equal(state.chimeras.length, 1, 'the walk actually decanted something');
+    // R208 — the scene plays first, on the real splice, and the player can
+    // skip it; the card that offers a name is what the skip lands on.
+    assert.ok(overlay.host.innerHTML.includes('class="alive card grad-flash"') && overlay.host.innerHTML.includes('id="alive-skip"'),
+      'the splice plays IT\'S ALIVE before the card');
+    press(overlay, (b) => b.el?.id === 'alive-skip');
     assert.ok(overlay.host.innerHTML.includes('data-picker="born-identity"'),
       'and the ceremony offers a name on the door, on the screen the splice happened on');
 
@@ -15060,6 +15067,92 @@ if (inShard('spar')) {
       `and the whole identity lands (${JSON.stringify(state.profile)})`);
     assert.ok(overlay.host.innerHTML.includes(state.profile.name),
       'and the ceremony says so rather than still offering the choice');
+  } finally {
+    restore();
+  }
+}
+
+// --- R208, THE SURGERY THEATER YOU CAN SEE. Every rule here is a pure
+// --- render or a stubbed-DOM walk, so it rides the common path (R207's
+// --- reason) and its breaks pay for nothing else.
+{
+  const { partThumbnail, thumbBox } = await import('../render/thumb.js');
+  const { recordingRoot, installDom, memoryStorage } = await import('./domstub.js');
+  const { renderTheaterScreen } = await import('../splice/theater-ui.js');
+  const { aliveMarkup, playAlive } = await import('../splice/alive-ui.js');
+
+  // 1. Every part draws, in every socket it fits, on every chassis that has
+  //    that socket: something of the part's own is on the ghost.
+  let drawn = 0;
+  for (const part of Object.values(content.parts)) {
+    for (const socketId of SOCKETS.filter((sid) => slotsOfSocket(sid).includes(part.slot))) {
+      for (const frame of Object.values(content.frames)) {
+        if (!frameHasSocket(frame, socketId) || (frame.slots && !frame.slots.includes(part.slot))) continue;
+        const thumb = partThumbnail(part.id, frame.id, socketId, content);
+        const viewBox = thumbBox(part.id, frame.id, socketId, content);
+        const ghost = renderCreatureSVG({ frame: frame.id, parts: {} }, content, { idPrefix: 'gh', ghost: socketId !== 'hide', viewBox });
+        assert.ok(thumb.includes('class="pick-thumb" aria-hidden="true"') && viewBox.split(' ').every((v) => Number.isFinite(Number(v))),
+          `${part.id} in ${frame.id}/${socketId}: a decorative thumbnail with a real viewBox (${viewBox})`);
+        assert.ok(thumb.replace(/pt\d+-torso-clip/g, '').length > ghost.replace(/gh-torso-clip/g, '').length + 40,
+          `${part.id} in ${frame.id}/${socketId}: the thumbnail draws the part, not just the chassis`);
+        drawn++;
+      }
+    }
+  }
+  assert.ok(drawn > Object.keys(content.parts).length, `every part drew somewhere (${drawn} thumbnails)`);
+
+  // 2-3. The Theater: every row of every socket picker carries its drawn
+  //      part, every filled socket shows it, and the slab draws a chosen part
+  //      arriving exactly once.
+  const root = recordingRoot();
+  const overlay = recordingRoot();
+  const picker = recordingRoot();
+  const restore = installDom({ overlay, picker, storage: memoryStorage() });
+  try {
+    const t0 = 1700000000000;
+    const state = newGameState();
+    state.seed = 208;
+    const kit = ['goat_head', 'wolf_head', 'eagle_forelimbs', 'goat_hindlimbs', 'wolf_tail', 'goat_hide', 'wolf_organ'];
+    state.inventory.parts.push(...kit.map((partId, i) => ({
+      id: `r208-${i}`, partId, grade: 'standard', donor: { name: 'Bessie', species: partId.split('_')[0], stars: 3, extractedAt: t0 },
+    })));
+    const ctx = { state, content, now: () => t0, save() {}, pushNews() {}, refreshTicker() {}, takeSubtab: () => null };
+    const press = (rec, find, from = 0) => {
+      const hit = rec.bound.slice(from).find(find);
+      assert.ok(hit, `R208 walk: nothing to press (${rec.bound.slice(from).map((b) => b.sel).join(' | ')})`);
+      hit.fn({ preventDefault() {}, stopPropagation() {}, target: hit.el, currentTarget: hit.el });
+    };
+    renderTheaterScreen(root.host, ctx);
+    for (const socketId of ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ']) {
+      const from = picker.bound.length;
+      press(root, (b) => b.el?.dataset?.picker === `slot-${socketId}`);
+      const rows = (picker.host.innerHTML.match(/data-value="r208-\d+"/g) ?? []).length;
+      const thumbs = (picker.host.innerHTML.match(/class="pick-thumb"/g) ?? []).length;
+      assert.ok(rows > 0 && thumbs === rows, `${socketId}: every row in the picker shows its part (${thumbs} drawn of ${rows})`);
+      press(picker, (b) => /^r208-/.test(b.el?.dataset?.value ?? ''), from);
+      const stage = root.host.innerHTML.slice(root.host.innerHTML.indexOf('class="stage"'), root.host.innerHTML.indexOf('class="ranch-msg"'));
+      assert.equal((stage.match(/class="sw-arrive"/g) ?? []).length > 0, true, `${socketId}: the chosen part arrives on the slab`);
+      const field = root.host.innerHTML.slice(root.host.innerHTML.indexOf(`data-picker="slot-${socketId}"`));
+      assert.ok(field.slice(0, field.indexOf('</button>')).includes('class="pick-thumb"'), `${socketId}: the filled socket shows its part`);
+    }
+    renderTheaterScreen(root.host, ctx);
+    assert.ok(!root.host.innerHTML.includes('class="sw-arrive"'), 'and it arrives once: the next render draws it in place');
+
+    // 4. The scene: the frame it holds under reduced motion, and the skip.
+    const genome = { frame: 'M', parts: { head: 'goat_head', tail: 'wolf_tail' } };
+    assert.ok(aliveMarkup(genome, content).includes('grad-flash') && !aliveMarkup(genome, content).includes('is-still'),
+      'the scene plays by default');
+    const was = globalThis.matchMedia;
+    globalThis.matchMedia = (q) => ({ matches: /reduce/.test(q) });
+    let done = 0;
+    try {
+      playAlive(overlay.host, content, genome, () => { done++; });
+    } finally { globalThis.matchMedia = was; }
+    assert.ok(overlay.host.innerHTML.includes('is-still') && overlay.host.innerHTML.includes(copy(content, 'theater.alive_continue')),
+      'under reduced motion the scene is one still frame, with a button that continues');
+    assert.equal(done, 0, 'and it waits for the player rather than moving on by itself');
+    press(overlay, (b) => b.el?.id === 'alive-skip', overlay.bound.length - 1);
+    assert.equal(done, 1, 'which hands over once');
   } finally {
     restore();
   }

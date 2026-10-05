@@ -3,6 +3,8 @@
 // M0 free-form dev slab — every part here is an owned token with lineage.
 
 import { creaturePortrait, socketFits } from '../render/renderer.js';
+import { partThumbnail } from '../render/thumb.js';
+import { playAlive } from './alive-ui.js';
 import { tierOfBuild } from './tier.js';
 import { renderIcon } from '../ui/icons.js';
 import { gradeOf, gradeIndexOf } from './extract.js';
@@ -30,6 +32,9 @@ const SLOT_LABELS = {
 // Screen-local draft (not saved: an unspliced slab is just a shopping cart).
 let draft = { frame: 'M', slots: {} };
 let lastMsg = 'The slab is sterile-ish. Select parts from the vault.';
+// R208 — the socket a part was just chosen for, so the slab draws it arriving
+// once; cleared by the render that shows it.
+let arriving = null;
 
 function draftGenome(state, content) {
   const parts = {};
@@ -94,7 +99,9 @@ export function renderTheaterScreen(root, ctx) {
   // gave you no reason to look further down. `dex.worn` is written by
   // `tickWorld`, so this is the same field the harness reports.
   const built = new Set(state.dex?.worn ?? []);
-  const slotOptions = (socketId) => {
+  // R208 — every row carries its part, drawn on this chassis in this socket.
+  // Only the open picker pays for them; the fields below ask for the count.
+  const slotOptions = (socketId, thumbs = false) => {
     const owned = state.inventory.parts.filter((t) => socketFits(socketId, content.parts[t.partId]?.slot));
     const bySpecies = new Map();
     for (const t of owned) {
@@ -116,6 +123,7 @@ export function renderTheaterScreen(root, ctx) {
               label: part.name,
               mark: classMark(part.classAffinity),
               badge: `<span class="grade-badge grade-${t.grade}">${grade.name}</span>`,
+              thumb: thumbs ? partThumbnail(t.partId, draft.frame, socketId, content) : '',
               // R32 made mass the currency the chassis decision is priced in — a
               // rhino head is 32 and a moth head is 1 — so the number has to be on
               // the part, not only in the panel after you have already fitted it.
@@ -143,6 +151,7 @@ export function renderTheaterScreen(root, ctx) {
         ? markedName(part)
         : owned.length ? 'Empty socket' : 'None in the vault',
       hint: part ? `${gradeOf(token.grade).name} \u00b7 ${token.donor.name}` : '',
+      thumb: part ? partThumbnail(token.partId, draft.frame, socketId, content) : '',
       disabled: !owned.length,
     });
   }).join('');
@@ -197,7 +206,7 @@ export function renderTheaterScreen(root, ctx) {
       }</p>
       <p class="recipe">${statLine}${report.tags.length ? ` · tags: ${report.tags.join(', ')}` : ''}</p>
       ${tierLine}
-      <div class="stage">${creaturePortrait(draftGenome(state, content), content, { idPrefix: 'thtr' })}</div>
+      <div class="stage">${creaturePortrait(draftGenome(state, content), content, { idPrefix: 'thtr', arrive: arriving })}</div>
       <p class="ranch-msg">${lastMsg}</p>
     </section>
     ${/* R128b — ABOVE THE BENCH, NOT UNDER IT. Appended, this card was 4th
@@ -234,6 +243,7 @@ export function renderTheaterScreen(root, ctx) {
       ${comboRows}
     </section>
 `;
+  arriving = null;
   bindFieldNote(root, ctx, () => renderTheaterScreen(root, ctx));
   // R128 — this screen had no fold until it had a facility card, so it
   // had never called this. A card whose header nothing listens to is a
@@ -249,7 +259,7 @@ export function renderTheaterScreen(root, ctx) {
     });
   });
   bindPickers(root, Object.fromEntries(sockets.map((socketId) => [`slot-${socketId}`, () => {
-    const { groups } = slotOptions(socketId);
+    const { groups } = slotOptions(socketId, true);
     return {
       title: SLOT_LABELS[socketId],
       subtitle: socketId === 'head'
@@ -264,6 +274,7 @@ export function renderTheaterScreen(root, ctx) {
       onPick: (value) => {
         if (value) draft.slots[socketId] = value;
         else delete draft.slots[socketId];
+        arriving = value ? socketId : null;
         renderTheaterScreen(root, ctx);
       },
     };
@@ -279,7 +290,9 @@ export function renderTheaterScreen(root, ctx) {
       sfx.speak(result.chimera, content, 'decant');
       draft = { frame: draft.frame, slots: {} };
       ctx.save();
-      showSpliceResult(ctx, result, () => renderTheaterScreen(root, ctx));
+      // R208 — the scene first, then the card it always was.
+      playAlive(document.querySelector('#overlay'), content, bornGenome(result.chimera),
+        () => showSpliceResult(ctx, result, () => renderTheaterScreen(root, ctx)));
     } else {
       renderTheaterScreen(root, ctx);
     }
@@ -302,11 +315,15 @@ export function renderTheaterScreen(root, ctx) {
 // `named` is true forever after — and the dossier still edits it.
 let identityRoll = 0;
 
+const bornGenome = (chimera) => ({
+  frame: chimera.frame,
+  parts: Object.fromEntries(Object.entries(chimera.tokens).map(([slot, token]) => [slot, token.partId])),
+});
+
 function showSpliceResult(ctx, result, onClose) {
   const { state, content } = ctx;
   const overlay = document.querySelector('#overlay');
-  const genome = { frame: result.chimera.frame, parts: {} };
-  for (const [slot, token] of Object.entries(result.chimera.tokens)) genome.parts[slot] = token.partId;
+  const genome = bornGenome(result.chimera);
   const combos = result.newCombos.length
     ? `<p class="combo-toast">✦ Combo discovered: <strong>${result.newCombos.map((c) => c.name).join(', ')}</strong> — logged in the Splice-Dex.</p>`
     : '';
