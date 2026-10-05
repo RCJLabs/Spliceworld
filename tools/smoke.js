@@ -18805,6 +18805,16 @@ if (inShard('contest')) {
     const upkeep = upkeepPerDay(d180, content);
     assert.ok(hired180.length > 0 && wages > 0, `the day-180 save has a payroll (${hired180.length} hired, $${Math.round(wages)}/day)`);
     assert.ok(wages < upkeep - wages, `and it costs less than everything else the ranch pays for ($${Math.round(wages)} of $${Math.round(upkeep)}/day)`);
+    // R207 — RULE 3 OVER A WHOLE CAMPAIGN. The walks above halt at dominion,
+    // around day 28, when a hand hired for a three-animal herd still covers
+    // most of it: break 433 went MISSED in R207's battery, and on `main`. By
+    // day 180 a kept Mopsy has missed 1,862 meals to 1,401 given (seed 2026).
+    // Priced duties are judged on their bill above, so they are skipped here.
+    for (const r of hired180) {
+      const duty = content.henchmen?.[r.id]?.duty;
+      if (hireRoster(content).filter((x) => x.duty === duty).every((x) => hireBill(content, x, d180) !== null)) continue;
+      assert.ok(r.missed < r.done, `day 180: ${r.id} covers most of their duty (${Math.round(r.done)} done, ${Math.round(r.missed)} missed) — a hire who cannot is replaced`);
+    }
     console.log(`   R188 day 180: wages $${Math.round(wages)}/day = ${(100 * wages / upkeep).toFixed(1)}% of upkeep, `
       + `${(100 * wages / Math.max(1, incomePerDay(d180, content))).toFixed(1)}% of territory income · `
       + hired180.map((r) => `${r.id} done ${Math.floor(r.done)} missed ${Math.floor(r.missed)}`).join(' · '));

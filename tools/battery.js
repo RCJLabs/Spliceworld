@@ -6612,6 +6612,10 @@ const BREAKS = [
     // R190 split rule 3 into a coverage half and a bill half (`worse`), so
     // this aims at the coverage half alone: the vet's rule is untouched and
     // only the hand's swap stops.
+    // R207's rot check found it MISSED, on `main` as well: smoke's walks halt
+    // at dominion, around day 28, when the kept hand still covers most of
+    // the herd. The rule now asks the day-180 save too, where she has missed
+    // 1,862 meals to 1,401 given.
     n: 433, gate: SHARD_B, name: 'a hand hired for a small herd keeps the job long after the herd has outgrown her',
     file: 'tools/sim.js',
     anchor: '  const worse = (held, want) => (bill(held) === null ? coverage(held) < coverage(want)',
