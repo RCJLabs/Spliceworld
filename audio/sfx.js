@@ -119,6 +119,12 @@ const STINGERS = {
     { type: 'triangle', from: 880, to: 1180, dur: 0.09, vol: 0.06 },
     { type: 'triangle', from: 1180, to: 1320, at: 0.10, dur: 0.12, vol: 0.05 },
   ],
+  // R208 — the eyes open: two climbing beats and a held top note.
+  alive: [
+    { type: 'sawtooth', from: 196, to: 220, dur: 0.16, vol: 0.09 },
+    { type: 'sawtooth', from: 262, to: 294, at: 0.18, dur: 0.16, vol: 0.09 },
+    { type: 'square', from: 392, to: 440, at: 0.36, dur: 0.5, vol: 0.1, mod: 6 },
+  ],
   decant: [
     { type: 'sine', from: 180, to: 520, dur: 0.30, vol: 0.09 },
     { type: 'square', from: 700, to: 520, at: 0.30, dur: 0.10, vol: 0.07 },

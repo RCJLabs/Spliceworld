@@ -1,5 +1,77 @@
 # PROGRESS
 
+## Session 232 — R208: the Surgery Theater you can see ✅
+
+**Every part in the Theater's pickers and filled sockets is drawn, on a
+ghost of the chassis it is being chosen for. A chosen part drops onto the
+slab. A splice plays IT'S ALIVE before its card: lightning, a seam stitching
+shut, eyes opening in the dark, a synth stinger. It is skippable, and it is
+one held frame under reduced motion. The boot budget did not move.**
+
+### What shipped
+
+- **`render/thumb.js`** (lazy): `partThumbnail` draws one part through the
+  real renderer, cropped to the sockets it hangs from on this chassis. Hides
+  are drawn on a solid torso.
+- **`renderCreatureSVG` options** `ghost`, `viewBox` and `arrive`, all off by
+  default. Every other portrait is byte-identical.
+- **Picker rows and filled sockets carry thumbnails** (`ui/picker.js` takes a
+  `thumb`). The Theater only draws them when a sheet opens.
+- **`splice/alive-ui.js`** (lazy): the scene, the "alive" stinger in
+  `audio/sfx.js`, and its words in `data/copy.json`.
+- **The new CSS is paid for**: six comment essays moved from `style.css` to
+  `docs/STYLE.md`.
+- **Breaks 549-560.**
+
+### Found on the way
+
+- **The seam vanished while the scene played**, because the body's animated
+  `filter` lifted it over the effects layer. The stage's layers are
+  positioned now.
+- **The a11y gate refused my first reduced-motion line.** It named a
+  selector one class short of the animated rule.
+- **Smoke's R112 walk now presses Skip.** It splices for real, so it is also
+  the headless proof that the scene plays and can be skipped. That is the
+  one change to an existing gate's logic in R208. Instead of a second full
+  battery a day after R207's, every break aimed near what R208 touched ran
+  again (23, all caught). Say so if that call should go the other way.
+- **The targeted battery caught two of my mistakes:**
+  - The ceremony's button copy was chosen with a ternary, which the copy
+    gate cannot read.
+  - Break 553 (every crop read from the head) passed a rule that checked a
+    part was drawn but not that the crop held it.
+
+  Both are fixed and re-run caught.
+
+### Verification
+
+- **`npm test`, run alone:** 11 of 11 jobs green. 1,467 CPU-seconds of
+  1,641 (six walks rebuilt, so the allowance applied), 483s wall.
+- **Battery:**
+  - `--anchors`: 551 of 551.
+  - `--only` over breaks 549-560 and the eleven aimed near R208's code: 23
+    of 23 caught, behind a 41-of-41 green baseline.
+- **Boot:** first paint 1,193 KB (1,194 before) against an unchanged 1,197.
+  Eager code is 337.6 KB against an unchanged 338, prose is unchanged, and
+  there are still 51 eager modules.
+- **a11y, height and wide gates green.** The a11y gate opens every picker:
+  every control clears 40px and every word clears the contrast floor, in
+  every theme.
+- **At 380px** (scratchpad probe, real UI):
+  - zero console errors on a fresh founding, on a v63 save migrated to v64,
+    and on the day-180 save;
+  - every row of all eight socket pickers (572 rows) is drawn, and no row is
+    under 64px;
+  - every filled socket shows its part, and the slab's arrival runs;
+  - Skip reaches the card in 9 ms, and the creature survives a reload;
+  - left alone, the card arrives at 2.7 s;
+  - under reduced motion it is a still frame, with nothing animating, until
+    "Meet it".
+
+### Next session
+
+R209: battles you can feel. The next full battery is due around R212.
+
 ## Session 231 — R207: the Hexapod ✅
 
 **Surgery Theater Tier III sells a fifth frame with a third pair of limbs.
