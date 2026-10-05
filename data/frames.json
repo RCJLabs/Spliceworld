@@ -588,10 +588,10 @@
         }
       },
       "phys": {
-        "mass": 120,
-        "hp": 28,
-        "stamina": 50,
-        "regen": 9,
+        "mass": 150,
+        "hp": 18,
+        "stamina": 44,
+        "regen": 7,
         "speed": 2
       },
       "shadow": {
