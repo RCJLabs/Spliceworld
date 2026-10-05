@@ -64,7 +64,12 @@ const SYSTEMS = {
   traits:      { key: 'traitsSeen',    what: 'a heritable trait expressed on a creature' },
   breeding:    { key: 'eggs',          what: 'an egg laid and hatched' },
   gauntlet:    { key: 'gauntletsWon',  what: 'a Gauntlet stage cleared' },
-  rehab:       { key: 'rehabbedEver',  what: 'a captive talked onto the roster' },
+  // R207 raises the floor from 1 to 5, combos' argument again. Break 249
+  // takes the Theater's reserved stalls away, and Tier III used to be the end
+  // of that: the three stalls it adds open on the day it is bought, the Wing
+  // enrols two captives in them before the splice policy fills them, and two
+  // graduations passed a floor of one. Clean: 12 here, 10 on R206.
+  rehab:       { key: 'rehabbedEver', min: 5, what: 'a captive talked onto the roster' },
 };
 
 const content = loadSimContent();

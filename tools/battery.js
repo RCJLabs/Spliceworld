@@ -2485,6 +2485,9 @@ const BREAKS = [
     // R157 — the other half of 152. THEATER_STALLS reserves the room; this is
     // the rule that stops the splice policy taking it. Break it and the walker
     // splices to the whole grant, both clocks starve, and coverage says so.
+    // R207's rot check found it MISSED: Tier III's new stalls let the Wing
+    // graduate two captives on the day it is bought, past a floor of one.
+    // The diet gate's rehab floor is five now; this break reads 2.
     n: 249, gate: DIET, name: 'the splice policy takes the whole grant again, so the vat and the Wing never get a stall',
     file: 'tools/sim.js',
     anchor: '      const cap = Math.min(room.cap - THEATER_STALLS, opts.stableCap ?? Infinity);',
