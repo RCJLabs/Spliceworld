@@ -666,8 +666,8 @@ export function renderPensScreen(root, ctx) {
       const natural = { id: 'natural', label: esc(content.cosmetics?.dyes?.natural ?? ''), sub: esc(content.cosmetics?.dyes?.naturalSub ?? '') };
       const dyes = dyesOf(state, content).map((id) => {
         const sp = content.species[id];
-        return { id, thumb: swatch(sp.palette), label: esc(fill(content.cosmetics?.dyes?.label ?? '{species}', { species: sp.name })) };
-      });
+        return { id, mark: swatch(sp.palette), label: esc(fill(content.cosmetics?.dyes?.label ?? '{species}', { species: sp.name })) };
+      }).sort((a, b) => a.label.localeCompare(b.label));
       openPicker({
         title: esc(copy(content, 'wardrobe.title', { name: ch.name })),
         subtitle: dyes.length ? copy(content, 'wardrobe.sub') : copy(content, 'wardrobe.none'),

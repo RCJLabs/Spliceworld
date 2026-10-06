@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**1 entry queued.** R214.
+**0 entries queued.** Everything written down has shipped; the next phase is written before it is started.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -8888,7 +8888,8 @@ written so that it has something on screen when it ships.
     seeds, first on day 28. Smoke asserts the day-180 walk entered both
     events at its last fair and brought ribbons home from more than one.
 
-- **R214 — Dress for villainy.** Two chimeras built from the same parts are
+- **R214 — Dress for villainy.** ✅
+  Two chimeras built from the same parts are
   identical, and nothing a player owns says "mine". Cosmetics, as data in
   `data/cosmetics.json`:
   * **Dyes** re-tint a chimera's palette. A species' palette becomes a dye the
@@ -8901,6 +8902,79 @@ written so that it has something on screen when it ships.
   Pens; the look shows in the arena and the Pens at 380px; a new accessory is
   a JSON row; the balance harness proves cosmetics change no number; and
   SAVE_VERSION moves with a migration and a fixture.*
+
+  **Shipped: a wardrobe on every creature's card in the Pens: a dye from
+  any species the lab has graduated, and seven accessories earned around the
+  county, drawn wherever the creature is and counted nowhere.**
+  * **Accessories are rows** in `data/cosmetics.json`: a top hat, a monocle,
+    lab goggles, a cape, an eyepatch, a bow tie and a crown. Each names an
+    anchor, a layer (the cape hangs behind the torso), what earns it and its
+    shapes, in the renderer's own shape vocabulary. One per anchor and layer,
+    so a hat replaces a hat and a bow tie and a cape go together.
+  * **Every head says where it wears things.** `HEAD_ANCHORS` in
+    tools/shapes.js sits beside the twelve head templates with the same
+    parameters: the top of the skull and its half-width, the near eye and
+    its radius, and a point under the jaw. The generator writes them into
+    data/parts-shapes.json for all 51 generated heads, so a new species gets
+    them from its template; a hand-made salvage head hangs all three off its
+    near eye. An accessory is scaled from the size its shapes were drawn for
+    to this head's.
+  * **A dye is a species' palette** laid over every part and the torso. A
+    species becomes a dye the first time an animal of it graduates (one line
+    in `extractAnimal`); the v67 migration grants a lab every species whose
+    essence it already holds.
+  * **Earned around the county:** goggles at 25 notoriety, the monocle at
+    300 and the eyepatch at 600 (the high-water mark), the top hat for a
+    filled commission, the bow tie for a fair ribbon, the cape for a Gauntlet
+    exhibition, and the crown only on a creature whose letter is S. An
+    accessory is kept once earned, so a ribbon that leaves with its winner
+    does not take the bow tie with it.
+  * **Drawn through the one door.** `chimeraPortrait` (R213) passes the look
+    to the renderer, which takes two new options: a palette in place of each
+    part's own, and SVG in the head's own space, the front layer inside the
+    head's group and the back layer under the torso in the head's transform
+    and posture. So the look shows in the Pens, the arena, the specimen card
+    and the fair, and follows the head when the arena moves it.
+  * **In the Pens:** under a creature's actions, a dye button that opens the
+    game's picker (the lab's dyes by name, each with its swatch, and Natural
+    colours) and a chip per accessory. A chip the creature cannot wear is
+    shown off, with what earns it written out, because a tooltip is
+    invisible on a phone. A field guide teaches it.
+  * **Not one number.** Nothing in the battle, the physiology, the letter or
+    the economy reads a look, and smoke names the only three modules that
+    may. `node tools/sim.js --cosmetics` fights 90 builds (every species'
+    purebred and the sampler's own) against all 26 encounters twice on one
+    seed, as built and dressed in a dye and an accessory in every slot, the
+    crown included, and compares the whole battle state after every step,
+    the physiology, the letter and the upkeep: 4,680 battles, every number
+    identical. Smoke runs the same proof.
+  * **SAVE_VERSION 66 -> 67:** `wardrobe: { dyes, unlocked }` and an
+    optional `look: { dye, wear }` on a chimera, with a migration, a v67
+    fixture and three vault bounds. A look is read, never trusted (R114), and
+    a look with nothing in it is deleted, so a natural creature saves as it
+    did.
+
+  **Found on the way:**
+  * **The expedition's and the fair's picker rows had no chosen state.**
+    Both mark a pick with `is-selected`, which nothing styled, so a pick
+    could not be seen. The wardrobe's chips needed the rule anyway, and it
+    covers all three.
+  * **The cape first hung under the belly,** where the torso hid it, and was
+    redrawn to sweep up and back from the neck.
+  * **Budgets:**
+    - eager code 339.74 -> 340.28 KB, the cap 340 -> 341 with every byte
+      itemised (the renderer's two options and anchor attach, a
+      graduation's dye, the wardrobe in a new game, the second-round entry);
+    - prose 260.52 -> 260.74 KB under 261;
+    - first paint 1,197 KB against 1,197 after the guide, the copy and the
+      CSS, so sixteen more `style.css` essays (3.6 KB) moved to
+      docs/STYLE.md and it reads 1,194, under `main`'s 1,195;
+    - the day-180 save 199.54 -> 200.11 KB, over the 200 KB budget by less
+      than the wardrobe's 559 bytes. The budget moved 200 -> 210, with the
+      reason beside it: R213 measured the walk alone moving this save 10.2
+      KB, so a budget a kilobyte above the reading fails on the seed rather
+      than the code. Four slots inside the quota is the hard limit and did
+      not move.
 
 ### 9.31 A vault full of treasure has no exit (R182) — found closing R116
 

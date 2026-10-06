@@ -241,3 +241,67 @@ The two losing bands used to carry a constant prescription apiece, and "bring mo
 ## R41: veterancy, the Sparring Ring, and names
 
 Levels are what a creature has been through; the chip and bar sit beside the chassis line so building and seasoning read as the two halves of the same creature. The rename pencil is quiet — the name is the feature.
+
+## R179 — the expedition launcher's three chip rows
+
+R179 — the expedition launcher's three chip rows. A gap rather than a margin, so the wrap at 380px cannot put two chips flush against each other: `tools/a11y.js` measures the gutter between neighbouring controls and 0px is a thumb hitting the wrong one.
+
+## Four fixed columns
+
+Four fixed columns, not auto-fit. auto-fit at minmax(90px) drops to three at 380px and leaves Record dangling alone on a second row with an empty half beside it — which became conspicuous the moment this card went permanently above the War Room's tabs.
+
+## R208 — the slab
+
+R208 — the slab: a chosen part drops into its socket. And IT'S ALIVE (splice/alive-ui.js): each beat a delayed animation, the scene ended by a timer, so the reduced-motion block can stop them all; `.is-still` is the frame it holds instead.
+
+## The creature renderer pads its viewBox generously
+
+The creature renderer pads its viewBox generously, so the zoom wrapper crops that back out. It also owns the FACING: everything is drawn facing right, so the foe's wrapper is mirrored — and because the sprite is its child, one set of keyframes then reads correctly on both sides.
+
+## R206 — a hide whose colours shift
+
+R206 — a hide whose colours shift: the cuttlefish's mantle. Its patches carry `anim` in data, the renderer writes it as a class, and the three layers fade on staggered clocks so the coat moves through its palette. Off under reduced motion, where each patch holds its own opacity.
+
+## R103 — what the opposition has committed to
+
+R103 — what the opposition has committed to. One line, directly above the buttons that answer it, because a telegraph the player has to look for is a telegraph nobody reads. Never below the 12px floor: it is the newest text in the game and it is not going to be the smallest.
+
+## Region contestation (§3.9)
+
+The coalition coming back for a node reads in the same visual language as a dissection countdown — red, a live clock, one button — because it is the same kind of thing: a window you can answer or lose.
+
+## The five-region map (R26)
+
+Each strip is its own card. A locked one keeps its name and its price of entry but folds its nodes away, so the region you are actually fighting in is never buried under three you cannot reach.
+
+## R45 — completion stays above the tab bar
+
+R45 — completion stays above the tab bar, because "how much of this have I found" is the whole reason the Dex is a screen and not a menu. Chips wrap rather than scroll: eight of them at 380px is three rows, and a row you have to swipe sideways is a row nobody reads.
+
+## Containment & Rehabilitation (§3.6)
+
+A bay is a fork, not a button: salvage and rehabilitation sit side by side with their real numbers so the choice is legible before any money moves (Law 4). Amber is the bandsaw, lime is the ball pit.
+
+## Jobs board
+
+Non-combat work. It sits above the map and reads in the game's "money" colour rather than its "war" colour, because the whole point is that this is the route that does not involve losing a fight.
+
+## R38: what is holding a grade down
+
+The forecast was one word for an animal with three inputs. The headroom chip is the hook that makes a card worth reading twice; the outlook line under it is what the player acts on.
+
+## R129 — the release banner
+
+R129 — the release banner, borrowing the dominion card's shape because it is the same kind of sentence: a standing state the wire announced once. `--warn` rather than `--accent` so the two never read as one event when a player holds the county and opens the doors in the same session.
+
+## R44: the Pens fold
+
+A stable is a list you scan before it is a creature you open. The shut row carries the clocks that cost you something when they run out — R15's rule, on the screen that grew past the War Room.
+
+## The first screen a new player sees
+
+The first screen a new player sees. It is a locked dialog: there is no game behind it to go back to, because the ranch has no animals until a lab is picked. Sized for the 380px phone first — five cards is a scroll, and the scroll is inside the panel rather than the page.
+
+## R105 — the county calendar
+
+R105 — the county calendar. The sky is an overlay INSIDE the header, never a theme token: five themes ship and a dusk that reached into the palette would make Blueprint at 7 p.m. a sixth theme nobody designed. Every theme keeps its own colours and simply has an evening.

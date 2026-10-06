@@ -16233,6 +16233,8 @@ if (inShard('cosmetics')) {
   const outfit = ['top_hat', 'monocle', 'bow_tie', 'cape'];
   const worn = chimeraPortrait({ ...base, look: { wear: outfit } }, content, { idPrefix: 'w' });
   for (const id of outfit) assert.equal(count(worn, `wear wear-${id}"`), 1, `${id} is drawn`);
+  const eye = C.anchorsOf(content.parts[base.tokens.head.partId]).eye;
+  assert.ok(worn.includes(`wear-monocle" transform="translate(${eye[0]} ${eye[1]})`), 'the monocle sits on the eye it was drawn for');
   assert.ok(worn.indexOf('wear-cape') < worn.indexOf('wear-top_hat'), 'a cape hangs behind, a hat sits in front');
   const twoHats = chimeraPortrait({ ...base, look: { wear: ['top_hat', 'crown'] } }, content, { idPrefix: 'w' });
   assert.ok(twoHats.includes('wear-top_hat') && !twoHats.includes('wear-crown'), 'one hat to a head, the first one worn');
@@ -16323,6 +16325,8 @@ if (inShard('cosmetics')) {
     }
     assert.deepEqual(readers.sort(), ['render/cosmetics.js', 'splice/pens-ui.js', 'splice/wardrobe.js'], 'only the wardrobe, its drawing and the Pens read a look');
     const proof = cosmeticsBench(content);
+    assert.ok(proof.wear.length === new Set(rows.map(C.slotOf)).size && proof.wear.includes('crown'),
+      `the harness dresses every slot, the crown included (${proof.wear.join(', ')})`);
     assert.ok(proof.battles > 1000 && proof.builds >= Object.keys(content.species).length - 10, `the harness dressed ${proof.builds} builds and fought ${proof.battles} battles`);
     assert.deepEqual(proof.differences, [], 'cosmetics change no number');
   }

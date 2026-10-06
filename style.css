@@ -293,10 +293,7 @@ main {
 .save-info { margin: 8px 0 0; font-size: 0.75rem; color: var(--muted); }
 
 .frame-picker { display: flex; flex-wrap: wrap; gap: 6px; }
-/* R179 — the expedition launcher's three chip rows. A gap rather than a
-   margin, so the wrap at 380px cannot put two chips flush against each
-   other: `tools/a11y.js` measures the gutter between neighbouring controls
-   and 0px is a thumb hitting the wrong one. */
+/* R179 — the expedition launcher's three chip rows: docs/STYLE.md. */
 .exp-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .frame-picker button {
   flex: 1 1 140px;
@@ -356,10 +353,7 @@ main {
 
 /* --- Ranch screen --- */
 
-/* Four fixed columns, not auto-fit. auto-fit at minmax(90px) drops to
-   three at 380px and leaves Record dangling alone on a second row with an
-   empty half beside it — which became conspicuous the moment this card
-   went permanently above the War Room's tabs. */
+/* Four fixed columns: docs/STYLE.md. */
 .econ-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -584,10 +578,7 @@ main {
   100% { transform: scale(2.4); opacity: 0; }
 }
 
-/* R208 — the slab: a chosen part drops into its socket. And IT'S ALIVE
-   (splice/alive-ui.js): each beat a delayed animation, the scene ended by a
-   timer, so the reduced-motion block can stop them all; `.is-still` is the
-   frame it holds instead. */
+/* R208 — the slab: docs/STYLE.md. */
 .sw-arrive { animation: sw-arrive 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.25) both; }
 @keyframes sw-arrive { from { transform: translateY(-70px); opacity: 0; } to { transform: none; opacity: 1; } }
 .alive { width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; text-align: center; }
@@ -784,10 +775,7 @@ body.in-battle .ticker { font-size: 0.75rem; }
 }
 .slot-foe .platform { background: radial-gradient(ellipse at 50% 50%, rgba(255, 138, 138, 0.14) 0%, transparent 70%); }
 
-/* The creature renderer pads its viewBox generously, so the zoom wrapper
-   crops that back out. It also owns the FACING: everything is drawn facing
-   right, so the foe's wrapper is mirrored — and because the sprite is its
-   child, one set of keyframes then reads correctly on both sides. */
+/* The creature renderer pads its viewBox generously: docs/STYLE.md. */
 .sprite-zoom { transform: scale(1.38); transform-origin: 50% 74%; }
 .slot-foe .sprite-zoom { transform: scale(1.38) scaleX(-1); }
 /* Enemy units already fill their viewBox — zooming them crops the helmet. */
@@ -1103,10 +1091,7 @@ body.in-battle .ticker { font-size: 0.75rem; }
   50% { transform: scale(1.014) translateY(-3px); }
 }
 .sw-idle { animation: sw-breathe 4.4s ease-in-out infinite; transform-origin: 50% 78%; transform-box: fill-box; }
-/* R206 — a hide whose colours shift: the cuttlefish's mantle. Its patches
-   carry `anim` in data, the renderer writes it as a class, and the three
-   layers fade on staggered clocks so the coat moves through its palette.
-   Off under reduced motion, where each patch holds its own opacity. */
+/* R206 — a hide whose colours shift: docs/STYLE.md. */
 @keyframes mantle-shift { 0%, 100% { opacity: 0.1; } 50% { opacity: 0.8; } }
 .shift-a { animation: mantle-shift 6s ease-in-out infinite; }
 .shift-b { animation: mantle-shift 6s ease-in-out -2s infinite; }
@@ -1141,10 +1126,7 @@ body.in-battle .ticker { font-size: 0.75rem; }
   .stage { min-height: 130px; }
 }
 
-/* R103 — what the opposition has committed to. One line, directly above the
-   buttons that answer it, because a telegraph the player has to look for is
-   a telegraph nobody reads. Never below the 12px floor: it is the newest
-   text in the game and it is not going to be the smallest. */
+/* R103 — what the opposition has committed to: docs/STYLE.md. */
 .intent {
   margin: 0;
   padding: 5px 8px;
@@ -1187,10 +1169,7 @@ body.in-battle .ticker { font-size: 0.75rem; }
 .cannon-bar { margin-top: 5px; }
 .act-capture { border-color: var(--zap) !important; color: var(--zap); font-weight: 700; }
 
-/* --- Region contestation (§3.9) -----------------------------------------
-   The coalition coming back for a node reads in the same visual language
-   as a dissection countdown — red, a live clock, one button — because it
-   is the same kind of thing: a window you can answer or lose. */
+/* --- Region contestation (§3.9) (docs/STYLE.md) --- */
 
 .contest-card { border-color: var(--danger-2); }
 /* Alerts sit above the tabs on every view, so their chrome is paid for
@@ -1229,10 +1208,7 @@ body.in-battle .ticker { font-size: 0.75rem; }
   letter-spacing: 0.02em;
 }
 
-/* --- The five-region map (R26) ---------------------------------------
-   Each strip is its own card. A locked one keeps its name and its price of
-   entry but folds its nodes away, so the region you are actually fighting
-   in is never buried under three you cannot reach. */
+/* --- The five-region map (R26) (docs/STYLE.md) --- */
 .region-card h3 {
   display: flex;
   align-items: baseline;
@@ -1521,10 +1497,7 @@ body.in-battle .ticker { font-size: 0.75rem; }
   color: var(--accent-2);
 }
 
-/* R45 — completion stays above the tab bar, because "how much of this have
-   I found" is the whole reason the Dex is a screen and not a menu. Chips
-   wrap rather than scroll: eight of them at 380px is three rows, and a row
-   you have to swipe sideways is a row nobody reads. */
+/* R45 — completion stays above the tab bar: docs/STYLE.md. */
 .dex-progress { padding-bottom: 8px; }
 .dex-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .dex-chip {
@@ -1956,10 +1929,7 @@ footer {
   .rival-portrait { flex-basis: 92px; width: 92px; }
 }
 
-/* --- Containment & Rehabilitation (§3.6) --------------------------------
-   A bay is a fork, not a button: salvage and rehabilitation sit side by
-   side with their real numbers so the choice is legible before any money
-   moves (Law 4). Amber is the bandsaw, lime is the ball pit. */
+/* --- Containment & Rehabilitation (§3.6) (docs/STYLE.md) --- */
 
 .bay-card { border-color: var(--accent-2-dim); }
 /* The renderer pads its viewBox generously so no part can clip. In a
@@ -2149,10 +2119,7 @@ footer {
   .subtabs.is-crowded { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
-/* --- Jobs board ----------------------------------------------------------
-   Non-combat work. It sits above the map and reads in the game's "money"
-   colour rather than its "war" colour, because the whole point is that
-   this is the route that does not involve losing a fight. */
+/* --- Jobs board (docs/STYLE.md) --- */
 
 .jobs-card { border-color: var(--accent-dim); }
 .job-row { align-items: flex-start; }
@@ -2477,10 +2444,7 @@ button.dex-cell:focus-visible {
 }
 .forecast .why-outnumbered { border-left-color: var(--accent); }
 
-/* --- R38: what is holding a grade down ---------------------------------
-   The forecast was one word for an animal with three inputs. The headroom
-   chip is the hook that makes a card worth reading twice; the outlook line
-   under it is what the player acts on. */
+/* --- R38: what is holding a grade down (docs/STYLE.md) --- */
 .headroom {
   font-size: 0.75rem;
   font-weight: 700;
@@ -2513,10 +2477,7 @@ button.dex-cell:focus-visible {
    R122 used on the feral panel; both tokens hold in all five themes. */
 .dominion-card .fine-print { color: var(--text); }
 
-/* R129 — the release banner, borrowing the dominion card's shape because it
-   is the same kind of sentence: a standing state the wire announced once.
-   `--warn` rather than `--accent` so the two never read as one event when a
-   player holds the county and opens the doors in the same session. */
+/* R129 — the release banner: docs/STYLE.md. */
 .release-card {
   border-color: var(--warn);
   background: linear-gradient(180deg, var(--warn-dim), transparent 70%);
@@ -2597,10 +2558,7 @@ button.dex-cell:focus-visible {
   background: var(--accent);
 }
 
-/* --- R44: the Pens fold ------------------------------------------------
-   A stable is a list you scan before it is a creature you open. The shut
-   row carries the clocks that cost you something when they run out —
-   R15's rule, on the screen that grew past the War Room. */
+/* --- R44: the Pens fold (docs/STYLE.md) --- */
 .pen-fold .fold-summary { color: var(--muted); }
 .pen-alert { color: var(--accent-2); font-weight: 700; }
 .pen-ready { color: var(--text); }
@@ -2661,10 +2619,7 @@ button.dex-cell:focus-visible {
 .pen-fold .animal-card { border: none; padding: 0; margin: 0; background: none; }
 
 /* --- The founding choice (R119) --- */
-/* The first screen a new player sees. It is a locked dialog: there is no
-   game behind it to go back to, because the ranch has no animals until a
-   lab is picked. Sized for the 380px phone first — five cards is a scroll,
-   and the scroll is inside the panel rather than the page. */
+/* The first screen a new player sees: docs/STYLE.md. */
 .founding { width: 100%; max-width: 34rem; max-height: 88vh; overflow-y: auto; }
 .founding-lede { margin: 0 0 12px; font-size: 0.82rem; line-height: 1.45; color: var(--muted); }
 .founding-foot { margin: 10px 0 0; font-size: 0.75rem; color: var(--muted); }
@@ -2814,11 +2769,7 @@ button.dex-cell:focus-visible {
 }
 .welcome .welcome-lines li { color: var(--text); }
 
-/* R105 — the county calendar.
-   The sky is an overlay INSIDE the header, never a theme token: five themes
-   ship and a dusk that reached into the palette would make Blueprint at
-   7 p.m. a sixth theme nobody designed. Every theme keeps its own colours
-   and simply has an evening. */
+/* R105 — the county calendar: docs/STYLE.md. */
 header { position: relative; overflow: hidden; }
 header > *:not(.sky-layer) { position: relative; z-index: 1; }
 .sky-layer {

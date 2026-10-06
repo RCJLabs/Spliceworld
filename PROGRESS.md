@@ -1,5 +1,65 @@
 # PROGRESS
 
+## Session 238 — R214: dress for villainy ✅
+
+**Every creature's card in the Pens has a wardrobe: a dye from any species
+the lab has graduated, and seven accessories earned around the county (lab
+goggles, a monocle, an eyepatch, a top hat, a bow tie, a cape, and a crown
+for S grades only). The look shows wherever the creature is drawn, the
+arena included, and the harness proves it changes no number.**
+
+### What shipped
+
+- **`data/cosmetics.json`** (second load round): the dyes' words, the three
+  anchors' sizes, the unlock sentences and seven accessory rows. A new
+  accessory is one more row. Documented in `data/notes/cosmetics.md`, with a
+  field guide on the Pens.
+- **Head anchors:** `HEAD_ANCHORS` in `tools/shapes.js`, beside the twelve
+  head templates, written by the generator into `data/parts-shapes.json` for
+  all 51 generated heads.
+- **`render/cosmetics.js`** (lazy) turns a look into the renderer's two new
+  options (`dye`, `wear`); **`splice/wardrobe.js`** (lazy) keeps what is
+  earned and puts it on. `chimeraPortrait` passes the look, so the Pens, the
+  arena, the specimen card and the fair all draw it.
+- **The Pens:** a dye button (the game's picker, swatches, Natural colours)
+  and a chip per accessory, with what earns a locked one written out.
+- **Graduation** makes a species a dye (one line in `extractAnimal`).
+- **SAVE_VERSION 67:** `wardrobe` and an optional `look`, with a migration,
+  a v67 fixture and three vault bounds.
+- **The proof:** `node tools/sim.js --cosmetics`, 4,680 battles of 90 builds
+  as built and dressed, every number identical; smoke runs it.
+- **Gates:** an R214 smoke block in shard d covering the data, the anchors
+  against the drawing, the drawing and a hostile look, a new row as data,
+  the unlocks and their doors, the three modules that may read a look, the
+  proof, the save, the Pens and the walk. **Breaks 638-656.**
+
+### Found on the way
+
+- **The expedition's and the fair's picker rows had no visible chosen
+  state**; one CSS rule now covers them and the wardrobe's chips.
+- **The cape first hung under the belly**, hidden by the torso, and was
+  redrawn to sweep up over the back.
+- **The eager code cap moved 340 -> 341** (measured 340.28), itemised.
+- **First paint went to 1,197 KB against 1,197**; sixteen more `style.css`
+  essays moved to `docs/STYLE.md`, and it reads 1,194.
+- **The day-180 save went to 200.11 KB against 200**, exactly as R213's
+  entry predicted: the wardrobe's 559 bytes on top of a reading the walk had
+  already pushed to the edge. The budget moved to 210 with the reason beside
+  it (the walk alone moved this save 10.2 KB in R213); the four-slot quota
+  check is unchanged.
+
+### Known issues
+
+- A dye covers every part in one palette; there is no per-part dye.
+- The walker never dresses its creatures, so no day-180 gate measures a
+  dressed stable's height (the Pens card is measured with its wardrobe row).
+
+### Next session
+
+Nothing is queued: R214 was the last entry in ROADMAP §9. The next session
+starts by writing the next phase (and its acceptance criterion) before any
+code, per the session protocol.
+
 ## Session 237 — R213: the County Fair ✅
 
 **For three days at every season's turn the county holds a fair: a race over
