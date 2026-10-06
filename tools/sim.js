@@ -1186,7 +1186,7 @@ import { regionOfNode } from '../campaign/map.js';
 import { contestEncounter } from '../campaign/contest.js';
 import { looseSpecimens, breakoutEncounter } from '../campaign/breakout.js';
 import { rehabPlan, startRehab, rehabSession, sessionReadyAt, rehabGrants } from '../campaign/rehab.js';
-import { seasonOf } from '../campaign/calendar.js';
+import { seasonOf, fairWindow } from '../campaign/calendar.js';
 import {
   expTuning, expeditionHours, expeditionRegions, expeditionCandidates, expeditionCrew,
 } from '../campaign/expedition.js';
@@ -1194,6 +1194,7 @@ import { findsFor, expeditionOdds, startExpedition } from '../campaign/outfit.js
 import { activeMission, missionCandidates, missionCooldownMs } from '../campaign/mission.js';
 import { missionsFor, missionHours, missionTargets, missionAptitude, startMission, missionCommitted, missionAgents, missionOdds } from '../campaign/caper.js';
 import { commissionBoard, homeChimeras, fits, fulfilCommission } from '../campaign/commissions.js';
+import { fairCandidates, fairRank, enterFair } from '../campaign/fair.js';
 import { hireRoster, slotsOf, hiredOf, hire, letGo, wageNow } from '../campaign/staff.js';
 import { guideStates } from '../ranch/onboarding.js';
 
@@ -2491,6 +2492,15 @@ function walkAct(state, content, now, open, opts = {}) {
     const who = homeChimeras(state).find((c) => fits(content, job.ask, c));
     const res = who && fulfilCommission(state, content, now, job.id, who.id);
     if (res?.ok) did('commission', { ask: job.ask.kind, reward: job.reward.kind, amount: job.reward.amount ?? 0 });
+  }
+  // R213 — THE COUNTY FAIR. While one is in town the walker enters each event
+  // once, with the candidates that event's own arithmetic ranks best.
+  const fair = fairWindow(state, content, now);
+  for (const event of fair.open && content.fair ? ['race', 'show'] : []) {
+    if (state.campaign.fair?.k === fair.k && state.campaign.fair[event]) continue;
+    const best = fairRank(state, content, fair.k, event, fairCandidates(state, now)).slice(0, content.fair[event]?.entries ?? 2);
+    const res = best.length && enterFair(state, content, now, event, best.map((c) => c.id));
+    if (res?.ok) did('fair', { event, place: Math.min(...res.result.field.filter((r) => r.id).map((r) => r.place)), prizes: res.result.prizes.length });
   }
   if (opts.hire) walkHire(state, content, now, did, opts.payrollOpen);
   // The ring. The hardest garrison you hold pays the most xp per charge.

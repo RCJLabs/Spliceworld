@@ -1,0 +1,81 @@
+{
+  "days": 3,
+  "race": {
+    "entries": 2,
+    "lanes": 6,
+    "distance": 100,
+    "base": 4,
+    "jitter": 0.06,
+    "courses": [
+      {
+        "id": "mud",
+        "name": "the Mud Flats",
+        "blurb": "Ankle-deep, knee-deep, and then personal.",
+        "stamina": 75,
+        "class": { "ground": 1.15, "water": 1.05, "air": 0.85 },
+        "frame": { "L": 1.1, "A": 0.9 }
+      },
+      {
+        "id": "pond",
+        "name": "the Duck Pond Steeplechase",
+        "blurb": "There is a pond in the middle. The ducks were not consulted.",
+        "stamina": 65,
+        "class": { "water": 1.25, "ground": 0.9, "air": 1 }
+      },
+      {
+        "id": "hill",
+        "name": "Gallows Hill",
+        "blurb": "Up, over, and down the far side at whatever speed gravity agrees to.",
+        "stamina": 85,
+        "class": { "air": 1.2, "ground": 1, "water": 0.85 },
+        "frame": { "A": 1.15, "L": 0.85 }
+      },
+      {
+        "id": "oval",
+        "name": "the Oval",
+        "blurb": "A flat dirt track and a man with a whistle. Pure speed.",
+        "stamina": 60,
+        "class": {},
+        "frame": { "S": 1.1, "L": 0.9 }
+      }
+    ],
+    "prizes": [
+      { "place": 1, "funds": 450, "part": "prime" },
+      { "place": 2, "funds": 220 },
+      { "place": 3, "funds": 110 }
+    ]
+  },
+  "show": {
+    "entries": 2,
+    "lanes": 6,
+    "jitter": 1,
+    "weights": { "grade": 3, "set": 5, "variety": 0.6, "combo": 1.5, "scar": 2 },
+    "prizes": [
+      { "place": 1, "funds": 400, "part": "prime" },
+      { "place": 2, "funds": 200 },
+      { "place": 3, "funds": 100 }
+    ]
+  },
+  "locals": {
+    "owners": [
+      "Mrs. Henderson's",
+      "The 4-H Club's",
+      "Old Man Pruitt's",
+      "The Reverend's",
+      "Deputy Doyle's",
+      "The Mayor's nephew's",
+      "A suspiciously well-funded child's",
+      "Nobody's, it just walked in"
+    ],
+    "picks": 3,
+    "grades": ["standard", "prime", "prime", "apex", "apex", "prismatic"]
+  },
+  "ribbons": {
+    "keep": 6,
+    "places": {
+      "1": { "name": "Blue", "color": "#2f6fdc", "edge": "#163a78" },
+      "2": { "name": "Red", "color": "#d23b3b", "edge": "#7a1b1b" },
+      "3": { "name": "White", "color": "#f2efe6", "edge": "#8a8577" }
+    }
+  }
+}

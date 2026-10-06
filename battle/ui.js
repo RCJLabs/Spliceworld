@@ -16,7 +16,7 @@
 
 import { creaturePortrait, renderUnitSVG, drawableGenome } from '../render/renderer.js';
 import { moodOf } from '../render/mood.js';
-import { chimeraGenome } from '../splice/theater.js';
+import { chimeraPortrait } from '../render/ribbons.js';
 import {
   step, playerActions, playerActive, turnForecast, intentOf, bracePreview, braceTitle,
 } from './engine.js';
@@ -139,7 +139,7 @@ function spriteFor(side, refId, ctx, battle) {
   // on this screen. No `idle` — the arena has its own animation vocabulary
   // (R2's beats) and a breathing sprite fights it.
   return chimera
-    ? creaturePortrait(chimeraGenome(chimera, content), content, {
+    ? chimeraPortrait(chimera, content, {
         idPrefix: `me-${refId}`, ...moodOf(chimera, content),
       })
     : '';

@@ -2625,6 +2625,8 @@ assert.deepEqual(m5.campaign, {
   legendsFound: [],
   // R212 — and no commission filled: the board is the seed and the clock.
   commissionsDone: [],
+  // R213 — and no fair entered.
+  fair: null,
 });
 // v27 (A4): the one job slot became a list, and a job that was IN FLIGHT
 // when the save was written has to survive the move — it keeps its clock,
@@ -7322,6 +7324,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'henchmen',
     // R212 — clients who want a creature built a particular way.
     'commissions',
+    // R213 — a race and a Best in Show at every season's turn.
+    'fair',
     // R82. The breakout is the rival ladder's consequence rather than a
     // second ladder: it is on the roll in its own right because it has a
     // data file, a module, a board, a launcher and a first-use moment, and
@@ -7471,6 +7475,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'henchmen.json': 'henchmen',
     // R212 — the commissions board, taught beside it.
     'commissions.json': 'commissions',
+    // R213 — the County Fair, on the same tab.
+    'fair.json': 'fair',
     'starters.json': null,
     // R62: the wire's copy is not a system with a first-use moment — it is
     // the voice every system above speaks in, met through all of them and
@@ -7550,6 +7556,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'campaign/caper.js': 'missions',
     // R212 — the commissions board's lazy half; its clock is in mission.js.
     'campaign/commissions.js': 'commissions',
+    // R213 — the fair's lazy half; its window is in calendar.js.
+    'campaign/fair.js': 'fair',
+    // R213 — the one door a chimera's portrait goes through, ribbons and all.
+    'render/ribbons.js': 'fair',
     // R181 — the hire board's lazy half; the clock half is in ranch/ranch.js.
     'campaign/staff.js': 'henchmen',
     'campaign/rehab.js': 'rehab',
@@ -7812,7 +7822,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
       // one cannot be true before there is a creature to photograph. Same
       // step, same reason as the tier letter above it.
       // R212 — and a client can be shown one, so the board's note lights here.
-    }, ['upkeep', 'temperament', 'bond', 'veterans', 'tiers', 'cards', 'commissions']],
+      // R213 — and entered at the fair.
+    }, ['upkeep', 'temperament', 'bond', 'veterans', 'tiers', 'cards', 'commissions', 'fair']],
     ['parts in the vault', () => {
       lab.inventory.parts = [{ id: 't0', partId: 'goat_head' }, { id: 't1', partId: 'goat_tail' }, { id: 't2', partId: 'goat_hide' }];
     }, ['combos']],
@@ -8994,6 +9005,8 @@ if (inShard('tiers')) {
     mission: 'data-cap-go=',
     // R212 — the board's Show button, on the same subtab.
     commission: 'data-commission=',
+    // R213 — the fair's Run button, on the same subtab, as the expedition's Send.
+    fair: 'data-fair-race=',
     buy: 'data-act="order"', facility: 'data-act="upgrade"', pens: 'data-act="pen"',
   };
   const screenModule = Object.fromEntries(shellScreenMap().map((e) => [e.screen, e.file]));
@@ -26043,7 +26056,20 @@ if (inShard('wire')) {
 // than as a fourth group, and the renderer's LATE attach became one loop over
 // three keys (+2 bytes for the third). PROSE_CAP stays where it was: R133's
 // essay in the agenda became a pointer to ROADMAP R133, which tells it.
-const KB_CAP = 339;        // CODE only, measured at 338.87
+// R213 — 339 -> 340, measured at 339.74 on a tree that read 338.85 before
+// it. The Ranch's agenda offers the County Fair on the first frame, so the
+// fair's window is eager: `fairWindow` in `campaign/calendar.js` (334 bytes,
+// beside the seasons it is counted in) and the agenda row that reads it
+// (about 570, its label in data/copy.json). The fair itself — the field, the course, the race, the
+// judging, the prizes and the ribbons — is lazy in `campaign/fair.js` and
+// `render/ribbons.js`, and so is its data, which rides the second round.
+//
+// Paid down before it was raised: the window reads `state.createdAt` and
+// `content.fair` without guards (every caller hands it a real save), the
+// row's hint counts hours rather than naming the season, and the fair rides
+// the renderer's one LATE attach loop (8 bytes). PROSE_CAP stays where it
+// was: R106's essay on the assault row became a pointer to ROADMAP R106.
+const KB_CAP = 340;        // CODE only, measured at 339.74
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.

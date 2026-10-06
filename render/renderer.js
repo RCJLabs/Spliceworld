@@ -297,7 +297,7 @@ export function attachShapes(content, raw) {
       if (into[id]) into[id].shapes = shapes;
     }
   }
-  for (const key of ['arena', 'pasture', 'commissions']) if (raw?.[key]) content[key] = raw[key];
+  for (const key of ['arena', 'pasture', 'commissions', 'fair']) if (raw?.[key]) content[key] = raw[key];
   return content;
 }
 

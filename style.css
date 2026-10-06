@@ -2187,6 +2187,27 @@ footer {
 /* R212 — a client's request, and the creatures at home that would do. */
 .commission > div:first-child { flex: 1 1 14rem; }
 .commission-fits { display: flex; flex-wrap: wrap; gap: 6px; }
+/* R213 — the County Fair. A lane per runner; each runner stops where it was
+   when the winner crossed the line (--p), and the run plays once. */
+.fair-card h4 { margin: 10px 0 4px; }
+.fair-track { display: grid; gap: 4px; margin: 6px 0; padding: 4px 0;
+  border-right: 4px dashed var(--goo); }
+.fair-lane { position: relative; height: 44px; border-radius: 6px;
+  background: repeating-linear-gradient(90deg, var(--panel-2) 0 22px, var(--panel) 22px 44px); }
+.fair-runner { position: absolute; top: 2px; width: 40px; height: 40px;
+  left: calc(var(--p, 1) * (100% - 40px)); }
+.fair-runner svg { width: 40px; height: 40px; display: block; }
+.fair-runner.is-running { animation: fair-run 2.8s cubic-bezier(.35, .1, .45, 1) both; }
+@keyframes fair-run { from { left: 0; } }
+.fair-results { margin: 6px 0; padding-left: 22px; }
+.fair-results li { margin: 2px 0; }
+.fair-results li.is-mine { font-weight: 700; }
+.fair-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid; vertical-align: -1px; }
+@media (prefers-reduced-motion: reduce) {
+  .fair-runner.is-running { animation: none; }
+  .fair-track, .fair-replay { display: none; }
+}
 .heat-high { color: var(--danger-soft); }
 
 /* --- Your dossier (§3.8) -------------------------------------------------
