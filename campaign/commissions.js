@@ -142,22 +142,37 @@ export function homeChimeras(state) {
   return (state.chimeras ?? []).filter((c) => !away.has(c.id));
 }
 
-// Does this creature answer the request? The same physiology the battle reads.
-export function fits(content, ask, chimera) {
+// What a body is, for a client: its parts, class, mass and move tags, read
+// through the same physiology the battle reads. Memoised on the frame and
+// the tokens, because the War Room asks it of every creature on every paint
+// and `analyze` is pure in exactly those.
+const bodies = new WeakMap();
+function bodyOf(content, chimera) {
   const tokens = Object.values(chimera?.tokens ?? {}).filter((t) => content.parts[t.partId]);
-  const parts = tokens.map((t) => content.parts[t.partId]);
+  const key = `${chimera?.frame}|${tokens.map((t) => `${t.partId}:${t.grade}:${(t.traits ?? []).join('+')}`).join(',')}`;
+  const seen = bodies.get(content) ?? new Map();
+  bodies.set(content, seen);
+  if (!seen.has(key)) {
+    const report = analyze(chimera.frame, tokens, content, tokens.length);
+    if (seen.size > 256) seen.clear();
+    seen.set(key, { parts: tokens.map((t) => content.parts[t.partId]), cls: report.creatureClass, mass: report.mass,
+      moves: new Set(movesFromTokens(tokens, report, content).flatMap((m) => m.tags ?? [])) });
+  }
+  return seen.get(key);
+}
+
+// Does this creature answer the request?
+export function fits(content, ask, chimera) {
+  const body = bodyOf(content, chimera);
   if (ask.kind === 'anatomy') {
-    return ask.want.every(({ slot, tag }) => parts.some((p) => p.slot === slot && (p.tags ?? []).includes(tag)));
+    return ask.want.every(({ slot, tag }) => body.parts.some((p) => p.slot === slot && (p.tags ?? []).includes(tag)));
   }
   if (ask.kind === 'species') {
-    const kinds = new Set(parts.map((p) => p.species));
+    const kinds = new Set(body.parts.map((p) => p.species));
     return kinds.size === ask.count && kinds.has(ask.species);
   }
-  if (ask.kind === 'frame' && chimera.frame !== ask.frame) return false;
-  const report = analyze(chimera.frame, tokens, content, tokens.length);
-  if (ask.kind === 'frame') return report.mass < ask.under;
-  return report.creatureClass === ask.cls
-    && movesFromTokens(tokens, report, content).some((m) => (m.tags ?? []).includes(ask.move));
+  if (ask.kind === 'frame') return chimera.frame === ask.frame && body.mass < ask.under;
+  return body.cls === ask.cls && body.moves.has(ask.move);
 }
 
 const noun = (content, { slot, tag }) => content.commissions?.nouns?.[`${slot}:${tag}`]

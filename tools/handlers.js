@@ -287,7 +287,10 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
     // R212 — a creature that answers the first commission on the board, so
     // the board paints its Show button. Built from that commission's own
     // witness through the Theater's door, on a table cleared for it and put
-    // back after, so every other control the table owns is still painted.
+    // back after, so every other control the table owns is still painted —
+    // and then worn by the Patient above, because a hurt creature is still
+    // home and a fourth creature is a fourth card: 381 more presses and
+    // twenty seconds of this gate, measured, for no control it lacked.
     const job = commissionBoard(s, content, now)[0];
     const keep = { table: s.theater, tier: s.facility.theater };
     s.theater = { ...s.theater, busyUntil: 0 };
@@ -299,6 +302,9 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
     const built = spliceChimera(s, job.witness.frame,
       Object.fromEntries(Object.keys(job.witness.parts).map((socket) => [socket, `cw-${socket}`])), content, now);
     if (!built.ok) throw new Error(`handlers fixture: the commission's witness would not splice (${built.msg})`);
+    const made = s.chimeras.pop();
+    const patient = s.chimeras.find((c) => c.id === 'h-hurt');
+    for (const key of ['frame', 'tokens', 'instability', 'moveset']) patient[key] = made[key];
     s.theater = keep.table;
     s.facility.theater = keep.tier;
     return s;

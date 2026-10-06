@@ -8294,8 +8294,8 @@ const BREAKS = [
     // R212 — ANY CHASSIS WILL DO. The fit stops reading the frame.
     n: 602, gate: SHARD_D, name: 'a frame request is answered on any chassis',
     file: 'campaign/commissions.js',
-    anchor: "  if (ask.kind === 'frame' && chimera.frame !== ask.frame) return false;\n",
-    to: '',
+    anchor: "  if (ask.kind === 'frame') return chimera.frame === ask.frame && body.mass < ask.under;",
+    to: "  if (ask.kind === 'frame') return body.mass < ask.under;",
     expect: 'is not answered on another chassis',
   },
   {
