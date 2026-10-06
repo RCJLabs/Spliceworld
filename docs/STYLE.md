@@ -195,3 +195,49 @@ Lifted from #ff4fa3 by R122's contrast floor: the field-note title is accent-2 o
 ## R73 follow-up
 
 R73 follow-up: was `var(--accent-2)` while `--cls-air` sits defined and unused in all five theme blocks — its two neighbours use their own class colour and Air borrowed the amber accent, so the one class the triangle makes hardest to read was also the one drawn in another role's colour.
+
+## Semantic palette: BIOHAZARD, the shipped scheme.
+
+A containment facility that has stopped filing paperwork: charcoal so dark it reads as unlit, with toxic lime and hazard amber doing all the talking. The alternates live in [data-theme] blocks below.
+
+Surfaces run ink (page) -> panel (card) -> panel-2 (raised) -> well (sunken). accent is the brand/action colour, accent-2 the secondary. danger/warn/hp/sta are role colours; the three class colours belong to the elemental triangle and should stay distinguishable in any scheme.
+
+## Colour schemes
+
+Each scheme overrides the semantic tokens above and nothing else. The three class colours stay deliberately distinguishable in every one: the elemental triangle is a mechanic, not decoration, so Ground/Water/Air must never blend into a scheme's accent.
+
+## Arena: one screen, no scrolling
+
+Laid out the way turn-based creature battles have been laid out since 1996 — foe up-and-right, you down-and-left, both facing each other, a message box under the field and the command menu under that. The shell goes fixed-height in battle mode so nothing can push the menu off.
+
+## In-game pickers (replaces every native <select>/<input>)
+
+Nothing in this game may hand the player an OS dropdown: the Android wheel and the iOS action sheet both break the Saturday-morning frame. Fields below are buttons; the sheet is drawn with the game's own chrome.
+
+## War Room sub-navigation
+
+Thirteen cards in one column became five views behind a tab bar. It is sticky so a long view (the wire, the labs) can still be navigated from anywhere in it, and it is deliberately quieter than the main tabs — a second row of chrome as loud as the first would read as a second app.
+
+## A4: the Right Now panel
+
+A list of what is actually open, grouped by what KIND of thing it is. Rows are buttons because every one of them goes somewhere; they are full-width and stacked so the panel reads the same at 380px as it does on a desktop, which is where it will mostly be read.
+
+## R33: the chimera dossier
+
+Everything physiology knows, folded into the pens card. Shut by default: the card already carries a portrait, temperament, obedience, four move slots and a parts manifest, and at 380px a ninth block open-by-default pushes the buttons off the first screen. The summary line carries class, flight and speed — the three facts worth a glance without opening it.
+
+## R35: the matchup layer on the briefing
+
+The class triangle was the only matchup the briefing showed. The tag chart is live in 96% of encounters and worth 4-7pp, and it was invisible on the screen where a team gets picked. Wins and losses read differently at a glance, because a briefing that only lists upsides is a brochure.
+
+## R36: the species cell is a button now
+
+The 34 base species carried a name, a role and a count — strictly less than the Dex showed for a variant of the same animal. The cell gains its tags (what variants and the field guide already show) and opens a sheet for the rest, because a 100px grid column cannot hold a set bonus and its effect. Inherits .dex-cell; this is the affordance only.
+
+## R37: why you are losing
+
+The two losing bands used to carry a constant prescription apiece, and "bring more creatures" was unfollowable for anyone already at the cap of three. The replacement is measured per matchup, so it earns a line of its own under the verdict rather than being folded into the band text.
+
+## R41: veterancy, the Sparring Ring, and names
+
+Levels are what a creature has been through; the chip and bar sit beside the chassis line so building and seasoning read as the two halves of the same creature. The rename pencil is quiet — the name is the feature.

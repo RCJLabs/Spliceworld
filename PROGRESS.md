@@ -1,5 +1,74 @@
 # PROGRESS
 
+## Session 237 — R213: the County Fair ✅
+
+**For three days at every season's turn the county holds a fair: a race over
+one of four drawn courses and a Best in Show, each entered once from the War
+Room's jobs tab. The race plays on a track at 380px and is a results list
+under reduced motion. Every roll is seeded by the save, the fair and the
+runner, so the same entries replay the same. Winners take money, a prime
+part for first, and a rosette that stays on the chimera and shows wherever
+it is drawn.**
+
+### What shipped
+
+- **`campaign/fair.js`** (lazy, with the War Room and the walker): the
+  county's field, the course, the race, the judging, the prizes and the
+  ribbons. **`fairWindow`** in `campaign/calendar.js` is the eager window the
+  Ranch's agenda asks.
+- **`render/ribbons.js`** (lazy): `chimeraPortrait`, the one door every
+  screen draws a player's chimera through, pinning the newest three
+  rosettes. The Pens, the arena, the specimen card and the fair use it.
+- **`data/fair.json`** (second load round): the days, the courses, the
+  race's and the show's arithmetic and prizes, the county's owners and
+  grade ladder, and the rosette colours. It is documented in
+  `data/notes/fair.md`, with a field guide.
+- **The War Room card** has the course, a picker per event, the track and
+  the results; **the Ranch agenda row** shows while an event is unentered.
+- **SAVE_VERSION 66:** `campaign.fair` and `ribbons` on the chimera, with a
+  migration, a v66 fixture and vault bounds.
+- **The walker** enters its two best in both events at every fair.
+- **Gates:** an R213 smoke block in shard b covering the window at every
+  turn, a 48-entry census run twice in two orders and after a reload, each
+  term of the race and the judging, the refusals, ribbons through one door,
+  the race playing once, the reduced-motion card, v65 -> v66, the agenda,
+  the walk, and new courses and places as data. The handlers fixture is a
+  season old, so the fair's controls are walked. **Breaks 616-637.**
+
+### Found on the way
+
+- **The day-180 save went over its 200 KB budget (200.4)**, mostly because
+  the walk became a different campaign (seed 2026: $497k against $137k, and
+  fuller containment bays). The fair's own 2.4 KB was cut to 1.5 by storing
+  a local's owner index and species instead of its name and dropping the
+  ribbon's season, which nothing read: 199.54 KB. **This is now the
+  tightest budget in the tree**; the next milestone that moves the walk
+  should expect to meet it.
+- **First paint went to 1,198 KB against 1,197**; eleven more `style.css`
+  essays (4.3 KB) moved to `docs/STYLE.md`, and it reads 1,195.
+- **The eager code cap moved 339 -> 340** (measured 339.74) for the window
+  and the agenda row. Prose held by turning R106's agenda essay into a
+  pointer.
+- **The handlers fixture never opened a fair**, because `newGameState` is
+  born on the wall clock. It is aged a season and an hour.
+- **Runners were a third of their lanes** until the track used the
+  pasture's crop.
+- **Seed 31337 ends at Theater II on this walker** (`main`: III). Diet's rule
+  reads seed 2026, which still buys it.
+
+### Known issues
+
+- On a busy save the fair's agenda row sits past the Ranch's three-row cap
+  for its kind (R143). The badge counts it, and the War Room carries the
+  card.
+- The pick lists name every creature at home; a stable of fifteen is three
+  rows of buttons per event.
+
+### Next session
+
+R214 — Dress for villainy. Start by reading `render/ribbons.js`: the
+accessories want the same door, and fair ribbons are one of their unlocks.
+
 ## Session 236 — R212: commissions ✅
 
 **Clients post commissions on the War Room's jobs tab ("wings and a venom
