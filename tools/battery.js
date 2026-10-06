@@ -4396,12 +4396,20 @@ const BREAKS = [
   {
     // The two boots are a union, not a sequence: `splice/extract.js` runs
     // ten of its fourteen functions drawing a herd and none at all for a
-    // player who has none yet, so a function live in EITHER is live. Take
-    // the merge away and the fresh boot's idle half is counted as dead.
+    // player who has none yet, so a function live in EITHER is live.
+    // R212 — RE-AIMED, BECAUSE IT HAD ROTTED ON `main`. It used to take the
+    // merge away, and since the herd boot is harvested SECOND that let it
+    // overwrite the fresh one: the herd's modules stayed live and only the
+    // fresh boot's idle half read dead. That was 6.6 KB on R211's tree
+    // (160.3 -> 166.9) against a budget that fires from 9.7 up, so it went
+    // MISSED on both trees. What the name describes is the herd boot not
+    // counting at all, which this is: five modules read as running nothing,
+    // and the dead bytes go 160.3 -> 213.9.
     n: 299, gate: BOOT, name: 'the second first paint stops counting, so a module that only runs for a player with a herd reads dead',
     file: 'tools/boot.js',
-    anchor: "          mine.set(key, { start: at.startOffset, end: at.endOffset, ran: (mine.get(key)?.ran ?? false) || lit });",
-    to: "          mine.set(key, { start: at.startOffset, end: at.endOffset, ran: lit });",
+    anchor: "    await send('Page.navigate', { url });\n    await sleep(3500);\n    await harvest();",
+    to: "    await send('Page.navigate', { url });\n    await sleep(3500);",
+    expect: 'splice/extract.js',
   },
 
   // R96 — a creature that shows what it is. Three breaks, one per rule the
