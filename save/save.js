@@ -5,7 +5,7 @@
 import { newWorldSeed } from '../util/rng.js';
 import { TUNING } from '../ranch/ranch.js';
 
-export const SAVE_VERSION = 65;
+export const SAVE_VERSION = 66;
 // R101 — exported for `save/slots.js`, which was carved out of this file
 // and still addresses the same keys. Nothing outside the save system
 // reads either one.
@@ -101,6 +101,8 @@ export function newGameState() {
       notorietyPeak: 0,
       // R212 — data/notes/commissions.md.
       commissionsDone: [],
+      // R213 — data/notes/fair.md.
+      fair: null,
     },
     // R181 — the payroll: one record per hire, its tallies inside it.
     staff: { hired: [], poached: {} },

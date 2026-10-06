@@ -51,6 +51,7 @@ import { feralStatus } from '../splice/feral.js';
 import { activeRaid, raidRemainingMs, levyOf } from '../campaign/taskforce.js';
 import { gauntletState } from '../campaign/gauntlet.js';
 import { fmtMoney, fill } from '../util/text.js';
+import { fairWindow } from '../campaign/calendar.js';
 
 const HOUR = 3600000;
 const fit = fitToFight;
@@ -393,16 +394,19 @@ export const AGENDA = [
       && commissionWindows(state, content, now).some((w) => !w.done),
   },
   {
+    // R213 — while the fair is in town and an event is unentered.
+    id: 'fair', kind: 'campaign', screen: 'battle', subtab: 'jobs', label: (state, content) => fill(content.copy?.fair?.agenda_label, {}),
+    hint: (state, content, now) => fill(content.copy?.fair?.agenda_hint,
+      { hours: Math.ceil((fairWindow(state, content, now).closesAt - now) / HOUR) }),
+    ready: (state, content, now) => {
+      const w = fairWindow(state, content, now), f = state.campaign?.fair;
+      return w.open && state.chimeras?.length > 0 && !(f?.k === w.k && f.race && f.show);
+    },
+  },
+  {
     id: 'assault', kind: 'campaign', screen: 'battle', label: 'Take a node',
-    // R106 — the row stays when the odds are hopeless, and says so. It is
-    // not removed, because `battle/forecast.js` settles that out loud: a
-    // forecast is not a gate, and "a player who wants to throw one goat at a
-    // police cruiser is entitled to". What was wrong was never the offer, it
-    // was that the offer read the same at three-against-one as it does at
-    // every other moment in the game — measured over three seeds, the row is
-    // offered outnumbered on days 0-9 and never afterwards, so this is the
-    // opening walking a new player into the one wall A1 designed around, in
-    // the voice of a hint about how well it pays.
+    // R106 — the row stays when the odds are hopeless, and says so; why, in
+    // ROADMAP R106.
     hint: (state, content, now) => {
       // R133 — the no-wall branch is most of a campaign, so it says how many
       // doors are open rather than a lesson; the story is ROADMAP R133.

@@ -27,8 +27,7 @@
 // refusals: a refusal is the most-read prose in an import feature, and CLAUDE
 // .md's rule does not have a carve-out for error text.
 
-import { creaturePortrait } from '../render/renderer.js';
-import { chimeraGenome } from './theater.js';
+import { chimeraPortrait } from '../render/ribbons.js';
 import { unitFromGenome } from '../battle/statblock.js';
 import { GRADE_INDEX } from './grades.js';
 import { fill, esc, safeText } from '../util/text.js';
@@ -151,7 +150,7 @@ export function cardSVG(chimera, state, content) {
   // has), so a card of a creature built on retired content still draws. Its
   // inner markup is lifted out and re-placed inside this one rather than
   // nested, which Safari draws inconsistently.
-  const portrait = creaturePortrait(chimeraGenome(chimera, content), content)
+  const portrait = chimeraPortrait(chimera, content)
     .replace(/^<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
 
   // `<metadata>` is the good door: JSON, no parsing of drawn text required.

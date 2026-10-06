@@ -188,6 +188,13 @@ const BOUNDS = {
   // after), and the carried list is trimmed at the boundary to LEGENDS_KEPT.
   'campaign.legendsFound': { max: (c) => Object.values(c.species ?? {}).filter((s) => s.rarity === 'unique').length, by: 'one per unique species, once per run' },
   'legends':              { max: 12, by: '`LEGENDS_KEPT` in save/slots.js — trimmed at every relocation' },
+  // R213 — a chimera wears at most `keep` ribbons; `enterFair` trims as it pins.
+  'chimeras[].ribbons':   { max: (c) => c.fair?.ribbons?.keep ?? 6, by: '`ribbons.keep` in fair.json' },
+  // R213 — one fair's field and its prizes, by its lanes.
+  'campaign.fair.race.field':  { max: (c) => c.fair?.race?.lanes ?? 6, by: 'the race\'s lanes' },
+  'campaign.fair.show.field':  { max: (c) => c.fair?.show?.lanes ?? 6, by: 'the show\'s lanes' },
+  'campaign.fair.race.prizes': { max: (c) => c.fair?.race?.entries ?? 2, by: 'the race\'s entries' },
+  'campaign.fair.show.prizes': { max: (c) => c.fair?.show?.entries ?? 2, by: 'the show\'s entries' },
   // R212 — one id per open window; `fulfilCommission` drops the lapsed ones.
   'campaign.commissionsDone': { max: (c) => Math.ceil((c.commissions?.board?.lastsHours ?? 32) / (c.commissions?.board?.everyHours ?? 8)) + 1, by: 'the open windows; lapsed ids are dropped on the next fill' },
   'campaign.faunaGranted': { max: (c) => Object.keys(c.species ?? {}).length, by: 'the species list' },

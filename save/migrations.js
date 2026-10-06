@@ -22,6 +22,13 @@
 // anything needing content/RNG (e.g. starter herd) happens on boot via
 // seeded flags (see ranch.ensureRanchSeeded).
 export const migrations = {
+  // R213 — no fair entered yet. A chimera's `ribbons` are absent until it
+  // wins one, which every reader takes as none.
+  66: (save) => {
+    save.campaign ??= {};
+    save.campaign.fair ??= null;
+    return save;
+  },
   // R212 — nothing filled yet: the board is new, and its open commissions
   // are derived from the seed and the clock, so there is nothing to seed.
   65: (save) => {

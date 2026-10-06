@@ -1506,7 +1506,7 @@ const COPY_BUDGET = {
   'campaign/rivals.js': 9,
   'campaign/sparring.js': 28,
   'campaign/taskforce.js': 21,
-  'campaign/ui.js': 320,
+  'campaign/ui.js': 318,
   'campaign/warroom.js': 70,
   'data/catalog.js': 28,
   'data/loader.js': 3,

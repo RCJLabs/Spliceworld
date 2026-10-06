@@ -103,6 +103,13 @@ export function skyOf(state, content, now = Date.now()) {
   };
 }
 
+// R213 — the fair at each season's turn after the first: data/notes/fair.md.
+export function fairWindow(state, content, now) {
+  const span = (calendarTuning(content).seasonDays ?? 28) * DAY, k = Math.floor((now - state.createdAt) / span);
+  const opensAt = state.createdAt + k * span, closesAt = opensAt + (content.fair?.days ?? 0) * DAY;
+  return { k, opensAt, closesAt, open: k > 0 && now < closesAt };
+}
+
 // The Ranch's one line — a sentence, not a panel, because R133 spent a
 // milestone getting things off the top of that screen.
 export function calendarLine(state, content, now = Date.now()) {

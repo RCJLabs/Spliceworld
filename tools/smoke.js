@@ -139,6 +139,10 @@ const SHARD_OF = {
   // fill, the clock and one stubbed War Room press. No battles; one cached
   // walk. Shard d, beside the henchmen.
   commissions: 'd',
+  // R213 — the County Fair: a census of every fair in a year of seasons on
+  // the day-180 lab, each entered twice in two orders; two stubbed screens.
+  // No battles; one cached walk. Shard b, the lightest on R212's reading.
+  fair: 'b',
   // R102 — its own name, for R129's reason one entry up. Shard b: the comment
   // above calls shard a "the lightest of the four" and that went stale, which
   // is why this is a measurement rather than a quote — a 212s, b 134s, c 174s,
@@ -2625,6 +2629,8 @@ assert.deepEqual(m5.campaign, {
   legendsFound: [],
   // R212 — and no commission filled: the board is the seed and the clock.
   commissionsDone: [],
+  // R213 — and no fair entered.
+  fair: null,
 });
 // v27 (A4): the one job slot became a list, and a job that was IN FLIGHT
 // when the save was written has to survive the move — it keeps its clock,
@@ -7322,6 +7328,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'henchmen',
     // R212 — clients who want a creature built a particular way.
     'commissions',
+    // R213 — a race and a Best in Show at every season's turn.
+    'fair',
     // R82. The breakout is the rival ladder's consequence rather than a
     // second ladder: it is on the roll in its own right because it has a
     // data file, a module, a board, a launcher and a first-use moment, and
@@ -7471,6 +7479,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'henchmen.json': 'henchmen',
     // R212 — the commissions board, taught beside it.
     'commissions.json': 'commissions',
+    // R213 — the County Fair, on the same tab.
+    'fair.json': 'fair',
     'starters.json': null,
     // R62: the wire's copy is not a system with a first-use moment — it is
     // the voice every system above speaks in, met through all of them and
@@ -7550,6 +7560,10 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'campaign/caper.js': 'missions',
     // R212 — the commissions board's lazy half; its clock is in mission.js.
     'campaign/commissions.js': 'commissions',
+    // R213 — the fair's lazy half; its window is in calendar.js.
+    'campaign/fair.js': 'fair',
+    // R213 — the one door a chimera's portrait goes through, ribbons and all.
+    'render/ribbons.js': 'fair',
     // R181 — the hire board's lazy half; the clock half is in ranch/ranch.js.
     'campaign/staff.js': 'henchmen',
     'campaign/rehab.js': 'rehab',
@@ -7812,7 +7826,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
       // one cannot be true before there is a creature to photograph. Same
       // step, same reason as the tier letter above it.
       // R212 — and a client can be shown one, so the board's note lights here.
-    }, ['upkeep', 'temperament', 'bond', 'veterans', 'tiers', 'cards', 'commissions']],
+      // R213 — and entered at the fair.
+    }, ['upkeep', 'temperament', 'bond', 'veterans', 'tiers', 'cards', 'commissions', 'fair']],
     ['parts in the vault', () => {
       lab.inventory.parts = [{ id: 't0', partId: 'goat_head' }, { id: 't1', partId: 'goat_tail' }, { id: 't2', partId: 'goat_hide' }];
     }, ['combos']],
@@ -8994,6 +9009,8 @@ if (inShard('tiers')) {
     mission: 'data-cap-go=',
     // R212 — the board's Show button, on the same subtab.
     commission: 'data-commission=',
+    // R213 — the fair's Run button, on the same subtab, as the expedition's Send.
+    fair: 'data-fair-race=',
     buy: 'data-act="order"', facility: 'data-act="upgrade"', pens: 'data-act="pen"',
   };
   const screenModule = Object.fromEntries(shellScreenMap().map((e) => [e.screen, e.file]));
@@ -15821,6 +15838,320 @@ if (inShard('commissions')) {
   assert.ok(said.some((t) => /\bslimy\b/.test(t)), 'a new tag is asked for in the words the slots give it');
   assert.ok(said.every(readable), 'and every one of them reads');
   console.log(`   R212 commissions: ${census.length} generated, every one splices and answers itself; ${cross} answered by another's witness; the walk fills them`);
+}
+
+// --- R213, THE COUNTY FAIR. A fair at every season's turn; its entries and
+// --- results seeded, so they replay; ribbons on the chimera, drawn wherever
+// --- the chimera is.
+if (inShard('fair')) {
+  const F = await import('../campaign/fair.js');
+  const { fairWindow } = await import('../campaign/calendar.js');
+  const { agenda } = await import('../ranch/agenda.js');
+  const { chimeraPortrait, ribbonsOf } = await import('../render/ribbons.js');
+  const { cardSVG } = await import('../splice/card.js');
+  const { renderWarRoomScreen } = await import('../campaign/ui.js');
+  const { renderPensScreen } = await import('../splice/pens-ui.js');
+  const { recordingRoot, installDom, memoryStorage } = await import('./domstub.js');
+  const { walkedSave } = await import('./fixtures.js');
+  const { vaultCapacity } = await import('../splice/vault.js');
+  const { esc } = await import('../util/text.js');
+  const DAY = 24 * HOUR;
+  const spec = content.fair;
+  const span = (content.calendar?.seasonDays ?? 28) * DAY;
+  const readable = (text) => typeof text === 'string' && text.length > 0 && !/[{}]|undefined|NaN|null/.test(text);
+  const count = (html, needle) => html.split(needle).length - 1;
+
+  // 1. A FAIR AT EVERY SEASON'S TURN, counted from the save's birthday like
+  //    the seasons, and only for `days`. Three years of turns.
+  const born = { ...newGameState(), seed: 2026, createdAt: t0 };
+  const turns = 3 * Math.max(1, content.calendar?.order?.length ?? 4);
+  for (let k = 0; k <= turns; k++) {
+    const turn = t0 + k * span;
+    const w = fairWindow(born, content, turn + HOUR);
+    assert.equal(w.open, k > 0, `turn ${k}: ${k ? 'the fair is in town' : 'no fair the day the lab opens'}`);
+    assert.ok(w.k === k && w.opensAt === turn && w.closesAt - w.opensAt === spec.days * DAY, `turn ${k}: numbered by its turn, in town ${spec.days} days`);
+    assert.equal(fairWindow(born, content, turn + spec.days * DAY).open, false, `turn ${k}: and gone after`);
+    assert.equal(fairWindow(born, content, turn - 1).open, false, `turn ${k}: and not in town the day before`);
+    if (k && (content.calendar?.order?.length ?? 0) > 1) {
+      assert.notEqual(seasonOfSmoke(born, content, turn - HOUR).id, seasonOfSmoke(born, content, turn + HOUR).id, `turn ${k}: it is the season's turn`);
+    }
+  }
+  const { fair: _late, ...core } = content;
+  assert.equal(fairWindow(born, core, t0 + span + HOUR).open, false, 'before data/fair.json lands there is no fair');
+
+  // 2. THE CENSUS. The day-180 lab at each of a year's fairs, its two best
+  //    entered in each event twice — once in each order — and once more after
+  //    a reload. Every pair agrees to the cent and the ribbon.
+  const d180 = walkedSave({ days: 180 });
+  const now = d180.lastTickAt;
+  const atFair = (k, seed = d180.seed) => {
+    const st = structuredClone(d180);
+    st.seed = seed;
+    st.campaign.fair = null;
+    for (const c of st.chimeras) delete c.ribbons;
+    st.createdAt = now - k * span - HOUR;
+    // Room on the shelf, so a prize part arrives as a part rather than as
+    // the cash a full Vault renders it into at the door.
+    st.inventory.parts = st.inventory.parts.slice(0, Math.max(0, vaultCapacity(st, content).parts - 4));
+    return st;
+  };
+  const courses = new Set();
+  const mine = [];
+  let parts = 0;
+  for (const seed of [d180.seed, 7]) {
+    for (let k = 1; k <= turns; k++) {
+      for (const event of ['race', 'show']) {
+        const where = `seed ${seed}, fair ${k}, ${event}`;
+        const a = atFair(k, seed);
+        const ids = F.fairRank(a, content, k, event, F.fairCandidates(a, now)).map((c) => c.id);
+        const b = structuredClone(a);
+        const c = await migrate(JSON.parse(JSON.stringify(a)));
+        const was = { funds: a.funds, parts: a.inventory.parts.length };
+        const ra = F.enterFair(a, content, now, event, [...ids, 'nobody']);
+        const rb = F.enterFair(b, content, now, event, ids.slice(0, spec[event].entries).reverse());
+        const rc = F.enterFair(c, content, now, event, ids.slice(0, spec[event].entries));
+        assert.ok(ra.ok && rb.ok && rc.ok, `${where}: entered (${ra.msg})`);
+        assert.equal(ra.result.field.filter((r) => r.id).length, Math.min(spec[event].entries, ids.length), `${where}: entries capped at ${spec[event].entries}`);
+        assert.deepEqual(rb.result, ra.result, `${where}: the same entries in another order run the same`);
+        assert.deepEqual(rc.result, ra.result, `${where}: and after a reload`);
+        assert.deepEqual({ ...F.fairField(a, content, k, event, ids.slice(0, spec[event].entries)), prizes: ra.result.prizes }, ra.result,
+          `${where}: and the stored result is the field run again`);
+        assert.deepEqual([b.funds, b.chimeras.map((x) => x.ribbons ?? null)], [a.funds, a.chimeras.map((x) => x.ribbons ?? null)], `${where}: paid and pinned the same`);
+        const field = ra.result.field;
+        assert.equal(field.length, spec[event].lanes, `${where}: the county fills every lane`);
+        assert.deepEqual(field.map((r) => r.place), field.map((_, i) => i + 1), `${where}: placed in order`);
+        const value = (r) => (event === 'race' ? -r.time : r.score);
+        assert.ok(field.every((r, i) => Number.isFinite(value(r)) && (!i || value(field[i - 1]) >= value(r))), `${where}: best first`);
+        assert.ok(event === 'show' || field.every((r) => r.time > 0), `${where}: every runner finishes`);
+        for (const r of field.filter((x) => !x.id)) {
+          assert.ok(content.species[r.species]?.mailOrderPrice && readable(F.localName(content, r)) && spec.locals.owners[r.owner],
+            `${where}: a local is a catalogue animal with an owner (${F.localName(content, r)})`);
+        }
+        if (event === 'race') {
+          assert.ok(spec.race.courses.some((x) => x.id === ra.result.course), `${where}: run on a course from the data`);
+          courses.add(ra.result.course);
+        }
+        // Paid by place, pinned on exactly the paid.
+        const won = field.filter((r) => r.id && spec[event].prizes.some((p) => p.place === r.place));
+        const cash = won.reduce((n, r) => n + (spec[event].prizes.find((p) => p.place === r.place).funds ?? 0), 0);
+        assert.equal(a.funds - was.funds, cash, `${where}: paid ${cash} by place`);
+        const firsts = won.filter((r) => r.place === 1 && spec[event].prizes.find((p) => p.place === 1).part).length;
+        assert.equal(a.inventory.parts.length - was.parts, firsts, `${where}: a part for first`);
+        parts += firsts;
+        for (const ch of a.chimeras) {
+          const r = won.find((x) => x.id === ch.id);
+          assert.deepEqual(ch.ribbons ?? null, r ? [{ k, event, place: r.place }] : null, `${where}: ${ch.name} wears what it won`);
+        }
+        assert.ok(readable(ra.msg), `${where}: and says so (${ra.msg})`);
+        mine.push(...field.filter((r) => r.id).map((r) => ({ event, place: r.place })));
+        // One shot each.
+        const again = F.enterFair(a, content, now, event, ids);
+        assert.ok(!again.ok && again.msg === copy(content, 'fair.already') && a.funds === was.funds + cash, `${where}: entered once`);
+      }
+    }
+  }
+  assert.deepEqual([...courses].sort(), spec.race.courses.map((x) => x.id).sort(), 'every course comes up');
+  for (const event of ['race', 'show']) {
+    const ours = mine.filter((r) => r.event === event);
+    assert.ok(ours.some((r) => r.place === 1) && ours.some((r) => r.place > 3), `${event}: the lab wins some and the county wins some`);
+  }
+  assert.ok(parts > 0, 'first place has paid a part');
+
+  // THE RACE READS THE BODY AND THE COURSE, AND THE JUDGE READS THE BODY:
+  // every term of each, moved alone against a runner at par.
+  {
+    const close = (x, y, eps = 1e-9) => Math.abs(x - y) <= eps * Math.max(1, Math.abs(y));
+    const ch = d180.chimeras.map((c) => {
+      const tokens = Object.values(c.tokens ?? {}).filter((x) => content.parts[x.partId]);
+      return { c, tokens, report: analyze(c.frame, tokens, content, tokens.length) };
+    }).find(({ report }) => report.stats.stamina >= 1 && report.stats.speed > 0);
+    const body = { frame: ch.c.frame, tokens: ch.tokens, scars: 0 };
+    const par = { id: 'par', stamina: 1 };
+    const t = F.raceTime(content, par, body, 0.5);
+    assert.ok(close(t, spec.race.distance / (ch.report.stats.speed + spec.race.base)), `a runner at par runs the distance at its speed (${ch.c.name})`);
+    assert.ok(close(F.raceTime(content, { ...par, class: { [ch.report.creatureClass]: 2 } }, body, 0.5), t / 2), "the course's terrain against its class");
+    assert.ok(close(F.raceTime(content, { ...par, frame: { [ch.c.frame]: 2 } }, body, 0.5), t / 2), "the course's terrain against its frame");
+    assert.ok(close(F.raceTime(content, { ...par, stamina: 4 * ch.report.stats.stamina }, body, 0.5), t * 2), 'a course longer than its legs slows it');
+    assert.ok(close(F.raceTime(content, par, body, 1), t * (1 + spec.race.jitter)) && close(F.raceTime(content, par, body, 0), t * (1 - spec.race.jitter)),
+      'and luck moves a time by the jitter and no more');
+    const judged = F.showScore(content, body, 0.5);
+    assert.ok(close(F.showScore(content, { ...body, scars: 2 }, 0.5), judged - 2 * spec.show.weights.scar, 0.011), 'scars count against');
+    const prime = { ...body, tokens: ch.tokens.map((x) => ({ ...x, grade: 'prismatic' })) };
+    assert.ok(ch.tokens.every((x) => x.grade === 'prismatic') || F.showScore(content, prime, 0.5) > judged, 'grade counts for');
+  }
+
+  // The doors that refuse: a closed fair, nobody fit to go, somebody away.
+  {
+    const st = atFair(1);
+    const id = st.chimeras[0].id;
+    assert.equal(F.enterFair(st, content, now + spec.days * DAY, 'race', [id]).msg, copy(content, 'fair.closed'), 'no entries once the fair has gone');
+    assert.equal(F.enterFair(st, core, now, 'race', [id]).msg, copy(content, 'fair.closed'), 'nor before it lands');
+    st.chimeras[0].injury = { name: 'Sprain', until: now + DAY };
+    assert.ok(!F.fairCandidates(st, now).some((c) => c.id === id), 'a creature in the Infirmary stays home');
+    assert.equal(F.enterFair(st, content, now, 'race', [id]).msg, copy(content, 'fair.pick'), 'and cannot be entered');
+    const away = atFair(1);
+    away.campaign.expedition = { regionId: 'kestrel', crew: [id] };
+    assert.ok(!F.fairCandidates(away, now).some((c) => c.id === id), 'nor can a creature out on an expedition');
+    assert.equal(st.funds, d180.funds, 'and nobody is paid for it');
+    const full = atFair(1);
+    const champ = F.fairRank(full, content, 1, 'show', F.fairCandidates(full, now))[0];
+    champ.ribbons = Array.from({ length: spec.ribbons.keep }, (_, i) => ({ k: 0, event: 'show', place: 1 + (i % 3) }));
+    const f = F.enterFair(full, content, now, 'show', [champ.id]);
+    const got = champ.ribbons;
+    assert.ok(f.result.prizes.length && got.length === spec.ribbons.keep && got[0].k === 1, `a full sash keeps the newest (${champ.name} placed ${f.result.field.find((r) => r.id === champ.id)?.place})`);
+  }
+
+  // 3. RIBBONS SHOW WHEREVER THE CHIMERA IS DRAWN. The portrait wears the
+  //    newest three; a creature with none, or with a save's garbage, draws
+  //    exactly as it did; and every chimera portrait goes through that door.
+  {
+    const ch = structuredClone(d180.chimeras[0]);
+    delete ch.ribbons;
+    const plain = creaturePortrait(chimeraGenome(ch, content), content, { idPrefix: 'p' });
+    assert.equal(chimeraPortrait(ch, content, { idPrefix: 'p' }), plain, 'no ribbons, the portrait it always was');
+    for (const junk of ['lots', { 1: 'x' }, null, 7]) {
+      assert.equal(chimeraPortrait({ ...ch, ribbons: junk }, content, { idPrefix: 'p' }), plain, `ribbons: ${JSON.stringify(junk)} draws nothing`);
+      assert.deepEqual(ribbonsOf({ ribbons: junk }), [], 'and reads as none');
+    }
+    ch.ribbons = [{ k: 4, event: 'race', place: 1 }, { k: 3, event: 'show', place: 2 }, { k: 2, event: 'race', place: 3 }, { k: 1, event: 'show', place: 9 }];
+    const worn = chimeraPortrait(ch, content, { idPrefix: 'p' });
+    assert.equal(count(worn, 'class="ribbon"'), 3, 'the newest three are pinned');
+    for (const p of [1, 2, 3]) assert.ok(worn.includes(spec.ribbons.places[p].color), `place ${p} in its own colour`);
+    assert.ok(worn.endsWith('</svg>') && worn.startsWith(plain.replace(/<\/svg>\s*$/, '')), 'pinned on top of the portrait, which is untouched');
+    assert.equal(count(chimeraPortrait({ ...ch, ribbons: [{ k: 1, event: 'show', place: 9 }] }, content), 'class="ribbon"'), 1,
+      'a place the data does not colour still draws');
+    assert.equal(count(cardSVG(ch, d180, content), 'class="ribbon"'), 3, 'the specimen card wears them');
+    // The Pens, with that creature's card open.
+    const st = structuredClone(d180);
+    st.chimeras[0] = ch;
+    st.ui = { ...(st.ui ?? {}), collapsed: { ...(st.ui?.collapsed ?? {}), [`pen-${ch.id}`]: false } };
+    const pens = recordingRoot();
+    const restore = installDom({ overlay: recordingRoot(), storage: memoryStorage() });
+    try {
+      renderPensScreen(pens.host, { state: st, content, now: () => now, save() {}, goto() {}, refreshTicker() {}, pushNews() {}, tick() {}, takeSubtab: () => null });
+      assert.equal(count(pens.host.innerHTML, 'class="ribbon"'), 3, 'the Pens wear them');
+    } finally {
+      restore();
+    }
+    // The door: outside the module that draws ribbons, nothing turns a
+    // chimera into a genome to draw — so nothing can draw one bare.
+    const doors = [];
+    for (const file of moduleFiles(root).map((f) => relative(root, f)).filter((f) => !f.startsWith('tools/'))) {
+      const src = stripComments(readFileSync(join(root, file), 'utf8'));
+      if (/\bchimeraGenome\s*\(/.test(src) && !/export function chimeraGenome/.test(src)) doors.push(file);
+    }
+    assert.deepEqual(doors, ['render/ribbons.js'], 'every chimera portrait is drawn through chimeraPortrait');
+    for (const file of ['splice/pens-ui.js', 'battle/ui.js', 'splice/card.js', 'campaign/ui.js']) {
+      assert.ok(/\bchimeraPortrait\s*\(/.test(stripComments(readFileSync(join(root, file), 'utf8'))), `${file} draws its chimeras wearing their ribbons`);
+    }
+  }
+
+  // 4. THE RACE RUNS ONCE ON SCREEN AND HOLDS ITS FINISH; under reduced
+  //    motion the track is not drawn and the results list is the card.
+  {
+    const st = atFair(6);
+    const wr = recordingRoot();
+    const restore = installDom({ overlay: recordingRoot(), storage: memoryStorage() });
+    const press = (attr) => {
+      const key = attr.slice(5).replace(/-(\w)/g, (_, c) => c.toUpperCase());
+      const hit = [...wr.bound].reverse().find((b) => b.el?.dataset?.[key] != null);
+      assert.ok(hit, `the card has a ${attr}`);
+      hit.fn({ preventDefault() {}, stopPropagation() {}, target: hit.el, currentTarget: hit.el });
+    };
+    try {
+      const ctx = { state: st, content, now: () => now, save() {}, goto() {}, refreshTicker() {}, pushNews() {}, tick() {}, takeSubtab: () => 'jobs' };
+      renderWarRoomScreen(wr.host, ctx);
+      const before = wr.host.innerHTML;
+      assert.ok(before.includes('fair-card') && before.includes(esc(F.courseOf(st, content, 6).name)), 'the jobs tab carries the fair and names the course');
+      assert.ok(!before.includes('data-fair-race='), 'nothing to run until somebody is picked');
+      press('data-fair-runner');
+      press('data-fair-race');
+      const run = wr.host.innerHTML;
+      assert.equal(count(run, 'fair-runner is-running'), spec.race.lanes, 'the race plays, every lane');
+      assert.ok(run.includes('--p:1.000') && run.includes('class="fair-results"') && count(run, '<li') >= spec.race.lanes,
+        'the winner reaches the line, and the results are written out beside the track');
+      assert.ok(st.campaign.fair?.race && !st.campaign.fair.show, 'the race is in the save and the show is still open');
+      renderWarRoomScreen(wr.host, ctx);
+      const held = wr.host.innerHTML;
+      assert.ok(!held.includes('is-running') && held.includes('fair-track'), 'it plays once and then holds its finish');
+      press('data-fair-replay');
+      assert.equal(count(wr.host.innerHTML, 'fair-runner is-running'), spec.race.lanes, 'Watch again plays it again');
+      press('data-fair-entrant');
+      press('data-fair-show');
+      assert.ok(st.campaign.fair.show && count(wr.host.innerHTML, 'class="fair-results"') === 2, 'Best in Show is judged on the spot');
+    } finally {
+      restore();
+    }
+    const css = readFileSync(join(root, 'style.css'), 'utf8');
+    assert.ok(/\.fair-runner\.is-running\s*\{[^}]*animation:\s*fair-run/.test(css), 'the race is a CSS animation');
+    const reduced = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]).join('\n');
+    assert.ok(/\.fair-track[^{]*\{[^}]*display:\s*none/.test(reduced), 'under reduced motion the track is not drawn');
+    assert.ok(!/\.fair-results[^{]*\{[^}]*display:\s*none/.test(css), 'and the results never are');
+  }
+
+  // 5. RIBBONS PERSIST. A v65 save arrives with no fair and no ribbons; a
+  //    ribboned lab written at v66 reads back wearing them.
+  {
+    const v65 = await migrate(JSON.parse(readFileSync(join(root, 'tools/saves/v65.json'), 'utf8')));
+    assert.ok(v65.campaign.fair === null && v65.chimeras.every((c) => c.ribbons === undefined), 'a v65 save arrives with no fair entered and nothing won');
+    const v66 = JSON.parse(readFileSync(join(root, 'tools/saves/v66.json'), 'utf8'));
+    assert.equal(v66.saveVersion, 66, 'the v66 fixture is a v66 save');
+    const st = await migrate(v66);
+    const won = atFair(2);
+    F.enterFair(won, content, now, 'show', F.fairRank(won, content, 2, 'show', F.fairCandidates(won, now)).slice(0, 2).map((c) => c.id));
+    st.chimeras = won.chimeras;
+    st.campaign.fair = won.campaign.fair;
+    const back = await migrate(JSON.parse(JSON.stringify(st)));
+    assert.ok(back.chimeras.some((c) => ribbonsOf(c).length), 'the lab has won something');
+    assert.deepEqual(back.chimeras.map((c) => c.ribbons ?? null), won.chimeras.map((c) => c.ribbons ?? null), 'and wears it after a reload');
+    assert.deepEqual(back.campaign.fair, won.campaign.fair, 'and the fair remembers what it judged');
+  }
+
+  // 6. THE RANCH'S AGENDA offers the fair while it is in town and an event
+  //    is unentered, once there is a creature to enter.
+  {
+    const st = atFair(3);
+    const rowOf = (s, c = content, at = now) => agenda(s, c, at).find((r) => r.id === 'fair');
+    const row = rowOf(st);
+    assert.ok(row && row.screen === 'battle' && row.subtab === 'jobs', 'the row lands on the jobs board');
+    assert.ok(readable(row.label) && row.hint.includes(String(Math.ceil((fairWindow(st, content, now).closesAt - now) / HOUR))), `and counts the hours left (${row.hint})`);
+    assert.equal(rowOf(st, content, now + spec.days * DAY), undefined, 'no row once the fair has gone');
+    assert.equal(rowOf(st, core), undefined, 'nor before it lands');
+    assert.equal(rowOf({ ...st, chimeras: [] }), undefined, 'nor with nobody to enter');
+    const ids = F.fairCandidates(st, now).slice(0, 1).map((c) => c.id);
+    F.enterFair(st, content, now, 'race', ids);
+    assert.ok(rowOf(st), 'one event entered, the row stays for the other');
+    F.enterFair(st, content, now, 'show', ids);
+    assert.equal(rowOf(st), undefined, 'both entered, it stands down');
+  }
+
+  // 7. THE 180-DAY WALK ENTERS FAIRS: its last one, both events, and the
+  //    ribbons it brought home from more than one.
+  const last = fairWindow(d180, content, now);
+  assert.ok(d180.campaign.fair?.k === last.k && d180.campaign.fair.race && d180.campaign.fair.show,
+    `the walk entered both events at its last fair (fair ${d180.campaign.fair?.k})`);
+  const fairsWon = new Set(d180.chimeras.flatMap((c) => ribbonsOf(c).map((r) => r.k)));
+  assert.ok(fairsWon.size >= 2, `and came home with ribbons from ${fairsWon.size} fairs`);
+
+  // 8. NEW CONTENT RACES WITHOUT NEW CODE: a course that names no class and
+  //    no frame runs everyone at par, and a fourth place paid in the data is
+  //    paid and pinned in its own colour.
+  {
+    const grown = structuredClone(content);
+    grown.fair.race.courses = [{ id: 'flat', name: 'the Car Park', stamina: 10 }];
+    grown.fair.race.prizes.push({ place: 4, funds: 5 }, { place: 5, funds: 5 }, { place: 6, funds: 5 });
+    grown.fair.ribbons.places['4'] = { name: 'Pink', color: '#ff69b4', edge: '#8b3a62' };
+    const st = atFair(1);
+    const pick = F.fairCandidates(st, now).slice(0, 2).map((c) => c.id);
+    const res = F.enterFair(st, grown, now, 'race', pick);
+    assert.ok(res.ok && res.result.course === 'flat', 'a course written only as data is run');
+    assert.equal(res.result.prizes.length, 2, 'and every place the data pays is paid');
+    const worn = st.chimeras.filter((c) => ribbonsOf(c).length);
+    assert.equal(worn.length, 2, 'and pinned');
+    const fourth = worn.find((c) => c.ribbons[0].place === 4);
+    assert.ok(!fourth || chimeraPortrait(fourth, grown).includes('#ff69b4'), 'in the colour the data gives it');
+  }
+  console.log(`   R213 fair: ${turns} season turns, ${mine.length / 2} entries run twice and replayed; ${courses.size} courses; ribbons through one door; the walk's last fair entered`);
 }
 
 // R71, second half: save slots. Multiple independent labs on one device —
@@ -26043,7 +26374,20 @@ if (inShard('wire')) {
 // than as a fourth group, and the renderer's LATE attach became one loop over
 // three keys (+2 bytes for the third). PROSE_CAP stays where it was: R133's
 // essay in the agenda became a pointer to ROADMAP R133, which tells it.
-const KB_CAP = 339;        // CODE only, measured at 338.87
+// R213 — 339 -> 340, measured at 339.74 on a tree that read 338.85 before
+// it. The Ranch's agenda offers the County Fair on the first frame, so the
+// fair's window is eager: `fairWindow` in `campaign/calendar.js` (334 bytes,
+// beside the seasons it is counted in) and the agenda row that reads it
+// (about 570, its label in data/copy.json). The fair itself — the field, the course, the race, the
+// judging, the prizes and the ribbons — is lazy in `campaign/fair.js` and
+// `render/ribbons.js`, and so is its data, which rides the second round.
+//
+// Paid down before it was raised: the window reads `state.createdAt` and
+// `content.fair` without guards (every caller hands it a real save), the
+// row's hint counts hours rather than naming the season, and the fair rides
+// the renderer's one LATE attach loop (8 bytes). PROSE_CAP stays where it
+// was: R106's essay on the assault row became a pointer to ROADMAP R106.
+const KB_CAP = 340;        // CODE only, measured at 339.74
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.

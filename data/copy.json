@@ -266,5 +266,31 @@
     "done": "{client} takes a photograph, pays {reward} and leaves. {name} stays home.",
     "gone": "That client has already left.",
     "no_fit": "The client squints at it and leaves the offer on the table."
+  },
+  "fair": {
+    "agenda_label": "Enter the County Fair",
+    "agenda_hint": "In town for another {hours}h. Two events, one shot at each.",
+    "heading": "The County Fair",
+    "blurb": "The {season} fair is in town for {left}: one race, one Best in Show, and the whole county pretending not to stare at your entries.",
+    "race": "The race",
+    "show": "Best in Show",
+    "course": "Today's course is {course}. {blurb}",
+    "judging": "Judged on grade, a purebred set, species variety and combos. Scars count against.",
+    "who": "Who goes (up to {n})",
+    "run": "Run the race",
+    "judge": "Enter Best in Show",
+    "pick": "Pick who goes first.",
+    "nobody": "Nobody at home is fit to enter.",
+    "replay": "Watch again",
+    "time": "{time}s",
+    "points": "{points} points",
+    "yours": "yours",
+    "track": "The race, from the start line to the finish",
+    "prize": "{name} takes the {ribbon} ribbon and {funds}{part}.",
+    "prize_part": ", plus a {part}",
+    "no_prize": "No ribbons this time. The county will talk about it for weeks.",
+    "closed": "The fair has packed up and left town.",
+    "already": "That event has already been run at this fair.",
+    "donor": "The County Fair"
   }
 }

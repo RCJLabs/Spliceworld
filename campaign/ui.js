@@ -49,6 +49,10 @@ import {
 import { findsFor, findsBeyond, expeditionOdds, startExpedition } from './outfit.js';
 import { missionTuning, activeMission, missionCandidates } from './mission.js';
 import { commissionBoard, homeChimeras, fits, askText, rewardText, fulfilCommission } from './commissions.js';
+import { fairCandidates, courseOf, enterFair, prizeLine, localName } from './fair.js';
+import { fairWindow, seasonOf } from './calendar.js';
+import { chimeraPortrait } from '../render/ribbons.js';
+import { stockGenome } from '../ranch/ranch.js';
 import { hireRoster, slotsOf, nextSlotAt, hiredOf, hireBlock, hire, letGo, wageNow } from './staff.js';
 import {
   missionsFor, missionHours, missionReadyAt, missionRemainingMs,
@@ -91,6 +95,10 @@ let lastAftermath = null;
 let expDraft = { regionId: null, hours: 0, crew: [] };
 // R212 — what the last client said, shown in the card that was pressed.
 let commissionNote = null;
+// R213 — who the player has picked for each event at this fair, and the fair
+// whose race was just run, so the track plays once and then holds the finish.
+let fairDraft = { k: null, race: [], show: [] };
+let raceShown = null;
 // R180 — the caper draft. One creature rather than a crew, so it is an id
 // and not a list, and the same rule holds: a half-composed mission is a UI
 // state and never touches the save.
@@ -505,7 +513,7 @@ function renderMap(root, ctx) {
 
   const views = {
     map: `${countyMarkup(state, content, t)}${regions}`,
-    jobs: `${staffCard(state, ctx, t)}${expeditionCard(state, ctx, t)}${missionCard(state, ctx, t)}${commissionCard(state, ctx, t)}${jobsCard(state, ctx, t)}`,
+    jobs: `${fairCard(state, ctx, t)}${staffCard(state, ctx, t)}${expeditionCard(state, ctx, t)}${missionCard(state, ctx, t)}${commissionCard(state, ctx, t)}${jobsCard(state, ctx, t)}`,
     labs: `
       ${releaseCard}
       ${dossier}
@@ -566,7 +574,10 @@ function renderMap(root, ctx) {
   // before that the coalition is still pretending it has nothing in storage.
   const gauntletCard = state.dominionAt
     ? (() => {
-        const rows = gauntletState(state, content).map(({ stage, status }) => `
+        const card = gauntletState(state, content);
+        // R213 — the card's pitch, until all four are beaten and it has made it.
+        const pitch = `<p class="fine-print">The county is yours, so the coalition has stopped pretending its storage is empty. Four exhibitions, in order. No territory changes hands — only reputations.</p>`;
+        const rows = card.map(({ stage, status }) => `
           <div class="encounter gauntlet-${status}">
             <div><strong>${stage.name}</strong>${status === 'beaten' ? ` ${renderIcon('trophy')}` : ''} <span class="lineage">${stage.escorts.length + 1} waves · ${fmtMoney(stage.reward)}</span>${
               // R212 — a beaten exhibition has made its pitch; its trophy says the rest.
@@ -576,7 +587,7 @@ function renderMap(root, ctx) {
           </div>`).join('');
         return `<section class="card gauntlet-card">
           <h3>${renderIcon('stadium')} The Gauntlet</h3>
-          <p class="fine-print">The county is yours, so the coalition has stopped pretending its storage is empty. Four exhibitions, in order. No territory changes hands — only reputations.</p>
+          ${card.every((r) => r.status === 'beaten') ? '' : pitch}
           ${rows}
         </section>`;
       })()
@@ -1295,6 +1306,60 @@ function jobsCard(state, ctx, t) {
     </section>`;
 }
 
+// R213 — the County Fair, while it is in town: the race and Best in Show,
+// each entered once and run on the spot. The race's track plays once after it
+// is run and then holds the finish; under reduced motion it is not drawn and
+// the results list is the card.
+function fairCard(state, ctx, t) {
+  const { content } = ctx;
+  const w = fairWindow(state, content, t);
+  if (!content.fair || !w.open) return '';
+  if (fairDraft.k !== w.k) fairDraft = { k: w.k, race: [], show: [] };
+  const done = state.campaign?.fair?.k === w.k ? state.campaign.fair : {};
+  const able = fairCandidates(state, t);
+  const places = content.fair.ribbons?.places ?? {};
+  const pickRow = (event) => `<p class="fine-print">${copy(content, 'fair.who', { n: content.fair[event]?.entries ?? 2 })}</p>
+      <div class="op-row exp-row">${able.length
+    ? able.map((c) => `<button type="button" ${event === 'race' ? 'data-fair-runner' : 'data-fair-entrant'}="${esc(c.id)}"${
+      fairDraft[event].includes(c.id) ? ' class="is-selected"' : ''}>${esc(c.name)}</button>`).join('')
+    : `<span class="locked-tag">${copy(content, 'fair.nobody')}</span>`}</div>`;
+  const pick = `<span class="locked-tag">${copy(content, 'fair.pick')}</span>`;
+  const results = (event, result) => `<ol class="fair-results">${result.field.map((r) => `<li${r.id ? ' class="is-mine"' : ''}>
+        <span class="fair-dot" aria-hidden="true" style="background:${places[r.place]?.color ?? 'transparent'};border-color:${places[r.place]?.edge ?? 'transparent'}"></span>
+        ${esc(r.id ? r.name : localName(content, r))}${r.id ? ` <span class="lineage">${copy(content, 'fair.yours')}</span>` : ''}
+        <span class="fine-print">${event === 'race' ? copy(content, 'fair.time', { time: r.time.toFixed(2) }) : copy(content, 'fair.points', { points: r.score.toFixed(1) })}</span></li>`).join('')}</ol>
+      <p class="ranch-msg">${esc(prizeLine(content, state, result))}</p>`;
+  const track = (result) => {
+    const animate = raceShown === w.k;
+    raceShown = null;
+    const lanes = result.field.map((r) => {
+      const chimera = r.id && state.chimeras.find((c) => c.id === r.id);
+      // The pasture's crop: a whole portrait's frame would leave a runner a third of its lane.
+      const crop = { viewBox: content.pasture?.viewBox ?? '-195 -150 390 310' };
+      const art = chimera ? chimeraPortrait(chimera, content, { idPrefix: `fair-${r.id}`, ...crop })
+        : r.species ? creaturePortrait(stockGenome(r.species, content), content, { idPrefix: `fair-l${r.place}`, ...crop }) : '';
+      return `<div class="fair-lane"><span class="fair-runner${animate ? ' is-running' : ''}" style="--p:${(result.field[0].time / r.time).toFixed(3)}">${art}</span></div>`;
+    }).join('');
+    return `<div class="fair-track" role="img" aria-label="${esc(copy(content, 'fair.track'))}">${lanes}</div>`;
+  };
+  const course = courseOf(state, content, w.k);
+  return `
+    <section class="card jobs-card fair-card">
+      <h3>${renderIcon('stadium')} ${copy(content, 'fair.heading')}</h3>
+      <p class="fine-print">${copy(content, 'fair.blurb', { season: esc(seasonOf(state, content, w.opensAt).name), left: fmtDuration(w.closesAt - t) })}</p>
+      <h4>${copy(content, 'fair.race')}</h4>
+      ${done.race
+    ? `${track(done.race)}${results('race', done.race)}<button type="button" class="job-abort fair-replay" data-fair-replay="1">${copy(content, 'fair.replay')}</button>`
+    : `<p class="fine-print">${copy(content, 'fair.course', { course: esc(course.name), blurb: esc(course.blurb ?? '') })}</p>
+      ${pickRow('race')}${fairDraft.race.length ? `<button type="button" data-fair-race="1">${copy(content, 'fair.run')}</button>` : pick}`}
+      <h4>${copy(content, 'fair.show')}</h4>
+      ${done.show
+    ? results('show', done.show)
+    : `<p class="fine-print">${copy(content, 'fair.judging')}</p>
+      ${pickRow('show')}${fairDraft.show.length ? `<button type="button" data-fair-show="1">${copy(content, 'fair.judge')}</button>` : pick}`}
+    </section>`;
+}
+
 // R212 — the commissions board: who wants what, what it pays, when they
 // leave, and which creatures at home would do. Up to three buttons a row,
 // because a request half the stable answers is a row, not a roster.
@@ -1363,6 +1428,33 @@ function bindJobs(root, ctx, redraw) {
       ctx.save();
       redraw();
     });
+  });
+  // R213 — the fair's pickers write the draft; only the two event buttons
+  // touch the save, and each runs its event on the spot.
+  for (const [sel, event] of [['button[data-fair-runner]', 'race'], ['button[data-fair-entrant]', 'show']]) {
+    root.querySelectorAll(sel).forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.fairRunner ?? btn.dataset.fairEntrant;
+        const max = content.fair?.[event]?.entries ?? 2;
+        const had = fairDraft[event].includes(id);
+        fairDraft = { ...fairDraft, [event]: had ? fairDraft[event].filter((x) => x !== id) : [...fairDraft[event], id].slice(-max) };
+        redraw();
+      });
+    });
+  }
+  for (const [sel, event] of [['button[data-fair-race]', 'race'], ['button[data-fair-show]', 'show']]) {
+    root.querySelectorAll(sel).forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const res = enterFair(state, content, ctx.now(), event, fairDraft[event]);
+        if (res.ok && event === 'race') raceShown = state.campaign.fair.k;
+        lastAftermath = res.ok ? null : res.msg;
+        ctx.save();
+        redraw();
+      });
+    });
+  }
+  root.querySelectorAll('button[data-fair-replay]').forEach((btn) => {
+    btn.addEventListener('click', () => { raceShown = state.campaign.fair?.k ?? null; redraw(); });
   });
   root.querySelectorAll('button[data-commission]').forEach((btn) => {
     btn.addEventListener('click', () => {

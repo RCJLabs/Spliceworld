@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 65
+- save version: 66
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**2 entries queued.** R213, R214.
+**1 entry queued.** R214.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -8727,7 +8727,8 @@ written so that it has something on screen when it ships.
     454-572). The one break that gate judges was caught behind a green
     baseline.
 
-- **R213 — The County Fair.** The calendar turns four 28-day seasons. Each
+- **R213 — The County Fair.** ✅
+  The calendar turns four 28-day seasons. Each
   one nudges decay, incubation or the odds of a variant, but the turn itself
   passes unmarked: there is nothing to enter and nothing to win. The jobs
   board has robbed the fair's livestock tent since R11. Now the fair comes to
@@ -8744,6 +8745,148 @@ written so that it has something on screen when it ships.
   card under reduced motion; ribbons persist (SAVE_VERSION, a migration and a
   fixture) and show wherever the chimera is drawn; and the walk enters
   fairs.*
+
+  **Shipped: a County Fair at every season's turn, three days long, with a
+  race and a Best in Show, each entered once from the War Room's jobs tab.
+  Rosettes stay on the winners and show wherever the chimera is drawn.**
+  * **The window is eager; the fair is lazy.** `fairWindow` in
+    `campaign/calendar.js` counts 28-day turns from the save's birthday, like
+    the seasons, because the Ranch's agenda asks it on the first frame. The
+    first turn is the day the lab opens, so the first fair is day 28.
+    Everything else is `campaign/fair.js`, loaded with the War Room and the
+    walker: the field, the course, the race, the judging, the prizes and the
+    ribbons. `data/fair.json` rides the second load round; until it lands
+    there is no fair.
+  * **An event runs the moment it is entered,** once per fair. The result is
+    computed, paid and pinned on the spot, so nothing waits on a tick, and a
+    fair nobody visits simply passes. Every roll is keyed by the save's seed,
+    the fair's number and the runner (a chimera's id or a local's lane), so
+    the same entries replay the same in any order and after a reload.
+  * **The race.** Pace is speed plus a base, times the course's multiplier for
+    the runner's class and for its frame, times the square root of how much
+    of the course's stamina the runner's stamina covers, with a seeded
+    stumble of up to 6% either way. Four courses are data (the Mud Flats, the
+    Duck Pond Steeplechase, Gallows Hill and the Oval); a class or frame a
+    course does not name races at par.
+  * **Best in Show** scores mean grade, a purebred set, species variety and
+    combos, takes points off for scars, and lets the judge move it by up to
+    a point either way.
+  * **The county's entries** are purebred catalogue animals. Each lane is the
+    best of three for that event and course, and their grade climbs a ladder
+    by fair, standard to prismatic by the sixth, so the county gets better as
+    the year goes on. Over four 180-day walks the walker wins about seven
+    shows in eight and places first to fifth in races.
+  * **Prizes:** $450, $220 and $110 for the race's top three and $400, $200
+    and $100 for the show's, and a prime catalogue part for each first,
+    through the Vault's door (a full shelf renders it).
+  * **Ribbons:** `{ k, event, place }` on the chimera, newest first, six
+    kept. `chimeraPortrait` in `render/ribbons.js` pins the newest three as
+    drawn rosettes: blue, red and white, a star for the show and a flag for
+    the race. Every screen that draws one of the player's chimeras goes
+    through it (the Pens, the arena, the specimen card and the fair), and
+    smoke holds the tree to that one door.
+  * **Where it shows:**
+    - a War Room card on the jobs tab: the course, a picker per event, and
+      the race on a track, a lane per runner, each stopping where it was
+      when the winner crossed. The run plays once (Watch again plays it
+      again); under reduced motion the track is not drawn and the results
+      list is the card;
+    - a Ranch agenda row while an event is unentered;
+    - a field guide.
+  * **SAVE_VERSION 65 -> 66:** `campaign.fair` (the current fair's two
+    results) and `ribbons` on the chimera, with a migration, a v66 fixture
+    and vault bounds.
+  * **The walker enters its two best in both events at every fair,** ranked
+    by the event's own arithmetic with the luck taken out.
+
+  **Found on the way:**
+  * **The day-180 save reached 200.4 KB against its 200 KB budget.** The
+    fair's own share was 2.4 KB. The rest is the walk becoming a different
+    campaign: seed 2026 ends on $497k rather than $137k, with forty fuller
+    containment bays. Two cuts, both to fields nothing needed:
+    - a stored row keeps a local's owner index and species, not its name,
+      which is built where it is drawn (1.38 -> 0.91 KB);
+    - a ribbon dropped its season, which nothing read (1.02 -> 0.61 KB).
+
+    The save reads 199.54 KB; `main` read 186.94.
+  * **First paint went to 1,198 KB against 1,197.** Eleven more `style.css`
+    essays (4.3 KB) moved to `docs/STYLE.md`, and it reads 1,195, as `main`
+    does.
+  * **Eager code:** the cap moved 339 -> 340 (measured 339.74) for
+    `fairWindow` (334 bytes) and the agenda row (about 570, its words in
+    data/copy.json). Prose stayed under 261 because R106's essay in the
+    agenda became a pointer to this file: 260.84 -> 260.52.
+  * **The handlers fixture is a season and an hour old.** `newGameState` is
+    born on the wall clock, years after the fixture's `now`, so the fair
+    never opened and every `data-fair-*` control was painted by nobody. Two
+    walked surfaces reach the Run and Judge buttons and the finished race's
+    Watch again.
+  * **Runners were a third of their lanes** at 380px until the track used the
+    pasture's crop.
+  * **On a busy save the fair's agenda row sits past the Ranch's three-row
+    cap** (R143). The badge counts it.
+  * **Seed 31337 ends at Theater II on this walker** (`main`: III). The diet
+    gate's Theater III rule reads seed 2026, which still buys it, and the
+    diet gate is green.
+  * **The first baseline went red on two height readings,** both the walk
+    becoming a different campaign:
+    - **the War Room's facility card sat 12px past its two-screen bound**,
+      because this lab has a creature in the impound on day 180 and `main`'s
+      does not, which puts a 154px rescue card above it. Once all four
+      exhibitions are beaten, the Gauntlet card drops its pitch, as R212
+      dropped each beaten exhibition's: 1,512px against 1,560 (`main`
+      1,461);
+    - **the Dex's combos tab read 854 words open against 836.** `main` reads
+      829. This lab discovered 28 combos where `main`'s found 27 (Cleanup
+      Crew and Shell Game in, Downwind out), and a discovered combo prints
+      its description where a hint printed two part names. The open budget
+      moved 836 -> 870, itemised beside it; the shut budget is untouched.
+
+  **Budgets and verification:**
+  * Eager code 338.85 -> 339.74 KB under 340; prose 260.84 -> 260.52 KB
+    under 261; first paint 1,195 KB under 1,197, as on `main`; the day-180
+    save 186.94 -> 199.54 KB under 200.
+  * **Breaks 616-637:** 22 of 22 caught for the check each is named for.
+    626 first read ELSEWHERE (a bare call with no import is caught by the
+    name check first) and was re-aimed at the import.
+  * **Three baselines.** The first was red on the two height readings above
+    and on a dead export (`fairLeftMs`, now gone). The second was green but
+    for the offline cold open, 1,124ms against 1,000 with four gates
+    sharing the box; alone it reads 601-719ms here and 535-584ms on `main`.
+    The third, on the same tree, was green throughout: `BATTERY_EXIT 0`.
+  * **`npm test` was red on seconds, and so is `main`: the host moved.** Run
+    alone: 2,651 CPU-seconds with six walks rebuilt (1,641 allowed), then
+    2,200 warm. `main` read 2,195 and 2,166 warm in the same hour, against
+    the 1,384 R212 read, so this tree costs about 1% more than `main`
+    (handlers +18s for the two fair surfaces). Both host-invariant rules
+    are green: no share moved past the band (handlers 5.2 -> 5.9%), and
+    the suite flies 1,213,184 battles, between the floor and the ceiling.
+    The budget did not move; this is a host reading, as R202's was.
+
+  **Done when, checked:**
+  * **A fair at every season's turn:** smoke walks three years of turns. Each
+    opens at the turn, as the season changes, stays three days, and is gone
+    the day before and after; there is none the day the lab opens.
+  * **Seeded, and replays the same:** smoke enters the day-180 lab at each of
+    twelve fairs on two seeds, both events, 48 entries. Each runs again in
+    the other order and again after a reload, and agrees to the cent and the
+    ribbon; the stored result is the field run again. Each term of the race
+    and the judging is moved alone against a runner at par.
+  * **Animates at 380px, a results card under reduced motion:** in Chromium
+    at 380px six runners animate across the jobs tab with no sideways scroll;
+    the result survives a reload. Under emulated reduced motion the track
+    and Watch again are not drawn and the results list stands. Smoke asserts
+    the run plays once and holds its finish.
+  * **Ribbons persist and show wherever the chimera is drawn:** SAVE_VERSION
+    66, a migration and a v66 fixture; smoke round-trips a ribboned lab
+    through save and load. A planted chimera wore three rosettes in the Pens
+    in Chromium; smoke renders the Pens and the specimen card wearing them
+    and holds every chimera portrait in the tree to `chimeraPortrait`. A
+    fresh save, and a v65 save migrated to v66, open every tab with zero
+    console errors and the fair card in town.
+  * **The walk enters fairs:** twelve events in 180 days on each of four
+    seeds, first on day 28. Smoke asserts the day-180 walk entered both
+    events at its last fair and brought ribbons home from more than one.
 
 - **R214 — Dress for villainy.** Two chimeras built from the same parts are
   identical, and nothing a player owns says "mine". Cosmetics, as data in

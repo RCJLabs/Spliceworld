@@ -929,6 +929,28 @@
       ]
     },
     {
+      "id": "fair",
+      "screen": "battle",
+      "order": 73,
+      "icon": "stadium",
+      "title": "Ribbons, rosettes and mild livestock fraud",
+      "body": "At every turn of the season the County Fair comes to town for a few days, and it is on the jobs board while it is here. Enter up to two creatures in the race, where speed, stamina and the day's terrain against their class decide it, and up to two in Best in Show, judged on grade, a purebred set, variety and combos, with scars against. Each event runs once, the moment you enter it. The top three win cash, first place a part, and every place a ribbon your creature wears from then on.",
+      "reachable": [
+        {
+          "path": "chimeras",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "campaign.fair",
+          "min": 1,
+          "default": 0
+        }
+      ]
+    },
+    {
       "id": "commissions",
       "screen": "battle",
       "order": 72,
