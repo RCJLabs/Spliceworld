@@ -8842,6 +8842,27 @@ written so that it has something on screen when it ships.
       its description where a hint printed two part names. The open budget
       moved 836 -> 870, itemised beside it; the shut budget is untouched.
 
+  **Budgets and verification:**
+  * Eager code 338.85 -> 339.74 KB under 340; prose 260.84 -> 260.52 KB
+    under 261; first paint 1,195 KB under 1,197, as on `main`; the day-180
+    save 186.94 -> 199.54 KB under 200.
+  * **Breaks 616-637:** 22 of 22 caught for the check each is named for.
+    626 first read ELSEWHERE (a bare call with no import is caught by the
+    name check first) and was re-aimed at the import.
+  * **Three baselines.** The first was red on the two height readings above
+    and on a dead export (`fairLeftMs`, now gone). The second was green but
+    for the offline cold open, 1,124ms against 1,000 with four gates
+    sharing the box; alone it reads 601-719ms here and 535-584ms on `main`.
+    The third, on the same tree, was green throughout: `BATTERY_EXIT 0`.
+  * **`npm test` was red on seconds, and so is `main`: the host moved.** Run
+    alone: 2,651 CPU-seconds with six walks rebuilt (1,641 allowed), then
+    2,200 warm. `main` read 2,195 and 2,166 warm in the same hour, against
+    the 1,384 R212 read, so this tree costs about 1% more than `main`
+    (handlers +18s for the two fair surfaces). Both host-invariant rules
+    are green: no share moved past the band (handlers 5.2 -> 5.9%), and
+    the suite flies 1,213,184 battles, between the floor and the ceiling.
+    The budget did not move; this is a host reading, as R202's was.
+
   **Done when, checked:**
   * **A fair at every season's turn:** smoke walks three years of turns. Each
     opens at the turn, as the season changes, stays three days, and is gone

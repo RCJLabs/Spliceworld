@@ -63,6 +63,22 @@ it is drawn.**
   836 (`main` 829) because the lab discovered one more combo; that open
   budget moved to 870, itemised.
 
+### Verified
+
+- `--anchors` 628 of 628. Breaks 616-637: 22 of 22 caught for their named
+  checks (626 re-aimed after reading ELSEWHERE).
+- Baseline green on its third run (`BATTERY_EXIT 0`); the second was red
+  only on the offline cold open under load (1,124ms), which reads 601-719ms
+  alone.
+- `npm test` red on SECONDS on this host **and on `main`**: 2,200 warm here
+  against `main`'s 2,195 and 2,166 in the same hour (R212 read 1,384). The
+  shares and the battle count (1,213,184) are green. Re-measure before
+  trusting the 1,425 budget again.
+- In Chromium at 380px: the race animates, the result survives a reload,
+  reduced motion draws the results card alone, a planted chimera wears
+  three rosettes in the Pens, and a fresh save and a migrated v65 save open
+  every tab with zero console errors.
+
 ### Known issues
 
 - On a busy save the fair's agenda row sits past the Ranch's three-row cap
