@@ -143,3 +143,55 @@ Measured at 380px: `.fine-print`'s muted grey on the warn ground came out at 3.4
 ## Two cells: the icon, then the sentence
 
 Two cells: the icon, then the whole sentence. Grid rather than flex, because a flex row lays out TEXT NODES as items too — it held four of them (the icon, a space, <b>Bear</b>, ", fully grown...") with 5px between each, so the screen read "Bear , fully grown" and a two-word species name took a column of its own with the rest of its sentence stranded beside it. One cell means the sentence wraps like prose and keeps its own punctuation.
+
+## R182 — a part's own render control
+
+R182 — a part's own render control. Pushed to the row's far end so the price lines up down a bay; muted, because it is the quiet way out and not the thing the row is about. The row does not wrap and gives up its block padding to the button, whose 40px floor is then the row's height: a wrapping row put the button on a line of its own and cost an open bay ~200px, which the height gate caught at 4,361 against 4,200.
+
+## R99 found this leak on `.lab-pick` and called it
+
+R99 found this leak on `.lab-pick` and called it the only instance in the game; it was the only instance until this row became a button. R73's global `button { justify-content: center }` centres a shrink-wrapped label inside its 40px target, and a full-width flex row inherits it — the a11y gate measured this one starting 98px into its own 348px line. A ragged left edge on a list you scan by name.
+
+## R103 — the telegraph is a line the arena
+
+R103 — the telegraph is a line the arena did not used to carry, and the arena is height-locked (`body.in-battle` is 100dvh with overflow hidden), so on the shortest phone the space has to come from somewhere. It comes from the stage, which is the one part of the fight that scales: the creatures get smaller, nothing gets cut off. Measured at 380x640, the line costs 38px and this gives back 40.
+
+## R113 - `flex
+
+R113 - `flex: 1 1 auto` -> `1 1 0`. A flexible element in a height-locked column should take what the others leave, and with an `auto` basis this one took its CONTENT height instead. It was not what pinned the stage at 280px - the `min-height: 760px` query below was - but it is the rule that makes the column shrink predictably now that the floor has room.
+
+## R75 — was `infinite`
+
+R75 — was `infinite`. The element is replaced by the poof at 0.55 × CEREMONY_MS (1155 ms), so nine iterations of 0.14 s cover the whole window with room to spare and the animation can no longer outlive the thing it decorates — an infinite animation that happens to be cut short by a setTimeout is a bounded animation with the bound written somewhere else.
+
+## R73 — every disabled opacity above was raised to
+
+R73 — every disabled opacity above was raised to 0.6. A disabled control is exempt from WCAG contrast, but its LABEL is usually the sentence that explains why it is disabled ("None in the vault", "the pens are full"), which is precisely the moment a player needs to read it. Measured: the primary button sat at 2.35:1 against its own surface.
+
+## R88 — "Send them without me"
+
+R88 — "Send them without me". Deliberately NOT a second big-btn: Launch is the decision, this is the shortcut past a decision already made, and a briefing with two equally loud buttons on it is a briefing that has stopped recommending anything. Full width so a thumb cannot miss it, quieter ink so the eye still lands on Launch first.
+
+## Two columns well before 360px
+
+Two columns well before 360px. Four fitted while the numbers were small, but a fully conquered map reads "+$2385/day" beside "128W-12L" and at 380px those two collide into each other mid-glyph — which every assertion in the suite happily reported as four cells of equal height. Screenshots catch what getBoundingClientRect does not.
+
+## R113 - 280px -> 260px
+
+R113 - 280px -> 260px. THIS is the floor the arena was resting on, not the base rule: the gate measures at 780dvh, so this query applies and pinned the stage at exactly 280px through three fixes aimed at the wrong number. With 12px type the chrome above and below is taller, and 280 is 14px more than a 780px phone has left to give.
+
+## R75 — the graduation ceremony's three were missing
+
+R75 — the graduation ceremony's three were missing: a player who has asked their OS to stop moving things still got a shaking portrait, a flashing card and an expanding puff. Safe to disable outright because the ceremony advances on setTimeout, not on animationend, so the results still arrive on time with nothing moving.
+
+## R51 — the third state of a field-guide cell
+
+R51 — the third state of a field-guide cell. "Logged" is a sighting and a unit logs itself just as readily while beating you, so a beaten one is marked rather than merely present. The border carries it: the grid is 100px cells at 380px and a badge would cost a row of height across all forty.
+
+## Lifted from #ff4fa3 by R122's contrast floor
+
+Lifted from #ff4fa3 by R122's contrast floor: the field-note title is accent-2 on panel-2, which was 4.32:1 — under 4.5 and the only theme where it was. This clears 4.73 there and 4.64 on accent-2-dim, and dark text over the fill goes 6.09 -> 6.67, so it is better in both directions.
+
+## R73 follow-up
+
+R73 follow-up: was `var(--accent-2)` while `--cls-air` sits defined and unused in all five theme blocks — its two neighbours use their own class colour and Air borrowed the amber accent, so the one class the triangle makes hardest to read was also the one drawn in another role's colour.

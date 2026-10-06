@@ -135,6 +135,10 @@ const SHARD_OF = {
   // comparison; no browser, no battles. Shard d is the lightest lane once
   // R180's `capers` block landed in a.
   hires: 'd',
+  // R212 — the commissions board: a census of 240 generated requests, the
+  // fill, the clock and one stubbed War Room press. No battles; one cached
+  // walk. Shard d, beside the henchmen.
+  commissions: 'd',
   // R102 — its own name, for R129's reason one entry up. Shard b: the comment
   // above calls shard a "the lightest of the four" and that went stale, which
   // is why this is a measurement rather than a quote — a 212s, b 134s, c 174s,
@@ -2619,6 +2623,8 @@ assert.deepEqual(m5.campaign, {
   mission: null, missionReadyAt: 0, missionCount: 0, missionReport: null,
   // R186 — and nobody found. A save from before the uniques cannot have met one.
   legendsFound: [],
+  // R212 — and no commission filled: the board is the seed and the clock.
+  commissionsDone: [], commissionCount: 0,
 });
 // v27 (A4): the one job slot became a list, and a job that was IN FLIGHT
 // when the save was written has to survive the move — it keeps its clock,
@@ -7314,6 +7320,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'missions',
     // R181 — the payroll: somebody to hold one duty while you are out.
     'henchmen',
+    // R212 — clients who want a creature built a particular way.
+    'commissions',
     // R82. The breakout is the rival ladder's consequence rather than a
     // second ladder: it is on the roll in its own right because it has a
     // data file, a module, a board, a launcher and a first-use moment, and
@@ -7461,6 +7469,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'missions.json': 'missions',
     // R181 — the payroll, taught in the War Room where the board is.
     'henchmen.json': 'henchmen',
+    // R212 — the commissions board, taught beside it.
+    'commissions.json': 'commissions',
     'starters.json': null,
     // R62: the wire's copy is not a system with a first-use moment — it is
     // the voice every system above speaks in, met through all of them and
@@ -7538,6 +7548,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     // about odds with nothing about what they cost.
     'campaign/mission.js': 'missions',
     'campaign/caper.js': 'missions',
+    // R212 — the commissions board's lazy half; its clock is in mission.js.
+    'campaign/commissions.js': 'commissions',
     // R181 — the hire board's lazy half; the clock half is in ranch/ranch.js.
     'campaign/staff.js': 'henchmen',
     'campaign/rehab.js': 'rehab',
@@ -7799,7 +7811,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
       // R108 — a card is a picture of a creature, so the note that offers
       // one cannot be true before there is a creature to photograph. Same
       // step, same reason as the tier letter above it.
-    }, ['upkeep', 'temperament', 'bond', 'veterans', 'tiers', 'cards']],
+      // R212 — and a client can be shown one, so the board's note lights here.
+    }, ['upkeep', 'temperament', 'bond', 'veterans', 'tiers', 'cards', 'commissions']],
     ['parts in the vault', () => {
       lab.inventory.parts = [{ id: 't0', partId: 'goat_head' }, { id: 't1', partId: 'goat_tail' }, { id: 't2', partId: 'goat_hide' }];
     }, ['combos']],
@@ -8979,6 +8992,8 @@ if (inShard('tiers')) {
     // presses: this gate asks which control the chip PROMISES, and the row
     // is offering to run a mission rather than to look at a roster.
     mission: 'data-cap-go=',
+    // R212 — the board's Show button, on the same subtab.
+    commission: 'data-commission=',
     buy: 'data-act="order"', facility: 'data-act="upgrade"', pens: 'data-act="pen"',
   };
   const screenModule = Object.fromEntries(shellScreenMap().map((e) => [e.screen, e.file]));
@@ -15585,6 +15600,218 @@ if (inShard('spar')) {
     restore();
   }
   console.log(`   R211 county: ${regions.length} regions, ${nodes.length} nodes placed from data, each 6px clear at 380px and on a road home`);
+}
+
+// --- R212, COMMISSIONS. The census is the criterion: every commission the
+// --- board generates is satisfiable by a chimera the player could build.
+if (inShard('commissions')) {
+  const C = await import('../campaign/commissions.js');
+  const { commissionWindows } = await import('../campaign/mission.js');
+  const { agenda } = await import('../ranch/agenda.js');
+  const { vaultCapacity } = await import('../splice/vault.js');
+  const { renderWarRoomScreen } = await import('../campaign/ui.js');
+  const { recordingRoot, installDom, memoryStorage } = await import('./domstub.js');
+  const { esc } = await import('../util/text.js');
+  const HOUR = 3600000;
+  const spec = content.commissions;
+  const witnessOf = (job, id = 'w') => ({ id, name: `Proof ${id}`, frame: job.witness.frame,
+    tokens: Object.fromEntries(Object.entries(job.witness.parts).map(([s, partId]) => [s, { partId, grade: 'standard', traits: [] }])) });
+  const firstFrames = content.facility.theater.levels.find((l) => l.level === 1).grants.frames;
+  const readable = (text) => typeof text === 'string' && text.length > 0 && !/[{}]|undefined|NaN|null/.test(text);
+
+  // 1. THE CENSUS. Four saves, sixty windows each: a commission every time,
+  //    whose witness is built from parts the catalogue sells, splices at the
+  //    LOWEST Theater tier that builds its frame, and answers its own request.
+  const census = [];
+  for (const seed of [1, 2026, 31337, 4242]) {
+    for (let k = 0; k < 60; k++) {
+      const job = C.commissionOf({ seed }, content, { id: `k${k}`, k, deadline: 0 });
+      assert.ok(job, `seed ${seed}, window ${k}: the board posts a commission`);
+      census.push(job);
+      const where = `seed ${seed}, window ${k} (${job.ask.kind})`;
+      assert.equal(job.witness.level, C.tierFor(content, job.witness.frame).level,
+        `${where}: the witness is built at the lowest tier that builds its frame`);
+      if (job.ask.kind !== 'frame') {
+        assert.ok(firstFrames.includes(job.witness.frame), `${where}: a request that names no chassis can be answered by a new lab`);
+      }
+      const lab = { ...newGameState(), seed };
+      lab.facility = { ...lab.facility, theater: job.witness.level };
+      lab.inventory.parts = Object.entries(job.witness.parts).map(([s, partId]) => ({ id: `w-${s}`, partId, grade: 'standard', traits: [] }));
+      const slots = Object.fromEntries(Object.keys(job.witness.parts).map((s) => [s, `w-${s}`]));
+      assert.deepEqual(validateSplice(lab, job.witness.frame, slots, content), [], `${where}: the witness splices at Tier ${job.witness.level}`);
+      for (const partId of Object.values(job.witness.parts)) {
+        assert.ok(content.species[content.parts[partId].species]?.mailOrderPrice, `${where}: ${partId} is a part the catalogue sells`);
+      }
+      assert.ok(C.fits(content, job.ask, witnessOf(job)), `${where}: the witness answers its own request`);
+      assert.ok(readable(C.askText(content, job.ask)) && readable(C.rewardText(content, job.reward)) && readable(job.client),
+        `${where}: the request reads as a sentence (${C.askText(content, job.ask)}; ${C.rewardText(content, job.reward)})`);
+    }
+  }
+  assert.deepEqual([...new Set(census.map((j) => j.ask.kind))].sort(), [...new Set(spec.kinds)].sort(), 'every kind of request comes up');
+  assert.deepEqual([...new Set(census.map((j) => j.reward.kind))].sort(), [...new Set(spec.rewards.map((r) => r.kind))].sort(), 'every kind of reward comes up');
+  assert.ok(census.some((j) => j.ask.kind === 'frame' && !firstFrames.includes(j.ask.frame)), 'a frame request may name a chassis a new lab has to earn');
+  assert.ok(census.every((j) => j.ask.kind !== 'class' || j.ask.move.toLowerCase() !== j.ask.cls),
+    'a class request never asks for the move that names the class');
+  // A REQUEST IS A FILTER: another commission's witness answers it rarely.
+  let cross = 0;
+  for (let i = 0; i < census.length; i++) cross += C.fits(content, census[i].ask, witnessOf(census[(i + 7) % census.length]));
+  assert.ok(cross / census.length < 0.25, `a request is a filter, not a formality (${cross} of ${census.length} answered by another's witness)`);
+  const again = C.commissionOf({ seed: 2026 }, content, { id: 'k5', k: 5, deadline: 0 });
+  assert.deepEqual({ ...again, deadline: 0 }, { ...census[65], deadline: 0 }, 'a commission reads the same every time it is asked for');
+
+  // 2. THE CLOCK. One commission a window, `lastsHours / everyHours` open at
+  //    once, each lapsing exactly `lastsHours` after it is posted.
+  const st = { ...newGameState(), seed: 2026 };
+  st.campaign = structuredClone(st.campaign);
+  const wins = commissionWindows(st, content, t0);
+  assert.equal(wins.length, spec.board.lastsHours / spec.board.everyHours, 'the board holds one window per shift a client waits');
+  for (const w of wins) {
+    assert.ok(w.deadline > t0 && w.deadline - spec.board.lastsHours * HOUR <= t0, `${w.id}: posted before now and open until its deadline`);
+  }
+  const posted = wins.map((w) => w.deadline).sort((a, b) => a - b);
+  for (let i = 1; i < posted.length; i++) assert.equal(posted[i] - posted[i - 1], spec.board.everyHours * HOUR, 'windows open a shift apart');
+  const open = C.commissionBoard(st, content, t0);
+  assert.deepEqual(open.map((j) => j.id).sort(), wins.map((w) => w.id).sort(), 'every open window has its commission');
+
+  // 3. THE FILL. A creature that fits is shown, the client pays, the
+  //    commission closes and the creature stays home.
+  const job = open[0];
+  st.chimeras = [witnessOf(job, 'c0')];
+  const away = structuredClone(st);
+  away.campaign.expedition = { regionId: 'kestrel', crew: ['c0'] };
+  assert.equal(C.fulfilCommission(away, content, t0, job.id, 'c0').ok, false, 'a creature out on an expedition cannot be shown');
+  for (const [field, value] of [['operations', [{ chimeraId: 'c0' }]], ['mission', { chimeraId: 'c0' }]]) {
+    assert.deepEqual(C.homeChimeras({ ...st, campaign: { ...st.campaign, [field]: value } }), [], `a creature away on a ${field} is not home`);
+  }
+  const bare = { id: 'c1', name: 'Bare', frame: 'S', tokens: {} };
+  const unfit = open.find((j) => !C.fits(content, j.ask, bare));
+  st.chimeras.push(bare);
+  const before = { funds: st.funds, noto: st.campaign.notoriety, parts: st.inventory.parts.length };
+  const refused = C.fulfilCommission(st, content, t0, unfit.id, 'c1');
+  assert.equal(refused.ok, false, 'a creature that does not fit is refused');
+  assert.equal(refused.msg, copy(content, 'commission.no_fit'), 'and the client says so');
+  assert.deepEqual({ funds: st.funds, noto: st.campaign.notoriety, parts: st.inventory.parts.length }, before, 'and nobody is paid for it');
+  const filled = C.fulfilCommission(st, content, t0, job.id, 'c0');
+  assert.ok(filled.ok && readable(filled.msg), `showing a creature that fits fills the commission (${filled.msg})`);
+  assert.ok(!C.commissionBoard(st, content, t0).some((j) => j.id === job.id), 'a filled commission closes');
+  assert.equal(st.campaign.commissionCount, 1, 'and is counted');
+  assert.ok(st.chimeras.some((c) => c.id === 'c0'), 'the creature stays home');
+  assert.equal(C.fulfilCommission(st, content, t0, job.id, 'c0').msg, copy(content, 'commission.gone'), 'a commission cannot be filled twice');
+
+  // Every kind of reward, paid where it says: walk the clock forward until
+  // each has come up, and fill it with its own witness.
+  const paid = new Set();
+  for (let h = 0; paid.size < 3 && h < 24 * 30; h += spec.board.everyHours) {
+    const at = t0 + h * HOUR;
+    for (const j of C.commissionBoard(st, content, at)) {
+      if (paid.has(j.reward.kind)) continue;
+      st.chimeras = [witnessOf(j, 'c0')];
+      const was = { funds: st.funds, noto: st.campaign.notoriety, parts: st.inventory.parts.length };
+      assert.ok(C.fulfilCommission(st, content, at, j.id, 'c0').ok, `${j.id}: its own witness fills it`);
+      if (j.reward.kind === 'funds') assert.equal(st.funds - was.funds, j.reward.amount, 'cash is paid in full');
+      if (j.reward.kind === 'notoriety') assert.equal(st.campaign.notoriety - was.noto, j.reward.amount, 'notoriety is paid in full');
+      if (j.reward.kind === 'part') {
+        const got = st.inventory.parts.at(-1);
+        assert.ok(st.inventory.parts.length === was.parts + 1 && got.partId === j.reward.partId && got.grade === j.reward.grade,
+          'a part arrives in the Vault at its grade');
+        // …and a full shelf renders it at the door and pays for it.
+        const full = structuredClone(st);
+        const cap = vaultCapacity(full, content).parts;
+        while (full.inventory.parts.length < cap) full.inventory.parts.push({ id: `f${full.inventory.parts.length}`, partId: j.reward.partId, grade: 'standard', traits: [] });
+        full.campaign.commissionsDone = full.campaign.commissionsDone.filter((d) => d !== j.id);
+        const cash = full.funds;
+        assert.ok(C.fulfilCommission(full, content, at, j.id, 'c0').ok && full.inventory.parts.length === cap && full.funds > cash,
+          'a part for a full Vault is rendered at the door and paid for');
+      }
+      paid.add(j.reward.kind);
+    }
+    assert.ok(st.campaign.commissionsDone.length <= wins.length + 1, 'the filled list holds only open windows');
+  }
+  assert.equal(paid.size, 3, 'cash, notoriety and a part are each paid');
+
+  // 4. DEADLINES ARE TIMESTAMPS SETTLED ON LOAD. A save written now and
+  //    opened after the soonest deadline has lost that client and kept the
+  //    rest; a week away is a week of clients who came and went.
+  const fresh = { ...newGameState(), seed: 7 };
+  const was = C.commissionBoard(fresh, content, t0);
+  const soonest = was[0];
+  const loaded = await migrate(JSON.parse(JSON.stringify(fresh)));
+  const later = C.commissionBoard(loaded, content, soonest.deadline);
+  assert.ok(!later.some((j) => j.id === soonest.id), 'a commission past its deadline is gone on load');
+  assert.deepEqual(later.filter((j) => was.some((w) => w.id === j.id)).map((j) => j.id), was.slice(1).map((j) => j.id),
+    'and every commission still inside its deadline is still there');
+  loaded.chimeras = [witnessOf(soonest, 'c0')];
+  assert.equal(C.fulfilCommission(loaded, content, soonest.deadline, soonest.id, 'c0').msg, copy(content, 'commission.gone'),
+    'a lapsed commission cannot be filled');
+  const week = t0 + 7 * 24 * HOUR;
+  assert.ok(C.commissionBoard(loaded, content, week).every((j) => j.deadline > week && !was.some((w) => w.id === j.id)),
+    'a week away: the board is the clients posted while you were gone');
+  const v64 = await migrate(JSON.parse(readFileSync(join(root, 'tools/saves/v64.json'), 'utf8')));
+  assert.deepEqual([v64.campaign.commissionsDone, v64.campaign.commissionCount], [[], 0], 'a v64 save arrives with nothing filled');
+  assert.equal(C.commissionBoard(v64, content, t0).length, wins.length, 'and a full board');
+
+  // 5. THE RANCH'S AGENDA counts the board, once there is a creature to show.
+  const ranch = { ...newGameState(), seed: 7 };
+  const rowOf = (s, c = content) => agenda(s, c, t0).find((r) => r.id === 'commission');
+  assert.equal(rowOf(ranch), undefined, 'no row before there is a creature to show');
+  ranch.chimeras = [{ id: 'c0', name: 'Anyone', frame: 'M', tokens: {} }];
+  const row = rowOf(ranch);
+  assert.ok(row && row.screen === 'battle' && row.subtab === 'jobs', 'the row lands on the jobs board');
+  assert.ok(row.hint.includes(String(C.commissionBoard(ranch, content, t0).length)), `the row counts the clients waiting (${row.hint})`);
+  const { commissions: _late, ...core } = content;
+  assert.equal(rowOf(ranch, core), undefined, 'before the board lands, the row counts nothing');
+  ranch.campaign.commissionsDone = commissionWindows(ranch, content, t0).map((w) => w.id);
+  assert.equal(rowOf(ranch), undefined, 'a board with every client served stands the row down');
+
+  // 6. THE WAR ROOM shows the board on the jobs tab, and pressing Show fills it.
+  const wr = { ...newGameState(), seed: 2026 };
+  wr.campaign = structuredClone(wr.campaign);
+  const target = C.commissionBoard(wr, content, t0)[0];
+  wr.chimeras = [witnessOf(target, 'c0')];
+  const wrRoot = recordingRoot();
+  const restore = installDom({ overlay: recordingRoot(), storage: memoryStorage() });
+  try {
+    const ctx = { state: wr, content, now: () => t0, save() {}, goto() {}, refreshTicker() {}, pushNews() {}, tick() {}, takeSubtab: () => 'jobs' };
+    renderWarRoomScreen(wrRoot.host, ctx);
+    const html = wrRoot.host.innerHTML;
+    for (const j of C.commissionBoard(wr, content, t0)) assert.ok(html.includes(esc(j.client)), `the War Room lists ${j.client}`);
+    const show = wrRoot.bound.find((b) => b.el?.dataset?.commission === `${target.id}|c0`);
+    assert.ok(show, 'a creature that fits has a Show button');
+    const cash = wr.funds;
+    show.fn({ preventDefault() {}, stopPropagation() {}, target: show.el, currentTarget: show.el });
+    assert.equal(wr.campaign.commissionCount, 1, 'pressing it fills the commission');
+    assert.ok(target.reward.kind !== 'funds' || wr.funds === cash + target.reward.amount, 'and pays');
+    const after = wrRoot.host.innerHTML;
+    assert.ok(after.includes(esc(copy(content, 'commission.done', { client: target.client, name: 'Proof c0', paid: C.rewardText(content, target.reward) }))),
+      'and the card says what the client paid');
+    assert.ok(!after.includes(`data-commission="${esc(target.id)}|`), 'with that client gone from the board');
+  } finally {
+    restore();
+  }
+
+  // 7. THE 180-DAY WALK FILLS COMMISSIONS, without ever building to order.
+  const { walkedSave } = await import('./fixtures.js');
+  const d180 = walkedSave({ days: 180 });
+  assert.ok(d180.campaign.commissionCount > 0, `the 180-day walk fills commissions (${d180.campaign.commissionCount})`);
+
+  // 8. NEW CONTENT MAKES NEW COMMISSIONS WITHOUT NEW DATA. A sixth frame on
+  //    the first tier and a newt with a tag nobody has written a noun for.
+  const grown = structuredClone(content);
+  grown.frames.Q = { ...structuredClone(content.frames.M), id: 'Q', name: 'Quadruped Frame' };
+  grown.facility.theater.levels.find((l) => l.level === 1).grants.frames.push('Q');
+  grown.species.newt = { ...structuredClone(content.species.frog), id: 'newt', name: 'Newt' };
+  for (const part of Object.values(content.parts).filter((p) => p.species === 'frog')) {
+    const id = part.id.replace(/^frog/, 'newt');
+    grown.parts[id] = { ...structuredClone(part), id, species: 'newt', name: part.name.replace(/Frog/g, 'Newt'), tags: ['Slimy'] };
+  }
+  const grownJobs = [];
+  for (let k = 0; k < 400; k++) grownJobs.push(C.commissionOf({ seed: 99 }, grown, { id: `k${k}`, k, deadline: 0 }));
+  const said = grownJobs.map((j) => C.askText(grown, j.ask));
+  assert.ok(grownJobs.some((j) => j.ask.kind === 'frame' && j.ask.frame === 'Q'), 'a new frame is asked for by name');
+  assert.ok(said.some((t) => /\bnewt\b/.test(t)), 'a new species is asked for by name');
+  assert.ok(said.some((t) => /\bslimy\b/.test(t)), 'a new tag is asked for in the words the slots give it');
+  assert.ok(said.every(readable), 'and every one of them reads');
+  console.log(`   R212 commissions: ${census.length} generated, every one splices and answers itself; ${cross} answered by another's witness; the walk filled ${d180.campaign.commissionCount}`);
 }
 
 // R71, second half: save slots. Multiple independent labs on one device —
@@ -25793,7 +26020,21 @@ if (inShard('wire')) {
 // and the A9 essay on `theaterGrants` became a pointer to
 // data/notes/frames.md, which already said it. PROSE_CAP stays where it was:
 // the eager graph carries 0.2 KB LESS prose than before R207.
-const KB_CAP = 338;        // CODE only, measured at 337.35
+// R212 — 338 -> 339, measured at 338.87 on a tree that read 337.93 before
+// it. The Ranch's agenda counts the commissions board on the first frame, so
+// the board's clock is eager: `commissionWindows` in `campaign/mission.js`
+// (489 bytes) and the agenda row that reads it (434). Everything that says
+// what a client WANTS — the witness, the request, the fit, the fill — is
+// lazy in `campaign/commissions.js`, and so is the board's data, which rides
+// the second round.
+//
+// Paid down before it was raised: the window math lost its hash (the seed is
+// already a number), the row's label is a literal and its hint counts rather
+// than computing the next deadline, the loader names the file inline rather
+// than as a fourth group, and the renderer's LATE attach became one loop over
+// three keys (+2 bytes for the third). PROSE_CAP stays where it was: R133's
+// essay in the agenda became a pointer to ROADMAP R133, which tells it.
+const KB_CAP = 339;        // CODE only, measured at 338.87
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.

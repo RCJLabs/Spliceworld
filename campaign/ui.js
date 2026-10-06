@@ -48,6 +48,7 @@ import {
 } from './expedition.js';
 import { findsFor, findsBeyond, expeditionOdds, startExpedition } from './outfit.js';
 import { missionTuning, activeMission, missionCandidates } from './mission.js';
+import { commissionBoard, homeChimeras, fits, askText, rewardText, fulfilCommission } from './commissions.js';
 import { hireRoster, slotsOf, nextSlotAt, hiredOf, hireBlock, hire, letGo, wageNow } from './staff.js';
 import {
   missionsFor, missionHours, missionReadyAt, missionRemainingMs,
@@ -88,6 +89,8 @@ let lastAftermath = null;
 // player makes across several taps, and a half-made one has no business in
 // the save.
 let expDraft = { regionId: null, hours: 0, crew: [] };
+// R212 — what the last client said, shown in the card that was pressed.
+let commissionNote = null;
 // R180 — the caper draft. One creature rather than a crew, so it is an id
 // and not a list, and the same rule holds: a half-composed mission is a UI
 // state and never touches the save.
@@ -502,7 +505,7 @@ function renderMap(root, ctx) {
 
   const views = {
     map: `${countyMarkup(state, content, t)}${regions}`,
-    jobs: `${staffCard(state, ctx, t)}${expeditionCard(state, ctx, t)}${missionCard(state, ctx, t)}${jobsCard(state, ctx, t)}`,
+    jobs: `${staffCard(state, ctx, t)}${expeditionCard(state, ctx, t)}${missionCard(state, ctx, t)}${commissionCard(state, ctx, t)}${jobsCard(state, ctx, t)}`,
     labs: `
       ${releaseCard}
       ${dossier}
@@ -1290,6 +1293,35 @@ function jobsCard(state, ctx, t) {
     </section>`;
 }
 
+// R212 — the commissions board: who wants what, what it pays, when they
+// leave, and which creatures at home would do. Up to three buttons a row,
+// because a request half the stable answers is a row, not a roster.
+function commissionCard(state, ctx, t) {
+  const { content } = ctx;
+  if (!content.commissions) return '';
+  const home = homeChimeras(state);
+  const rows = commissionBoard(state, content, t).map((job) => {
+    const fit = home.filter((c) => fits(content, job.ask, c));
+    return `<div class="encounter commission">
+        <div><strong>${esc(job.client)}</strong><br>
+        <span class="fine-print">${esc(copy(content, 'commission.wants', { ask: askText(content, job.ask) }))} ${
+      esc(rewardText(content, job.reward))}, ${copy(content, 'commission.leaves', {
+      left: `<strong class="countdown">${fmtDuration(job.deadline - t)}</strong>` })}.</span></div>
+        <div class="commission-fits">${fit.length
+      ? fit.slice(0, 3).map((c) => `<button type="button" data-commission="${esc(job.id)}|${esc(c.id)}">${
+        esc(copy(content, 'commission.show', { name: c.name }))}</button>`).join('')
+      : `<span class="locked-tag">${copy(content, 'commission.nobody')}</span>`}</div>
+      </div>`;
+  }).join('');
+  return `
+    <section class="card jobs-card">
+      <h3>${renderIcon('document')} ${copy(content, 'commission.heading')}</h3>
+      <p class="fine-print">${copy(content, 'commission.blurb')}</p>
+      ${commissionNote ? `<p class="ranch-msg">${esc(commissionNote)}</p>` : ''}
+      ${rows || `<p class="fine-print">${copy(content, 'commission.empty')}</p>`}
+    </section>`;
+}
+
 function bindJobs(root, ctx, redraw) {
   const { state, content } = ctx;
   const t = ctx.now();
@@ -1327,6 +1359,14 @@ function bindJobs(root, ctx, redraw) {
   root.querySelectorAll('button[data-exp-recall]').forEach((btn) => {
     btn.addEventListener('click', () => {
       lastAftermath = recallExpedition(state, content, ctx.now()).msg;
+      ctx.save();
+      redraw();
+    });
+  });
+  root.querySelectorAll('button[data-commission]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const [id, chimeraId] = btn.dataset.commission.split('|');
+      commissionNote = fulfilCommission(state, content, ctx.now(), id, chimeraId).msg;
       ctx.save();
       redraw();
     });

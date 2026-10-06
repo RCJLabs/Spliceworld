@@ -53,6 +53,7 @@ import { recordingRoot, installDom, memoryStorage, fakeEvent, attrsOfFire, dataA
 import { moduleFiles } from './scopecheck.js';
 import { stripComments } from './source.js';
 import { hire, hireRoster } from '../campaign/staff.js';
+import { commissionBoard } from '../campaign/commissions.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const HOUR = 3600000;
@@ -283,6 +284,23 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
       rivalId: rivalList(content)[0].id, rival: rivalList(content)[0].name,
       hours: 3, chimeraId: null, name: 'Specimen', success: true, funds: 39,
       fate: 'home', granted: 'intel' };
+    // R212 — a creature that answers the first commission on the board, so
+    // the board paints its Show button. Built from that commission's own
+    // witness through the Theater's door, on a table cleared for it and put
+    // back after, so every other control the table owns is still painted.
+    const job = commissionBoard(s, content, now)[0];
+    const keep = { table: s.theater, tier: s.facility.theater };
+    s.theater = { ...s.theater, busyUntil: 0 };
+    s.facility.theater = Math.max(keep.tier, job.witness.level);
+    for (const [socket, partId] of Object.entries(job.witness.parts)) {
+      s.inventory.parts.push({ id: `cw-${socket}`, partId, grade: 'standard', traits: [],
+        donor: { name: job.client, species: content.parts[partId].species, stars: 3, extractedAt: now } });
+    }
+    const built = spliceChimera(s, job.witness.frame,
+      Object.fromEntries(Object.keys(job.witness.parts).map((socket) => [socket, `cw-${socket}`])), content, now);
+    if (!built.ok) throw new Error(`handlers fixture: the commission's witness would not splice (${built.msg})`);
+    s.theater = keep.table;
+    s.facility.theater = keep.tier;
     return s;
   };
 

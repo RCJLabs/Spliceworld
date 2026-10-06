@@ -22,6 +22,14 @@
 // anything needing content/RNG (e.g. starter herd) happens on boot via
 // seeded flags (see ranch.ensureRanchSeeded).
 export const migrations = {
+  // R212 — nothing filled yet: the board is new, and its open commissions
+  // are derived from the seed and the clock, so there is nothing to seed.
+  65: (save) => {
+    save.campaign ??= {};
+    save.campaign.commissionsDone ??= [];
+    save.campaign.commissionCount ??= 0;
+    return save;
+  },
   // R189 — nobody has been hired away yet: an agent is a hire this version
   // introduces, so a save from before it cannot have lost one to a lab.
   64: (save) => {

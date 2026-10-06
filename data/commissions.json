@@ -1,0 +1,55 @@
+{
+  "board": {
+    "everyHours": 8,
+    "lastsHours": 32,
+    "tries": 12,
+    "skip": 0.3,
+    "massStep": 10
+  },
+  "kinds": ["anatomy", "anatomy", "class", "frame", "species"],
+  "pay": { "anatomy": 1, "class": 1.25, "frame": 1.35, "species": 1.1 },
+  "rewards": [
+    { "kind": "funds", "weight": 3, "min": 120, "max": 300 },
+    { "kind": "notoriety", "weight": 1, "min": 4, "max": 10 },
+    { "kind": "part", "weight": 2, "grade": "prime" }
+  ],
+  "clients": [
+    "A man in a very large hat",
+    "The Tri-County Gentlemen's Bestiary Society",
+    "A minor duke, through his lawyer",
+    "Somebody calling from a payphone",
+    "An avant-garde petting zoo",
+    "A retired magician with a grudge",
+    "The night shift at the aquarium",
+    "A film studio that will not say which film",
+    "A woman who signs her letters 'Ominously'",
+    "Two children in one trench coat",
+    "A hedge fund, for the lobby",
+    "The world's least licensed circus",
+    "A cult that insists it is a book club",
+    "Your former lab partner, who says no hard feelings",
+    "A billionaire's personal zookeeper",
+    "An anonymous rival who would rather not be named"
+  ],
+  "slots": {
+    "head": "{a} {tag} head",
+    "forelimbs": "{tag} forelimbs",
+    "hindlimbs": "{tag} hindlimbs",
+    "tail": "{a} {tag} tail",
+    "hide": "{a} {tag} hide",
+    "organ": "{a} {tag} organ"
+  },
+  "nouns": {
+    "forelimbs:Airborne": "wings",
+    "organ:Venomous": "a venom organ",
+    "organ:Electric": "a battery for an organ",
+    "head:Electric": "a head that hums",
+    "head:Sonic": "a head that shrieks",
+    "hide:Armored": "plating",
+    "hide:Aquatic": "a waterproof hide",
+    "tail:Aquatic": "a swimming tail",
+    "organ:Gas": "a gas bladder",
+    "hide:Camo": "a hide you cannot quite see",
+    "hindlimbs:Aquatic": "flippers"
+  }
+}
