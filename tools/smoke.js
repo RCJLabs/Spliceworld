@@ -2624,7 +2624,7 @@ assert.deepEqual(m5.campaign, {
   // R186 — and nobody found. A save from before the uniques cannot have met one.
   legendsFound: [],
   // R212 — and no commission filled: the board is the seed and the clock.
-  commissionsDone: [], commissionCount: 0,
+  commissionsDone: [],
 });
 // v27 (A4): the one job slot became a list, and a job that was IN FLIGHT
 // when the save was written has to survive the move — it keeps its clock,
@@ -15700,7 +15700,7 @@ if (inShard('commissions')) {
   const filled = C.fulfilCommission(st, content, t0, job.id, 'c0');
   assert.ok(filled.ok && readable(filled.msg), `showing a creature that fits fills the commission (${filled.msg})`);
   assert.ok(!C.commissionBoard(st, content, t0).some((j) => j.id === job.id), 'a filled commission closes');
-  assert.equal(st.campaign.commissionCount, 1, 'and is counted');
+  assert.deepEqual(st.campaign.commissionsDone, [job.id], 'and is recorded');
   assert.ok(st.chimeras.some((c) => c.id === 'c0'), 'the creature stays home');
   assert.equal(C.fulfilCommission(st, content, t0, job.id, 'c0').msg, copy(content, 'commission.gone'), 'a commission cannot be filled twice');
 
@@ -15753,7 +15753,7 @@ if (inShard('commissions')) {
   assert.ok(C.commissionBoard(loaded, content, week).every((j) => j.deadline > week && !was.some((w) => w.id === j.id)),
     'a week away: the board is the clients posted while you were gone');
   const v64 = await migrate(JSON.parse(readFileSync(join(root, 'tools/saves/v64.json'), 'utf8')));
-  assert.deepEqual([v64.campaign.commissionsDone, v64.campaign.commissionCount], [[], 0], 'a v64 save arrives with nothing filled');
+  assert.deepEqual(v64.campaign.commissionsDone, [], 'a v64 save arrives with nothing filled');
   assert.equal(C.commissionBoard(v64, content, t0).length, wins.length, 'and a full board');
 
   // 5. THE RANCH'S AGENDA counts the board, once there is a creature to show.
@@ -15785,7 +15785,7 @@ if (inShard('commissions')) {
     assert.ok(show, 'a creature that fits has a Show button');
     const cash = wr.funds;
     show.fn({ preventDefault() {}, stopPropagation() {}, target: show.el, currentTarget: show.el });
-    assert.equal(wr.campaign.commissionCount, 1, 'pressing it fills the commission');
+    assert.deepEqual(wr.campaign.commissionsDone, [target.id], 'pressing it fills the commission');
     assert.ok(target.reward.kind !== 'funds' || wr.funds === cash + target.reward.amount, 'and pays');
     const after = wrRoot.host.innerHTML;
     assert.ok(after.includes(esc(copy(content, 'commission.done', { client: target.client, name: 'Proof c0', reward: C.rewardText(content, target.reward) }))),
@@ -15798,7 +15798,9 @@ if (inShard('commissions')) {
   // 7. THE 180-DAY WALK FILLS COMMISSIONS, without ever building to order.
   const { walkedSave } = await import('./fixtures.js');
   const d180 = walkedSave({ days: 180 });
-  assert.ok(d180.campaign.commissionCount > 0, `the 180-day walk fills commissions (${d180.campaign.commissionCount})`);
+  // A fill appends its own id and drops only lapsed ones, so the list is never
+  // empty again once anything has been filled.
+  assert.ok(d180.campaign.commissionsDone.length > 0, 'the 180-day walk fills commissions');
 
   // 8. NEW CONTENT MAKES NEW COMMISSIONS WITHOUT NEW DATA. A sixth frame on
   //    the first tier and a newt with a tag nobody has written a noun for.
@@ -15817,7 +15819,7 @@ if (inShard('commissions')) {
   assert.ok(said.some((t) => /\bnewt\b/.test(t)), 'a new species is asked for by name');
   assert.ok(said.some((t) => /\bslimy\b/.test(t)), 'a new tag is asked for in the words the slots give it');
   assert.ok(said.every(readable), 'and every one of them reads');
-  console.log(`   R212 commissions: ${census.length} generated, every one splices and answers itself; ${cross} answered by another's witness; the walk filled ${d180.campaign.commissionCount}`);
+  console.log(`   R212 commissions: ${census.length} generated, every one splices and answers itself; ${cross} answered by another's witness; the walk fills them`);
 }
 
 // R71, second half: save slots. Multiple independent labs on one device —

@@ -100,7 +100,7 @@ export function newGameState() {
       // R94: the high-water mark. The meter falls; this does not.
       notorietyPeak: 0,
       // R212 — data/notes/commissions.md.
-      commissionsDone: [], commissionCount: 0,
+      commissionsDone: [],
     },
     // R181 — the payroll: one record per hire, its tallies inside it.
     staff: { hired: [], poached: {} },

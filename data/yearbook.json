@@ -60,13 +60,6 @@
           "sub": "Rival labs, no battle"
         },
         {
-          "id": "commissions",
-          "label": "Commissions",
-          "from": "campaign.commissionCount",
-          "fmt": "count",
-          "sub": "Built to order, shown, kept"
-        },
-        {
           "id": "sent",
           "label": "Sent, not watched",
           "from": "sentCount",

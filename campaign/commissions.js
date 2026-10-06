@@ -200,7 +200,6 @@ export function fulfilCommission(state, content, now, id, chimeraId) {
   const cam = state.campaign;
   const live = new Set(commissionWindows(state, content, now).map((w) => w.id));
   cam.commissionsDone = [...(cam.commissionsDone ?? []).filter((d) => live.has(d)), id];
-  cam.commissionCount = (cam.commissionCount ?? 0) + 1;
   const { reward } = job;
   if (reward.kind === 'funds') state.funds += reward.amount;
   else if (reward.kind === 'notoriety') cam.notoriety = (cam.notoriety ?? 0) + reward.amount;

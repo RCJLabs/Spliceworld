@@ -27,7 +27,6 @@ export const migrations = {
   65: (save) => {
     save.campaign ??= {};
     save.campaign.commissionsDone ??= [];
-    save.campaign.commissionCount ??= 0;
     return save;
   },
   // R189 — nobody has been hired away yet: an agent is a hire this version

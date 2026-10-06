@@ -944,7 +944,7 @@
       ],
       "done": [
         {
-          "path": "campaign.commissionCount",
+          "path": "campaign.commissionsDone",
           "min": 1,
           "default": 0
         }

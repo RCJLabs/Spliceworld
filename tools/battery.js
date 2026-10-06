@@ -8390,12 +8390,12 @@ const BREAKS = [
     expect: 'data-commission is painted and nothing ever fired',
   },
   {
-    // R212 — A MIGRATION THAT FORGETS THE COUNT.
-    n: 614, gate: SAVES, name: 'the v65 migration forgets the commission count',
+    // R212 — A MIGRATION THAT FORGETS THE BOARD.
+    n: 614, gate: SAVES, name: 'the v65 migration forgets the filled commissions',
     file: 'save/migrations.js',
-    anchor: '    save.campaign.commissionCount ??= 0;\n',
+    anchor: '    save.campaign.commissionsDone ??= [];\n',
     to: '',
-    expect: 'campaign.commissionCount',
+    expect: 'campaign.commissionsDone',
   },
   {
     // R212 — A LIST WITH NO CEILING. A fill keeps every id it ever filled.

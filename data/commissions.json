@@ -11,7 +11,7 @@
   "rewards": [
     { "kind": "funds", "weight": 3, "min": 120, "max": 300 },
     { "kind": "notoriety", "weight": 1, "min": 4, "max": 10 },
-    { "kind": "part", "weight": 2, "grade": "prime" }
+    { "kind": "part", "weight": 2, "grade": "standard" }
   ],
   "clients": [
     "A man in a very large hat",
