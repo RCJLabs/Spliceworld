@@ -183,10 +183,10 @@ export function askText(content, ask) {
 
 export function rewardText(content, reward) {
   if (reward.kind === 'part') {
-    return copy(content, 'commission.pays_part', { grade: reward.grade, part: content.parts[reward.partId]?.name ?? reward.partId });
+    return copy(content, 'commission.reward_part', { grade: reward.grade, part: content.parts[reward.partId]?.name ?? reward.partId });
   }
-  if (reward.kind === 'notoriety') return copy(content, 'commission.pays_notoriety', { n: reward.amount });
-  return copy(content, 'commission.pays_funds', { amount: fmtMoney(reward.amount) });
+  if (reward.kind === 'notoriety') return copy(content, 'commission.reward_notoriety', { n: reward.amount });
+  return copy(content, 'commission.reward_funds', { amount: fmtMoney(reward.amount) });
 }
 
 // Show the client a creature. Pays and closes the commission; the creature
@@ -210,5 +210,5 @@ export function fulfilCommission(state, content, now, id, chimeraId) {
       donor: { name: job.client, species: content.parts[reward.partId].species, stars: 3, extractedAt: now },
     }]);
   }
-  return { ok: true, job, msg: copy(content, 'commission.done', { client: job.client, name: chimera.name, paid: rewardText(content, reward) }) };
+  return { ok: true, job, msg: copy(content, 'commission.done', { client: job.client, name: chimera.name, reward: rewardText(content, reward) }) };
 }

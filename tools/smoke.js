@@ -15643,6 +15643,12 @@ if (inShard('commissions')) {
         assert.ok(content.species[content.parts[partId].species]?.mailOrderPrice, `${where}: ${partId} is a part the catalogue sells`);
       }
       assert.ok(C.fits(content, job.ask, witnessOf(job)), `${where}: the witness answers its own request`);
+      if (job.ask.kind === 'frame') {
+        // The same body on the lightest other chassis is lighter still, so
+        // only the chassis itself can refuse it.
+        const other = Object.values(content.frames).filter((f) => f.id !== job.ask.frame).sort((a, b) => a.phys.mass - b.phys.mass)[0];
+        assert.ok(!C.fits(content, job.ask, { ...witnessOf(job), frame: other.id }), `${where}: a frame request is not answered on another chassis`);
+      }
       assert.ok(readable(C.askText(content, job.ask)) && readable(C.rewardText(content, job.reward)) && readable(job.client),
         `${where}: the request reads as a sentence (${C.askText(content, job.ask)}; ${C.rewardText(content, job.reward)})`);
     }
@@ -15782,7 +15788,7 @@ if (inShard('commissions')) {
     assert.equal(wr.campaign.commissionCount, 1, 'pressing it fills the commission');
     assert.ok(target.reward.kind !== 'funds' || wr.funds === cash + target.reward.amount, 'and pays');
     const after = wrRoot.host.innerHTML;
-    assert.ok(after.includes(esc(copy(content, 'commission.done', { client: target.client, name: 'Proof c0', paid: C.rewardText(content, target.reward) }))),
+    assert.ok(after.includes(esc(copy(content, 'commission.done', { client: target.client, name: 'Proof c0', reward: C.rewardText(content, target.reward) }))),
       'and the card says what the client paid');
     assert.ok(!after.includes(`data-commission="${esc(target.id)}|`), 'with that client gone from the board');
   } finally {

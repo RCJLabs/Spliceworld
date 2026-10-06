@@ -1304,13 +1304,12 @@ function commissionCard(state, ctx, t) {
     const fit = home.filter((c) => fits(content, job.ask, c));
     return `<div class="encounter commission">
         <div><strong>${esc(job.client)}</strong><br>
-        <span class="fine-print">${esc(copy(content, 'commission.wants', { ask: askText(content, job.ask) }))} ${
-      esc(rewardText(content, job.reward))}, ${copy(content, 'commission.leaves', {
-      left: `<strong class="countdown">${fmtDuration(job.deadline - t)}</strong>` })}.</span></div>
+        <span class="fine-print">${esc(copy(content, 'commission.wants', { ask: askText(content, job.ask), reward: rewardText(content, job.reward) }))} ${
+      copy(content, 'commission.leaves', { left: `<strong class="countdown">${fmtDuration(job.deadline - t)}</strong>` })}</span></div>
         <div class="commission-fits">${fit.length
       ? fit.slice(0, 3).map((c) => `<button type="button" data-commission="${esc(job.id)}|${esc(c.id)}">${
         esc(copy(content, 'commission.show', { name: c.name }))}</button>`).join('')
-      : `<span class="locked-tag">${copy(content, 'commission.nobody')}</span>`}</div>
+      : `<span class="fine-print">${copy(content, 'commission.nobody')}</span>`}</div>
       </div>`;
   }).join('');
   return `

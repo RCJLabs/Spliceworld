@@ -163,7 +163,7 @@ R116 before chunking: one to a tree edited underneath it, one to a restart
 twenty-five minutes in. Build the id list from the file, because break
 numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327, 347
 are retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
-588 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
+606 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
 gene probe, R183 added 399-401 for the job headline, R185 added 402-404 for
 the Dex tab list, R176 added 405-407 for the lazy synth, R179 added 408-412
 for the expedition, R180 added 413-422 for the mission board, R181 added
@@ -189,9 +189,10 @@ added 538-540 for the cuttlefish's coat holding still when asked, and R207
 added 541-548 for the Hexapod's middle pair, and R208 added 549-560 for
 the Theater you can see, and R209 added 561-573 for the arena's effects,
 scenery and exits, and R210 added 574-584 for the pasture, and R211 added
-585-597 for the county on a map.
+585-597 for the county on a map, and R212 added 598-615 for the
+commissions board.
 The count and the top id have
-not agreed since the retirements: 588 breaks, numbered to 597. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
+not agreed since the retirements: 606 breaks, numbered to 615. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
 against a tree carrying 410, because a milestone that adds breaks has to
 remember to come back here and nobody had. Trust `--anchors`, which prints
 the real total, over this sentence. Count with `--anchors`, which

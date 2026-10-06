@@ -1,5 +1,59 @@
 # PROGRESS
 
+## Session 236 — R212: commissions ✅
+
+**Clients post commissions on the War Room's jobs tab ("wings and a venom
+organ", "a Water-class creature with an Electric move", "something under 60
+mass on the Scamper Frame"), each with a real-time deadline. Showing one a
+creature that fits pays cash, notoriety or a part for the Vault, and the
+creature stays home. Every request is read off a body built from parts the
+catalogue sells, so every one can be answered, and smoke proves it across a
+census of 240.**
+
+### What shipped
+
+- **`campaign/commissions.js`** (lazy, with the War Room and the walker):
+  the witness, the request, the fit, the board and the fill.
+  `commissionWindows` in `campaign/mission.js` is the eager clock the
+  agenda counts from.
+- **`data/commissions.json`** (second load round) holds the clock, the
+  kinds, the rewards, the clients and the anatomy nouns. It is documented
+  in `data/notes/commissions.md`, with a field guide and a Yearbook row.
+- **The War Room card** lists each client, the request, the reward, the
+  clock, and Show buttons for the creatures at home that fit. **The Ranch
+  agenda row** counts the clients waiting.
+- **SAVE_VERSION 65:** `campaign.commissionsDone` and
+  `campaign.commissionCount`, with a migration, a v65 fixture and a vault
+  bound.
+- **The walker** shows a client the first creature at home that fits.
+- **Gates:** an R212 smoke block in shard d covering the census, the clock,
+  the fill, the deadlines on load, the agenda, the War Room press, the
+  walk, and new content making new commissions. **Breaks 598-615.**
+
+### Found on the way
+
+- **The eager code cap moved 338 -> 339** (measured 338.87). The clock and
+  the agenda row are about 0.9 KB and have to be eager; everything else is
+  lazy. Paid down first:
+  - the window math lost its hash;
+  - the row's label is a literal;
+  - the renderer's LATE attach became one loop.
+- **The prose cap held:** R133's essay in the agenda became a pointer to
+  ROADMAP R133. **First paint went down** 1,196 -> 1,195 KB, because
+  thirteen more `style.css` essays (4.4 KB) moved to `docs/STYLE.md`.
+- **The handlers fixture** needed a creature that fits a live commission,
+  so it splices one from a commission's own witness.
+- **The reward line read "…forelimbs. pays $140"**, lowercase after a full
+  stop. Rewards are noun phrases now, placed in the sentence by the copy.
+
+### Verification
+
+VERIFICATION_HERE
+
+### Next session
+
+R213: the County Fair.
+
 ## Session 235 — R211: the county on a map ✅
 
 **The War Room's map tab opens on a drawn county: five region outlines, the

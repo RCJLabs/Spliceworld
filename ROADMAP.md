@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**3 entries queued.** R212, R213, R214.
+**2 entries queued.** R213, R214.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -8578,7 +8578,8 @@ written so that it has something on screen when it ships.
     and 6px and every word the contrast floor, in every theme, on fresh and
     day-180 saves. Nothing scrolls sideways at any width.
 
-- **R212 — Commissions.** A heist already likes a creature that fits (Camo
+- **R212 — Commissions.** ✅
+  A heist already likes a creature that fits (Camo
   for the petting zoo, Armored for the fair's livestock tent), but a fit only
   improves the odds, and no one in the county asks for a creature built a
   particular way. A commissions board: shady clients ask for a creature by
@@ -8593,6 +8594,49 @@ written so that it has something on screen when it ships.
   pays and closes it; deadlines are timestamps settled on load; the board
   shows on the Ranch's agenda and in the War Room; SAVE_VERSION moves with a
   migration and a fixture; and the 180-day walk fulfils commissions.*
+
+  **Shipped: a commissions board on the War Room's jobs tab and the Ranch's
+  agenda, where showing a client a creature that fits pays and closes the
+  commission.**
+  * **Every request is satisfiable by construction.** A commission starts as
+    a WITNESS: a body built from parts of species the catalogue sells, on a
+    frame, in the bays the lowest Theater tier that builds that frame opens.
+    The request is read off what that body turned out to be, through the
+    same `analyze` the battle reads. There are four kinds:
+    - two parts by slot and tag ("wings and a venom organ");
+    - a class and a move tag, never the tag that names the class;
+    - a chassis and a mass ceiling;
+    - a species count, with one species named.
+
+    Every kind but the chassis one is built on a frame the first tier grants,
+    so a new lab can answer it.
+  * **The board is the seed, the clock and the filled ids.** One commission
+    is posted per eight-hour window, on the save's own phase, and each client
+    waits 32 hours, so four are open at once. Nothing about a commission is
+    stored until it is filled, so a deadline settles on load by being read: a
+    week away is a week of clients who came and went.
+  * **Showing a creature pays and closes.** The creature must be home (not on
+    a job, an expedition or a mission) and must fit. The client pays cash,
+    notoriety or a prime part for the Vault; a part for a full shelf is
+    rendered at the door and paid for. The creature stays home.
+  * **Where it shows:**
+    - a War Room card on the jobs tab lists each client, the request, the
+      reward, the clock, and a Show button for up to three creatures that
+      fit;
+    - a Ranch agenda row counts the clients waiting, once there is a creature
+      to show;
+    - a field guide teaches it, and the Yearbook counts the fills.
+  * **`data/commissions.json`** holds the clock, the kinds, the rewards, the
+    clients and the anatomy nouns, and rides the second load round. It is
+    documented in `data/notes/commissions.md`. A new species, part, tag or
+    frame makes new commissions without a line of it changing.
+  * **SAVE_VERSION 64 -> 65:** `campaign.commissionsDone` (ids of open
+    windows only, bounded in tools/vault.js) and `campaign.commissionCount`,
+    with a migration and a v65 fixture.
+  * **The walker shows a client the first creature at home that fits.** It
+    never builds to order, so what it fills is the floor of the verb.
+
+VERIFICATION_R212
 
 - **R213 — The County Fair.** The calendar turns four 28-day seasons. Each
   one nudges decay, incubation or the odds of a variant, but the turn itself
