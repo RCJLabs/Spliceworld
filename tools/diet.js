@@ -72,6 +72,10 @@ const SYSTEMS = {
   rehab:       { key: 'rehabbedEver', min: 5, what: 'a captive talked onto the roster' },
 };
 
+// R212 — the verbs one campaign only just reaches, judged on the census in
+// section 4c instead of on seed 2026 alone. The argument is there.
+const BY_CENSUS = new Set(['vat']);
+
 const content = loadSimContent();
 const walk = campaignWalk(content, { seed: 2026, days: 180, stopAtDominion: false });
 // R95 — hand it on. `tools/reach.js` runs next on the same suite lane and
@@ -89,6 +93,7 @@ if (rows.length < 15) {
 if (REPORT) console.log(`\n${rows.length} agenda rows:`);
 for (const row of rows) {
   const verb = VERB_FOR_ROW[row.id] ?? row.id;
+  if (BY_CENSUS.has(verb)) continue;   // R212 — judged on the census, section 4c
   const n = walk.verbs[verb] ?? 0;
   if (REPORT) console.log(`  ${String(n).padStart(6)}  ${row.id.padEnd(12)} (${row.kind}, logged as ${verb})`);
   if (!n) {
@@ -100,6 +105,7 @@ for (const row of rows) {
 // ---- 2. every named system -------------------------------------------
 if (REPORT) console.log(`\n${Object.keys(SYSTEMS).length} systems:`);
 for (const [name, { key, what, min }] of Object.entries(SYSTEMS)) {
+  if (BY_CENSUS.has(name)) continue;
   const n = walk[key];
   if (n === undefined) {
     fails.push(`\`campaignWalk\` reports no \`${key}\`, so nothing can say whether ${name} ever ran`);
@@ -382,6 +388,29 @@ sockets across ${bodies} kept chimeras: `
     fails.push(`theater: the day-180 walk ends at tier ${level} of ${levels.length} — the top of the Theater is a purchase nobody makes`);
   } else if (unbuilt.length) {
     fails.push(`theater: the day-180 walk bought tier ${level} and never built ${unbuilt.map((f) => content.frames[f]?.name ?? f).join(', ')}`);
+  }
+}
+
+// ---- 4c. R212: the vat, on the census -----------------------------------
+//
+// The vat was the one verb sections 1 and 2 read off seed 2026 that seed
+// 2026 only just reached. `main` ran it ONCE there in 180 days while the
+// census below ran it on all seven campaigns (1, 6, 6, 3, 12, 5, 2 decants).
+// A walker that plays any differently reshuffles that campaign, and R212's
+// commissions did: the same seed runs it 0 times now and the census 5 of 7
+// (0, 1, 4, 8, 5, 16, 0). One run in 180 days was a coin, not coverage, so
+// the vat answers R207's majority rule over the campaigns this gate already
+// walks for its combos: more than half of them run it. Break 154, which stops
+// the walker running it at all, reads 0 of 7.
+// BLIND AGAIN IF this goes back to one seed.
+{
+  const runs = COMBO_SEEDS.map((seed) => ((seed === 2026 ? walk.save : walkedSave({ seed, days: 180 })).vatCount ?? 0));
+  const ran = runs.filter((n) => n > 0).length;
+  if (REPORT) {
+    console.log(`\n  vat: ${COMBO_SEEDS.map((s, i) => `${s}: ${runs[i]}`).join(', ')} — ${ran} of ${COMBO_SEEDS.length} campaigns ran it`);
+  }
+  if (ran * 2 <= COMBO_SEEDS.length) {
+    fails.push(`vat: ${ran} of ${COMBO_SEEDS.length} campaigns ran it in 180 days — ${SYSTEMS.vat.what}`);
   }
 }
 

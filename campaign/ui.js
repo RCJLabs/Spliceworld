@@ -568,8 +568,10 @@ function renderMap(root, ctx) {
     ? (() => {
         const rows = gauntletState(state, content).map(({ stage, status }) => `
           <div class="encounter gauntlet-${status}">
-            <div><strong>${stage.name}</strong>${status === 'beaten' ? ` ${renderIcon('trophy')}` : ''} <span class="lineage">${stage.escorts.length + 1} waves · ${fmtMoney(stage.reward)}</span><br>
-            <span class="fine-print">${status === 'locked' ? 'The card goes in order.' : stage.blurb}</span></div>
+            <div><strong>${stage.name}</strong>${status === 'beaten' ? ` ${renderIcon('trophy')}` : ''} <span class="lineage">${stage.escorts.length + 1} waves · ${fmtMoney(stage.reward)}</span>${
+              // R212 — a beaten exhibition has made its pitch; its trophy says the rest.
+              status === 'beaten' ? '' : `<br>
+            <span class="fine-print">${status === 'locked' ? 'The card goes in order.' : stage.blurb}</span>`}</div>
             ${status === 'open' ? `<button type="button" data-gauntlet="${stage.id}"${canFight ? '' : ' disabled'}>${canFight ? 'Answer' : noneFit}</button>` : status === 'beaten' ? '<span class="held-tag">BEATEN</span>' : '<span class="locked-tag">locked</span>'}
           </div>`).join('');
         return `<section class="card gauntlet-card">

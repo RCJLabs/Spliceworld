@@ -5461,8 +5461,8 @@ const BREAKS = [
     // 3586 -> 3816). What the break aims at is `opens`, which is untouched.
     n: 199, gate: HEIGHT, name: 'the height gate stops asking whether a folding screen still opens',
     file: 'tools/height.js',
-    anchor: '  vault:          { folded: 3816,  tallest: 4600, opens: 20 },',
-    to: '  vault:          { folded: 3816,  tallest: 4600 },',
+    anchor: '  vault:          { folded: 3816,  tallest: 5045, opens: 20 },',
+    to: '  vault:          { folded: 3816,  tallest: 5045 },',
   },
   {
     // R137 — the five rows that point at the Ranch go back to navigating to
