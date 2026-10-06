@@ -8496,12 +8496,15 @@ const BREAKS = [
     expect: 'entries capped at',
   },
   {
-    // R213 — A SECOND DOOR. One screen draws the chimera bare again, and its
-    // ribbons stay home.
+    // R213 — A SECOND DOOR. The War Room rolls its own portrait from the
+    // genome, under the same name, and the fair's runners leave their
+    // ribbons at home. (One anchor cannot both import `chimeraGenome` and
+    // change a call a thousand lines away, and a call with no import is
+    // caught by the name check before the door is asked.)
     n: 626, gate: SHARD_B, name: 'the fair draws its runners without their ribbons',
     file: 'campaign/ui.js',
-    anchor: 'const art = chimera ? chimeraPortrait(chimera, content, {',
-    to: 'const art = chimera ? creaturePortrait(chimeraGenome(chimera, content), content, {',
+    anchor: "import { chimeraPortrait } from '../render/ribbons.js';",
+    to: "import { chimeraGenome } from '../splice/theater.js';\nconst chimeraPortrait = (c, content, opts) => creaturePortrait(chimeraGenome(c, content), content, opts);",
     expect: 'drawn through chimeraPortrait',
   },
   {

@@ -176,6 +176,3 @@ export function prizeLine(content, state, result) {
     part: p.partId ? copy(content, 'fair.prize_part', { part: content.parts[p.partId]?.name ?? p.partId }) : '',
   })).join(' ');
 }
-
-// How long the fair has left, for the card.
-export const fairLeftMs = (state, content, now) => Math.max(0, fairWindow(state, content, now).closesAt - now);

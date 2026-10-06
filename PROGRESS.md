@@ -55,6 +55,13 @@ it is drawn.**
   pasture's crop.
 - **Seed 31337 ends at Theater II on this walker** (`main`: III). Diet's rule
   reads seed 2026, which still buys it.
+- **The first baseline went red on two height readings**, both from the
+  walk's new trajectory. The War Room's facility card sat 12px past two
+  screens because this lab has a creature in the impound on day 180, so the
+  Gauntlet card drops its pitch once all four exhibitions are beaten
+  (1,512px against 1,560). The Dex's combos tab read 854 words open against
+  836 (`main` 829) because the lab discovered one more combo; that open
+  budget moved to 870, itemised.
 
 ### Known issues
 

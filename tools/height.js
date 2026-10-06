@@ -623,7 +623,12 @@ const WORDS = {
   // ninety: two discovered combos print their whole description (about 28
   // words each) and two hints name both halves (about 17).
   // R206: 750 -> 836 open, measured 736 -> 822, the four new rows.
-  'dex:combos':   { folded: 150,  open: 836 },
+  // R213: 836 -> 870 open, measured 829 on `main` -> 854, on a tree that
+  // adds no combo. The fair moves the walk, and seed 2026's day-180 lab
+  // discovers 28 combos where `main`'s found 27 (Cleanup Crew and Shell Game
+  // in, Downwind out); a discovered combo prints its description where a
+  // hint printed two part names. Inventory, as R180 says. Shut is untouched.
+  'dex:combos':   { folded: 150,  open: 870 },
   // R129: 200/200 -> 100 shut (measured 50) and 250 open (measured 221).
   // See the height note above — the words are the twelve descriptions, and
   // they are now behind the fold that holds them.

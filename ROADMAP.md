@@ -8828,6 +8828,19 @@ written so that it has something on screen when it ships.
   * **Seed 31337 ends at Theater II on this walker** (`main`: III). The diet
     gate's Theater III rule reads seed 2026, which still buys it, and the
     diet gate is green.
+  * **The first baseline went red on two height readings,** both the walk
+    becoming a different campaign:
+    - **the War Room's facility card sat 12px past its two-screen bound**,
+      because this lab has a creature in the impound on day 180 and `main`'s
+      does not, which puts a 154px rescue card above it. Once all four
+      exhibitions are beaten, the Gauntlet card drops its pitch, as R212
+      dropped each beaten exhibition's: 1,512px against 1,560 (`main`
+      1,461);
+    - **the Dex's combos tab read 854 words open against 836.** `main` reads
+      829. This lab discovered 28 combos where `main`'s found 27 (Cleanup
+      Crew and Shell Game in, Downwind out), and a discovered combo prints
+      its description where a hint printed two part names. The open budget
+      moved 836 -> 870, itemised beside it; the shut budget is untouched.
 
   **Done when, checked:**
   * **A fair at every season's turn:** smoke walks three years of turns. Each

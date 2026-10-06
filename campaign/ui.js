@@ -574,7 +574,10 @@ function renderMap(root, ctx) {
   // before that the coalition is still pretending it has nothing in storage.
   const gauntletCard = state.dominionAt
     ? (() => {
-        const rows = gauntletState(state, content).map(({ stage, status }) => `
+        const card = gauntletState(state, content);
+        // R213 — the card's pitch, until all four are beaten and it has made it.
+        const pitch = `<p class="fine-print">The county is yours, so the coalition has stopped pretending its storage is empty. Four exhibitions, in order. No territory changes hands — only reputations.</p>`;
+        const rows = card.map(({ stage, status }) => `
           <div class="encounter gauntlet-${status}">
             <div><strong>${stage.name}</strong>${status === 'beaten' ? ` ${renderIcon('trophy')}` : ''} <span class="lineage">${stage.escorts.length + 1} waves · ${fmtMoney(stage.reward)}</span>${
               // R212 — a beaten exhibition has made its pitch; its trophy says the rest.
@@ -584,7 +587,7 @@ function renderMap(root, ctx) {
           </div>`).join('');
         return `<section class="card gauntlet-card">
           <h3>${renderIcon('stadium')} The Gauntlet</h3>
-          <p class="fine-print">The county is yours, so the coalition has stopped pretending its storage is empty. Four exhibitions, in order. No territory changes hands — only reputations.</p>
+          ${card.every((r) => r.status === 'beaten') ? '' : pitch}
           ${rows}
         </section>`;
       })()
