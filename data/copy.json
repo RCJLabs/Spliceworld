@@ -261,6 +261,7 @@
     "leaves": "Leaves in {left}.",
     "show": "Show {name}",
     "nobody": "Nobody at home fits. The Theater takes walk-ins.",
+    "donor": "A satisfied client",
     "empty": "The waiting room is empty. Word gets around; more will come.",
     "done": "{client} takes a photograph, pays {reward} and leaves. {name} stays home.",
     "gone": "That client has already left.",

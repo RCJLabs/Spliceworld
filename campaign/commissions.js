@@ -206,7 +206,8 @@ export function fulfilCommission(state, content, now, id, chimeraId) {
   else if (content.parts[reward.partId]) {
     admitParts(state, content, [{
       id: `t${state.inventory.tokenCount++}`, partId: reward.partId, grade: reward.grade, traits: [],
-      donor: { name: job.client, species: content.parts[reward.partId].species, stars: 3, extractedAt: now },
+      // A save keeps a name to 40 characters (save/schema.js); a client is a sentence.
+      donor: { name: copy(content, 'commission.donor'), species: content.parts[reward.partId].species, stars: 3, extractedAt: now },
     }]);
   }
   return { ok: true, job, msg: copy(content, 'commission.done', { client: job.client, name: chimera.name, reward: rewardText(content, reward) }) };

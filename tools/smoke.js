@@ -15611,7 +15611,7 @@ if (inShard('commissions')) {
   const { vaultCapacity } = await import('../splice/vault.js');
   const { renderWarRoomScreen } = await import('../campaign/ui.js');
   const { recordingRoot, installDom, memoryStorage } = await import('./domstub.js');
-  const { esc } = await import('../util/text.js');
+  const { esc, safeText } = await import('../util/text.js');
   const HOUR = 3600000;
   const spec = content.commissions;
   const witnessOf = (job, id = 'w') => ({ id, name: `Proof ${id}`, frame: job.witness.frame,
@@ -15720,6 +15720,7 @@ if (inShard('commissions')) {
         const got = st.inventory.parts.at(-1);
         assert.ok(st.inventory.parts.length === was.parts + 1 && got.partId === j.reward.partId && got.grade === j.reward.grade,
           'a part arrives in the Vault at its grade');
+        assert.equal(safeText(got.donor.name), got.donor.name, "and its donor is a name a save keeps without repair");
         // …and a full shelf renders it at the door and pays for it.
         const full = structuredClone(st);
         const cap = vaultCapacity(full, content).parts;
