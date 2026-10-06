@@ -28,7 +28,7 @@
 // which is R122's original bug report — a phone stuck on a broken build.
 // `tools/release.js` is the answer and exists for this: CACHE is checked
 // against SAVE_VERSION by a gate rather than by anybody remembering.
-const CACHE = 'spliceworld-v66-2cb19496';
+const CACHE = 'spliceworld-v67-c8efb318';
 
 const SHELL = [
   '.',
@@ -116,6 +116,8 @@ const SHELL = [
   'campaign/county.js',
   'campaign/commissions.js',
   'campaign/fair.js',
+  'splice/wardrobe.js',
+  'render/cosmetics.js',
   'campaign/monologue.js',
   'campaign/identity.js',
   'campaign/caper.js',
@@ -170,6 +172,7 @@ const SHELL = [
   'data/pasture.json',
   'data/commissions.json',
   'data/fair.json',
+  'data/cosmetics.json',
   // R109: the spare phrasings, fetched in the same round for the same
   // reason. Offline gets the whole voice, it just does not wait for it.
   'data/voice-pools.json',

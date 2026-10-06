@@ -9,7 +9,7 @@
 import { writeFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { HEADS, LIMBS, TAILS, HIDES, organ, GLYPHS } from './shapes.js';
+import { HEADS, HEAD_ANCHORS, LIMBS, TAILS, HIDES, organ, GLYPHS } from './shapes.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const species = JSON.parse(readFileSync(join(root, 'data/species.json'), 'utf8')).species;
@@ -646,6 +646,8 @@ const HEAD_VERB = { bird: 'Peck', moth: 'Proboscis Jab', bug: 'Mandible Snap', b
 const SLOTS = ['head', 'forelimbs', 'hindlimbs', 'tail', 'hide', 'organ'];
 
 const parts = [];
+// R214 — where each generated head wears a hat, a monocle and a bow tie.
+const anchors = {};
 for (const sp of species) {
   if (sp.synthetic) continue;
   const root = sp.variantOf ?? sp.id; // a variant borrows its base's tables
@@ -729,6 +731,7 @@ for (const sp of species) {
       shapes,
     };
     parts.push(part);
+    if (slot === 'head') anchors[part.id] = HEAD_ANCHORS[b.head[0]](b.head[1]);
   }
 }
 
@@ -761,6 +764,9 @@ const out = {
 // body or a body with no stats.
 const geometry = {
   shapes: Object.fromEntries([...parts, ...salvage].map((p) => [p.id, p.shapes])),
+  // R214 — generated heads only: a hand-made salvage head has none, and the
+  // wardrobe falls back to its eye (render/cosmetics.js).
+  anchors,
 };
 // R127 — ROUND THE GEOMETRY ON THE WAY OUT. Sixty-five shipped parts carried
 // coordinates like `5.800000000000001`, which is what `2 + 16 * 0.55` is in
@@ -804,7 +810,9 @@ const emit = (rel, text) => {
 
 const stale = [
   emit('data/parts.json', JSON.stringify(out, null, 2) + '\n'),
-  emit('data/parts-shapes.json', JSON.stringify(tidyShapes(geometry), null, 2) + '\n'),
+  // R214 — a numeric array is an anchor (no shape has one), on one line.
+  emit('data/parts-shapes.json', JSON.stringify(tidyShapes(geometry), null, 2)
+    .replace(/\[\s+(-?[\d.]+(?:,\s+-?[\d.]+)*)\s+\]/g, (m, xs) => `[${xs.split(/,\s+/).join(', ')}]`) + '\n'),
 ].filter(Boolean);
 if (CHECK) {
   if (stale.length) {

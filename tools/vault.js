@@ -188,6 +188,12 @@ const BOUNDS = {
   // after), and the carried list is trimmed at the boundary to LEGENDS_KEPT.
   'campaign.legendsFound': { max: (c) => Object.values(c.species ?? {}).filter((s) => s.rarity === 'unique').length, by: 'one per unique species, once per run' },
   'legends':              { max: 12, by: '`LEGENDS_KEPT` in save/slots.js — trimmed at every relocation' },
+  // R214 — one dye per species that has a palette, one record per accessory,
+  // and one accessory per slot on a creature.
+  'wardrobe.dyes':        { max: (c) => Object.keys(c.species ?? {}).length, by: 'a species graduates once' },
+  'wardrobe.unlocked':    { max: (c) => c.cosmetics?.accessories?.length ?? 0, by: 'each accessory is earned once' },
+  'chimeras[].look.wear': { max: (c) => new Set((c.cosmetics?.accessories ?? []).map((r) => `${r.anchor}:${r.layer ?? 'front'}`)).size,
+                            by: 'one accessory per anchor and layer' },
   // R213 — a chimera wears at most `keep` ribbons; `enterFair` trims as it pins.
   'chimeras[].ribbons':   { max: (c) => c.fair?.ribbons?.keep ?? 6, by: '`ribbons.keep` in fair.json' },
   // R213 — one fair's field and its prizes, by its lanes.

@@ -22,6 +22,19 @@
 // anything needing content/RNG (e.g. starter herd) happens on boot via
 // seeded flags (see ranch.ensureRanchSeeded).
 export const migrations = {
+  // R214 — the wardrobe. A dye is a species that has graduated, and nothing
+  // before this version wrote that down, so a lab arrives with a dye for
+  // every species whose essence it already holds (its vials, and the donors
+  // of its parts) — generous to a lab that bought some of them, and never
+  // less than it earned. No accessory is recorded; the wardrobe reads the
+  // save's own notoriety, commissions, ribbons and Gauntlet when it opens.
+  // A chimera's `look` is absent until it is dressed, which reads as none.
+  67: (save) => {
+    const held = [...(save.inventory?.vials ?? []).map((v) => v?.species),
+      ...(save.inventory?.parts ?? []).map((t) => t?.donor?.species)];
+    save.wardrobe ??= { dyes: [...new Set(held.filter((id) => typeof id === 'string' && id !== 'salvage'))], unlocked: [] };
+    return save;
+  },
   // R213 — no fair entered yet. A chimera's `ribbons` are absent until it
   // wins one, which every reader takes as none.
   66: (save) => {

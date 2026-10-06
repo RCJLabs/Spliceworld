@@ -929,6 +929,28 @@
       ]
     },
     {
+      "id": "cosmetics",
+      "screen": "pens",
+      "order": 32,
+      "icon": "crown",
+      "title": "Dress for villainy",
+      "body": "Open a creature in the Pens and its wardrobe sits under its buttons. Every animal you graduate lends its species' colours as a dye, and accessories are earned around the county: goggles and a monocle for notoriety, a top hat for a commission, a bow tie for a fair ribbon, a cape for the Gauntlet, and a crown that only an S-grade creature may wear. It shows wherever the creature does, the arena included. None of it changes a single number.",
+      "reachable": [
+        {
+          "path": "chimeras",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "wardrobe.unlocked",
+          "min": 1,
+          "default": 0
+        }
+      ]
+    },
+    {
       "id": "fair",
       "screen": "battle",
       "order": 73,

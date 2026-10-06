@@ -103,6 +103,9 @@ export function extractAnimal(state, animalId, content, now) {
   if (!fit.fits) return { ok: false, msg: fit.msg };
 
   state.ranch.stock.splice(idx, 1);
+  // R214 — its species' palette is a dye from now on: splice/wardrobe.js.
+  const dyes = state.wardrobe?.dyes;
+  if (dyes && !dyes.includes(animal.species)) dyes.push(animal.species);
   const inv = state.inventory;
 
   // R31: the vial carries the whole donor, because that is what a vial IS.

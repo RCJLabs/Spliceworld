@@ -2039,6 +2039,14 @@ footer {
 .temperament strong { letter-spacing: 0.02em; }
 .pen-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .pen-actions .care-train { margin: 0; }
+/* R214 — the wardrobe, under a creature's actions. The chosen-button rule
+   also covers the expedition's and the fair's picker rows, which had none,
+   so a pick there could not be seen. */
+.exp-row button.is-selected, .wear-chip.is-selected { border-color: var(--goo); box-shadow: inset 0 0 0 2px var(--goo); }
+.wardrobe { margin-top: 8px; }
+.wear-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.dye-btn { display: inline-flex; align-items: center; gap: 6px; }
+.dye-swatch { width: 34px; height: 12px; flex: none; }
 .pen-dismantle {
   background: var(--panel);
   color: var(--muted);

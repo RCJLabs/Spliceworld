@@ -15455,5 +15455,262 @@
         "opacity": 0.9
       }
     ]
+  },
+  "anchors": {
+    "bear_head": {
+      "crown": [20, -53, 37],
+      "eye": [22, -24, 11],
+      "neck": [8, 15]
+    },
+    "tiger_head": {
+      "crown": [20, -49, 33],
+      "eye": [22, -24, 12],
+      "neck": [8, 12]
+    },
+    "wolf_head": {
+      "crown": [20, -47, 31],
+      "eye": [22, -24, 11],
+      "neck": [8, 10]
+    },
+    "crocodile_head": {
+      "crown": [22, -42, 30],
+      "eye": [26, -26, 9],
+      "neck": [12, 6]
+    },
+    "gorilla_head": {
+      "crown": [20, -52, 36],
+      "eye": [22, -24, 11],
+      "neck": [8, 15]
+    },
+    "rhino_head": {
+      "crown": [20, -46, 30],
+      "eye": [22, -24, 10.5],
+      "neck": [8, 10]
+    },
+    "pangolin_head": {
+      "crown": [20, -42, 26],
+      "eye": [22, -24, 9],
+      "neck": [8, 6]
+    },
+    "tortoise_head": {
+      "crown": [22, -42, 30],
+      "eye": [26, -26, 10],
+      "neck": [12, 6]
+    },
+    "rhino_beetle_head": {
+      "crown": [24, -44, 32],
+      "eye": [24, -22, 13],
+      "neck": [10, 8]
+    },
+    "ram_head": {
+      "crown": [20, -42, 26],
+      "eye": [22, -24, 10.5],
+      "neck": [8, 6]
+    },
+    "eagle_head": {
+      "crown": [20, -51, 31],
+      "eye": [27, -24, 10.5],
+      "neck": [10, 8]
+    },
+    "bat_head": {
+      "crown": [20, -40, 24],
+      "eye": [22, -24, 12],
+      "neck": [8, 4]
+    },
+    "dragonfly_head": {
+      "crown": [24, -44, 32],
+      "eye": [24, -22, 17],
+      "neck": [10, 8]
+    },
+    "shark_head": {
+      "crown": [34, -56, 30],
+      "eye": [38, -22, 11],
+      "neck": [10, 14]
+    },
+    "octopus_head": {
+      "crown": [40, -66, 34],
+      "eye": [26, -26, 16],
+      "neck": [14, 12]
+    },
+    "electric_eel_head": {
+      "crown": [34, -56, 30],
+      "eye": [38, -22, 10],
+      "neck": [10, 14]
+    },
+    "anglerfish_head": {
+      "crown": [34, -56, 30],
+      "eye": [38, -22, 12],
+      "neck": [10, 14]
+    },
+    "frog_head": {
+      "crown": [16, -43, 17],
+      "eye": [16, -26, 13],
+      "neck": [16, 18]
+    },
+    "goat_head": {
+      "crown": [20, -42, 26],
+      "eye": [22, -24, 10.5],
+      "neck": [8, 6]
+    },
+    "chameleon_head": {
+      "crown": [22, -42, 30],
+      "eye": [26, -26, 12],
+      "neck": [12, 6]
+    },
+    "skunk_head": {
+      "crown": [20, -40, 24],
+      "eye": [22, -24, 11],
+      "neck": [8, 4]
+    },
+    "porcupine_head": {
+      "crown": [20, -42, 26],
+      "eye": [22, -24, 10],
+      "neck": [8, 6]
+    },
+    "mantis_head": {
+      "crown": [24, -44, 32],
+      "eye": [24, -22, 15],
+      "neck": [10, 8]
+    },
+    "cobra_head": {
+      "crown": [29, -86, 30],
+      "eye": [26, -26, 10],
+      "neck": [12, 6]
+    },
+    "scorpion_head": {
+      "crown": [24, -44, 32],
+      "eye": [24, -22, 12],
+      "neck": [10, 8]
+    },
+    "goose_head": {
+      "crown": [20, -51, 31],
+      "eye": [27, -24, 11],
+      "neck": [10, 8]
+    },
+    "moth_head": {
+      "crown": [22, -48, 30],
+      "eye": [24, -22, 16],
+      "neck": [10, 10]
+    },
+    "heron_head": {
+      "crown": [20, -51, 31],
+      "eye": [27, -24, 10],
+      "neck": [10, 8]
+    },
+    "owl_head": {
+      "crown": [20, -51, 31],
+      "eye": [27, -24, 13],
+      "neck": [10, 8]
+    },
+    "falcon_head": {
+      "crown": [20, -51, 31],
+      "eye": [27, -24, 11],
+      "neck": [10, 8]
+    },
+    "jellyfish_head": {
+      "crown": [38, -58, 34],
+      "eye": [29, -23, 15],
+      "neck": [12, 6]
+    },
+    "pufferfish_head": {
+      "crown": [34, -56, 30],
+      "eye": [38, -22, 14],
+      "neck": [10, 14]
+    },
+    "otter_head": {
+      "crown": [20, -41, 25],
+      "eye": [22, -24, 12],
+      "neck": [8, 5]
+    },
+    "armadillo_head": {
+      "crown": [20, -40, 24],
+      "eye": [22, -24, 9],
+      "neck": [8, 4]
+    },
+    "hummingbird_head": {
+      "crown": [20, -51, 31],
+      "eye": [27, -24, 11],
+      "neck": [10, 8]
+    },
+    "vulture_head": {
+      "crown": [20, -48, 28],
+      "eye": [27, -24, 10],
+      "neck": [10, 8]
+    },
+    "peacock_head": {
+      "crown": [20, -51, 31],
+      "eye": [27, -24, 10],
+      "neck": [10, 8]
+    },
+    "squirrel_head": {
+      "crown": [20, -40, 24],
+      "eye": [22, -24, 15],
+      "neck": [8, 4]
+    },
+    "elephant_head": {
+      "crown": [26, -60, 34],
+      "eye": [44, -30, 9],
+      "neck": [20, 8]
+    },
+    "platypus_head": {
+      "crown": [20, -38, 30],
+      "eye": [30, -26, 9],
+      "neck": [12, 10]
+    },
+    "mantis_shrimp_head": {
+      "crown": [24, -44, 32],
+      "eye": [24, -22, 15],
+      "neck": [10, 8]
+    },
+    "cuttlefish_head": {
+      "crown": [40, -66, 34],
+      "eye": [26, -26, 15],
+      "neck": [14, 12]
+    },
+    "alpine_ram_head": {
+      "crown": [20, -50, 34],
+      "eye": [22, -24, 10.5],
+      "neck": [8, 13]
+    },
+    "abyssal_shark_head": {
+      "crown": [34, -56, 30],
+      "eye": [38, -22, 13],
+      "neck": [10, 14]
+    },
+    "storm_eagle_head": {
+      "crown": [20, -51, 31],
+      "eye": [27, -24, 10.5],
+      "neck": [10, 8]
+    },
+    "glider_skunk_head": {
+      "crown": [20, -40, 24],
+      "eye": [22, -24, 11],
+      "neck": [8, 4]
+    },
+    "iron_tortoise_head": {
+      "crown": [22, -42, 30],
+      "eye": [26, -26, 10],
+      "neck": [12, 6]
+    },
+    "pale_cobra_head": {
+      "crown": [29, -86, 30],
+      "eye": [26, -26, 10],
+      "neck": [12, 6]
+    },
+    "manta_head": {
+      "crown": [34, -56, 30],
+      "eye": [38, -22, 13],
+      "neck": [10, 14]
+    },
+    "lamprey_head": {
+      "crown": [34, -56, 30],
+      "eye": [38, -22, 9],
+      "neck": [10, 14]
+    },
+    "clinker_head": {
+      "crown": [16, -40, 14],
+      "eye": [16, -26, 10],
+      "neck": [16, 18]
+    }
   }
 }

@@ -4,9 +4,14 @@
 // arena, the specimen card and the fair itself. Lazy with those screens; the
 // renderer it wraps is untouched, and a creature with no ribbons draws
 // exactly as it did. The rosettes' colours are data (data/fair.json).
+//
+// R214 — and wearing what it was dressed in: a dye and accessories from
+// data/cosmetics.json, through render/cosmetics.js, on every one of those
+// screens for the same reason.
 
 import { creaturePortrait } from './renderer.js';
 import { chimeraGenome } from '../splice/theater.js';
+import { lookOpts } from './cosmetics.js';
 
 // R114 — a save is untrusted input, and `?? []` does not guard a field that
 // is present and not an array.
@@ -30,7 +35,8 @@ export function rosette(ribbon, places, x, y) {
 
 // The newest three, pinned along the top right of the portrait.
 export function chimeraPortrait(chimera, content, opts = {}) {
-  const svg = creaturePortrait(chimeraGenome(chimera, content), content, opts);
+  const genome = chimeraGenome(chimera, content);
+  const svg = creaturePortrait(genome, content, { ...opts, ...lookOpts(chimera, genome, content) });
   const ribbons = ribbonsOf(chimera).slice(0, 3);
   if (!ribbons.length) return svg;
   const places = content.fair?.ribbons?.places;

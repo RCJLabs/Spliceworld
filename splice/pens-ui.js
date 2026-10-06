@@ -56,10 +56,39 @@ import { guideForScreen } from '../ranch/onboarding.js';
 import { renderIcon } from '../ui/icons.js';
 import { announce } from '../ui/live.js';
 import * as sfx from '../audio/sfx.js';
-import { fmtMoney, copy } from '../util/text.js';
+import { fmtMoney, copy, esc, fill } from '../util/text.js';
 import { isHold } from './facility.js';
+import { wearable, dyesOf, setDye, toggleWear } from './wardrobe.js';
 
 let lastMsg = '';
+
+// R214 — three dots of a palette, for a dye's button and its picker rows.
+const swatch = (p) => `<svg class="dye-swatch" viewBox="0 0 34 12" aria-hidden="true">${
+  [p.primary, p.secondary, p.accent].map((c, i) => `<circle cx="${6 + i * 11}" cy="6" r="5" fill="${esc(c ?? '#999')}"/>`).join('')}</svg>`;
+
+// R214 — THE WARDROBE: a dye from a picker and an accessory per chip, under
+// the card's actions. A chip the creature cannot wear yet is shown off, with
+// what earns it written out, because a tooltip is invisible on a phone.
+function wardrobeRow(state, content, ch) {
+  if (!content.cosmetics) return '';
+  const rows = wearable(state, content, ch);
+  const worn = Array.isArray(ch.look?.wear) ? ch.look.wear : [];
+  const dye = typeof ch.look?.dye === 'string' ? content.species[ch.look.dye] : null;
+  const chips = rows.map((r) => {
+    const on = worn.includes(r.id);
+    return `<button type="button" class="wear-chip${on ? ' is-selected' : ''}" data-wear="${esc(ch.id)}|${esc(r.id)}" aria-pressed="${on}"${
+      r.ok || on ? '' : ' disabled'}>${esc(r.name)}</button>`;
+  }).join('');
+  const locked = rows.filter((r) => !r.ok && !worn.includes(r.id));
+  return `<div class="wardrobe">
+              <p class="fine-print">${copy(content, 'wardrobe.heading')}</p>
+              <div class="wear-row">
+                <button type="button" class="dye-btn" data-dye="${esc(ch.id)}">${dye?.palette ? swatch(dye.palette) : ''}${
+    esc(dye ? dye.name : content.cosmetics.dyes?.natural ?? '')}</button>${chips}
+              </div>
+              ${locked.length ? `<p class="fine-print wear-locked">${locked.map((r) => esc(copy(content, 'wardrobe.locked', { name: r.name, hint: r.hint }))).join(' · ')}</p>` : ''}
+            </div>`;
+}
 let vatPick = { a: null, b: null };
 
 // --- The Chaos Vat -------------------------------------------------------
@@ -465,6 +494,7 @@ export function renderPensScreen(root, ctx) {
               <button type="button" data-card="${ch.id}">${renderIcon('document')} Specimen card</button>
               <button type="button" class="pen-dismantle" data-dismantle="${ch.id}">${renderIcon('wrench')} Dismantle</button>
             </div>
+            ${wardrobeRow(state, content, ch)}
             ${'<!--R89:ALERTS-->'}
             ${isExhausted(ch, t) ? `<p class="settle">${renderIcon('test-tube')} Recovering from the vat — ${fmtDuration(ch.exhaustedUntil - t)} left.</p>` : ''}
             ${ch.vatBorn?.parents?.length
@@ -625,6 +655,37 @@ export function renderPensScreen(root, ctx) {
           renderPensScreen(root, ctx);
         },
       });
+    });
+  });
+  // R214 — the wardrobe. A dye is a picker of the lab's dyes; an accessory
+  // chip puts it on or takes it off. Neither touches anything but the look.
+  unbound(root, 'button[data-dye]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const ch = state.chimeras.find((c) => c.id === btn.dataset.dye);
+      if (!ch) return;
+      const natural = { id: 'natural', label: esc(content.cosmetics?.dyes?.natural ?? ''), sub: esc(content.cosmetics?.dyes?.naturalSub ?? '') };
+      const dyes = dyesOf(state, content).map((id) => {
+        const sp = content.species[id];
+        return { id, thumb: swatch(sp.palette), label: esc(fill(content.cosmetics?.dyes?.label ?? '{species}', { species: sp.name })) };
+      });
+      openPicker({
+        title: esc(copy(content, 'wardrobe.title', { name: ch.name })),
+        subtitle: copy(content, dyes.length ? 'wardrobe.sub' : 'wardrobe.none'),
+        groups: [{ label: null, options: [natural, ...dyes] }],
+        selectedId: ch.look?.dye ?? 'natural',
+        onPick: (value) => {
+          setDye(state, content, ch.id, value === 'natural' ? null : value);
+          ctx.save();
+          renderPensScreen(root, ctx);
+        },
+      });
+    });
+  });
+  unbound(root, 'button[data-wear]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const [id, acc] = btn.dataset.wear.split('|');
+      if (toggleWear(state, content, id, acc).ok) ctx.save();
+      renderPensScreen(root, ctx);
     });
   });
   unbound(root, 'button[data-treat]').forEach((btn) => {

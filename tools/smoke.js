@@ -139,6 +139,9 @@ const SHARD_OF = {
   // fill, the clock and one stubbed War Room press. No battles; one cached
   // walk. Shard d, beside the henchmen.
   commissions: 'd',
+  // R214 — the wardrobe: rows, anchors, unlocks, the door, the Pens and the
+  // harness's proof (one sweep, ~4,700 fights). Shard d.
+  cosmetics: 'd',
   // R213 — the County Fair: a census of every fair in a year of seasons on
   // the day-180 lab, each entered twice in two orders; two stubbed screens.
   // No battles; one cached walk. Shard b, the lightest on R212's reading.
@@ -2632,6 +2635,8 @@ assert.deepEqual(m5.campaign, {
   // R213 — and no fair entered.
   fair: null,
 });
+// R214 — and nothing held, so nothing to dye with and nothing yet earned.
+assert.deepEqual(m5.wardrobe, { dyes: [], unlocked: [] });
 // v27 (A4): the one job slot became a list, and a job that was IN FLIGHT
 // when the save was written has to survive the move — it keeps its clock,
 // its sealed outcome and its crew. The deliberate-break battery caught this
@@ -7330,6 +7335,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'commissions',
     // R213 — a race and a Best in Show at every season's turn.
     'fair',
+    // R214 — a dye and accessories, and not one number changed.
+    'cosmetics',
     // R82. The breakout is the rival ladder's consequence rather than a
     // second ladder: it is on the roll in its own right because it has a
     // data file, a module, a board, a launcher and a first-use moment, and
@@ -7481,6 +7488,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'commissions.json': 'commissions',
     // R213 — the County Fair, on the same tab.
     'fair.json': 'fair',
+    // R214 — the wardrobe, taught on the Pens where it is worn.
+    'cosmetics.json': 'cosmetics',
     'starters.json': null,
     // R62: the wire's copy is not a system with a first-use moment — it is
     // the voice every system above speaks in, met through all of them and
@@ -7564,6 +7573,9 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
     'campaign/fair.js': 'fair',
     // R213 — the one door a chimera's portrait goes through, ribbons and all.
     'render/ribbons.js': 'fair',
+    // R214 — the wardrobe: what is earned and worn, and how it is drawn.
+    'splice/wardrobe.js': 'cosmetics',
+    'render/cosmetics.js': 'cosmetics',
     // R181 — the hire board's lazy half; the clock half is in ranch/ranch.js.
     'campaign/staff.js': 'henchmen',
     'campaign/rehab.js': 'rehab',
@@ -7827,7 +7839,8 @@ const classOfSpecies = (id) => content.species[id]?.class ?? null;
       // step, same reason as the tier letter above it.
       // R212 — and a client can be shown one, so the board's note lights here.
       // R213 — and entered at the fair.
-    }, ['upkeep', 'temperament', 'bond', 'veterans', 'tiers', 'cards', 'commissions', 'fair']],
+      // R214 — and dressed.
+    }, ['upkeep', 'temperament', 'bond', 'veterans', 'tiers', 'cards', 'commissions', 'fair', 'cosmetics']],
     ['parts in the vault', () => {
       lab.inventory.parts = [{ id: 't0', partId: 'goat_head' }, { id: 't1', partId: 'goat_tail' }, { id: 't2', partId: 'goat_hide' }];
     }, ['combos']],
@@ -16152,6 +16165,212 @@ if (inShard('fair')) {
     assert.ok(!fourth || chimeraPortrait(fourth, grown).includes('#ff69b4'), 'in the colour the data gives it');
   }
   console.log(`   R213 fair: ${turns} season turns, ${mine.length / 2} entries run twice and replayed; ${courses.size} courses; ribbons through one door; the walk's last fair entered`);
+}
+
+// --- R214, DRESS FOR VILLAINY. A dye and accessories from the Pens, drawn
+// --- wherever the chimera is; a new accessory is a JSON row; and not one
+// --- number changes.
+if (inShard('cosmetics')) {
+  const W = await import('../splice/wardrobe.js');
+  const C = await import('../render/cosmetics.js');
+  const { chimeraPortrait } = await import('../render/ribbons.js');
+  const { renderPensScreen } = await import('../splice/pens-ui.js');
+  const { recordingRoot, installDom, memoryStorage } = await import('./domstub.js');
+  const { walkedSave } = await import('./fixtures.js');
+  const { cosmeticsBench } = await import('./sim.js');
+  const { extractAnimal } = await import('../splice/extract.js');
+  const { ensureRanchSeeded } = await import('../ranch/ranch.js');
+  const { tierOf } = await import('../splice/tier.js');
+  const spec = content.cosmetics;
+  const rows = spec.accessories;
+  const count = (html, needle) => html.split(needle).length - 1;
+
+  // 1. THE DATA. Every row is a look and nothing else, sits at an anchor the
+  //    file sizes, and is earned by a kind the wardrobe reads and the file
+  //    words. Every generated head says where it wears them, and its eye
+  //    anchor IS the eye it draws.
+  const KEYS = new Set(['id', 'name', 'blurb', 'anchor', 'layer', 'unlock', 'shapes']);
+  const KINDS = ['notoriety', 'commissions', 'ribbons', 'gauntlet', 'tier'];
+  for (const r of rows) {
+    assert.deepEqual(Object.keys(r).filter((k) => !KEYS.has(k)), [], `${r.id}: a look and nothing else (no stat, no move)`);
+    assert.ok(spec.anchors[r.anchor]?.unit > 0, `${r.id}: sits at an anchor the file sizes`);
+    assert.ok(KINDS.includes(r.unlock?.kind) && spec.unlocks[r.unlock.kind], `${r.id}: earned by a kind the wardrobe reads and the file words`);
+    assert.ok(r.shapes?.length && r.name && r.blurb, `${r.id}: drawn, named and described`);
+  }
+  assert.equal(new Set(rows.map((r) => r.id)).size, rows.length, 'accessory ids are unique');
+  for (const want of ['top_hat', 'monocle', 'lab_goggles', 'cape', 'eyepatch', 'bow_tie', 'crown']) {
+    assert.ok(rows.some((r) => r.id === want), `the wardrobe has the ${want}`);
+  }
+  assert.deepEqual([...new Set(rows.map((r) => r.unlock.kind))].sort(), [...KINDS].sort(), 'ribbons, commissions, notoriety and the Gauntlet each unlock something, and the crown is for a grade');
+  assert.equal(rows.find((r) => r.id === 'crown').unlock.tier, 'S', 'the crown is for an S grade');
+  const heads = Object.values(content.parts).filter((p) => p.slot === 'head' && p.species !== 'salvage');
+  for (const h of heads) {
+    const a = h.anchors;
+    assert.ok(a && ['crown', 'eye', 'neck'].every((k) => Array.isArray(a[k]) && a[k].every(Number.isFinite)), `${h.id}: declares where it wears things`);
+    const sclera = h.shapes.filter((x) => x.type === 'circle' && x.fill === '@white' && x.stroke !== 'none');
+    assert.ok(sclera.some((x) => x.cx === a.eye[0] && x.cy === a.eye[1] && x.r === a.eye[2]), `${h.id}: its eye anchor is an eye it draws`);
+    assert.ok(a.crown[1] < a.eye[1], `${h.id}: a hat sits above the eye`);
+  }
+  const salvageHead = Object.values(content.parts).find((p) => p.slot === 'head' && !p.anchors);
+  if (salvageHead) assert.ok(C.anchorsOf(salvageHead).eye.every(Number.isFinite), `${salvageHead.id}: a hand-made head hangs its anchors off its eye`);
+
+  // 2. DRAWN WHEREVER THE CHIMERA IS, and a natural one exactly as before.
+  const d180 = walkedSave({ days: 180 });
+  const now = d180.lastTickAt;
+  const base = structuredClone(d180.chimeras.find((c) => c.tokens?.head && content.parts[c.tokens.head.partId]));
+  delete base.look; delete base.ribbons;
+  const plain = chimeraPortrait(base, content, { idPrefix: 'w' });
+  assert.equal(plain, creaturePortrait(chimeraGenome(base, content), content, { idPrefix: 'w' }), 'undressed, the portrait it always was');
+  for (const junk of ['hat', 7, { dye: 'no_such_species', wear: ['no_such_hat', 3, null] }, { dye: 7, wear: 'top_hat' }, { wear: [] }]) {
+    assert.equal(chimeraPortrait({ ...base, look: junk }, content, { idPrefix: 'w' }), plain, `look ${JSON.stringify(junk)} draws nothing`);
+  }
+  const dyeId = Object.keys(content.species).find((id) => content.species[id].palette
+    && !Object.values(base.tokens).some((t) => content.parts[t.partId]?.species === id));
+  const dyed = chimeraPortrait({ ...base, look: { dye: dyeId } }, content, { idPrefix: 'w' });
+  const own = new Set(Object.values(base.tokens).map((t) => content.species[content.parts[t.partId]?.species]?.palette?.primary).filter(Boolean));
+  assert.ok(dyed.includes(content.species[dyeId].palette.primary) && [...own].every((c) => c === content.species[dyeId].palette.primary || !dyed.includes(`fill="${c}"`)),
+    `a dye re-tints every part (${dyeId})`);
+  const outfit = ['top_hat', 'monocle', 'bow_tie', 'cape'];
+  const worn = chimeraPortrait({ ...base, look: { wear: outfit } }, content, { idPrefix: 'w' });
+  for (const id of outfit) assert.equal(count(worn, `wear wear-${id}"`), 1, `${id} is drawn`);
+  assert.ok(worn.indexOf('wear-cape') < worn.indexOf('wear-top_hat'), 'a cape hangs behind, a hat sits in front');
+  const twoHats = chimeraPortrait({ ...base, look: { wear: ['top_hat', 'crown'] } }, content, { idPrefix: 'w' });
+  assert.ok(twoHats.includes('wear-top_hat') && !twoHats.includes('wear-crown'), 'one hat to a head, the first one worn');
+  const { cosmetics: _late, ...core } = content;
+  assert.ok(!chimeraPortrait({ ...base, look: { wear: outfit } }, core, { idPrefix: 'w' }).includes('class="wear'), 'before the wardrobe lands, nothing is worn');
+  for (const file of ['splice/pens-ui.js', 'battle/ui.js', 'splice/card.js']) {
+    assert.ok(/\bchimeraPortrait\s*\(/.test(stripComments(readFileSync(join(root, file), 'utf8'))), `${file} draws its chimeras dressed`);
+  }
+
+  // 3. A NEW ACCESSORY IS A JSON ROW: earned, worn and drawn with no code.
+  {
+    const grown = structuredClone(content);
+    grown.cosmetics.accessories.push({ id: 'party_hat', name: 'Party Hat', blurb: 'Someone has a birthday. It is the creature.', anchor: 'crown',
+      unlock: { kind: 'notoriety', min: 1 }, shapes: [{ type: 'polygon', points: '-14,0 0,-40 14,0', fill: '#ff69b4' }] });
+    grown.cosmetics.accessories.push({ id: 'mystery', name: 'Mystery', blurb: 'Earned by a rule nobody wrote down.', anchor: 'eye',
+      unlock: { kind: 'astrology', min: 0 }, shapes: [{ type: 'circle', cx: 0, cy: 0, r: 4, fill: '#000' }] });
+    const st = { ...newGameState(), seed: 1, chimeras: [structuredClone(base)] };
+    st.campaign = { ...st.campaign, notorietyPeak: 5 };
+    const got = W.accessories(st, grown);
+    assert.ok(got.find((r) => r.id === 'party_hat').earned, 'a new row is earned by an existing kind');
+    assert.ok(!got.find((r) => r.id === 'mystery').earned, 'and a kind nobody reads earns nothing');
+    assert.ok(W.toggleWear(st, grown, base.id, 'party_hat').ok, 'and worn');
+    assert.ok(chimeraPortrait(st.chimeras[0], grown).includes('wear-party_hat') && chimeraPortrait(st.chimeras[0], grown).includes('#ff69b4'), 'and drawn');
+  }
+
+  // 4. EARNED, KEPT AND PUT ON. Every lab-wide kind from the save's own
+  //    progress; a ribbon's accessory kept after the ribbon leaves; the crown
+  //    only on an S; one to a slot; a dye only once its species graduates.
+  {
+    const st = { ...newGameState(), seed: 1, chimeras: [structuredClone(base)] };
+    const earned = () => W.accessories(st, content).filter((r) => r.earned).map((r) => r.id).sort();
+    assert.deepEqual(earned(), [], 'a new lab has earned nothing');
+    assert.equal(W.toggleWear(st, content, base.id, 'top_hat').ok, false, 'and cannot wear what it has not earned');
+    const steps = [
+      [() => { st.campaign.notorietyPeak = 25; }, 'notoriety'],
+      [() => { st.campaign.commissionsDone = ['k1']; }, 'commissions'],
+      [() => { st.chimeras[0].ribbons = [{ k: 1, event: 'race', place: 3 }]; }, 'ribbons'],
+      [() => { st.gauntletBeaten = ['stage1']; }, 'gauntlet'],
+    ];
+    for (const [act, kind] of steps) {
+      const before = earned().length;
+      act();
+      assert.ok(earned().length > before, `${kind} earns something`);
+    }
+    delete st.chimeras[0].ribbons;
+    assert.ok(earned().includes('bow_tie'), 'the bow tie stays when the ribbon leaves');
+    assert.ok(W.toggleWear(st, content, base.id, 'top_hat').ok && W.toggleWear(st, content, base.id, 'bow_tie').ok, 'two slots, two accessories');
+    assert.ok(W.toggleWear(st, content, base.id, 'lab_goggles').ok, 'goggles on');
+    st.campaign.notorietyPeak = 600;
+    assert.ok(W.toggleWear(st, content, base.id, 'eyepatch').ok, 'an eyepatch on');
+    assert.deepEqual(st.chimeras[0].look.wear.slice().sort(), ['bow_tie', 'eyepatch', 'top_hat'], 'and the goggles came off for it: one to a slot');
+    for (const id of ['top_hat', 'bow_tie', 'eyepatch']) W.toggleWear(st, content, base.id, id);
+    assert.equal(st.chimeras[0].look, undefined, 'a look with nothing in it is no look at all');
+    // The crown, on a creature's own letter.
+    const order = content.tiers.tiers.map((t) => t.id);
+    const letter = (c) => tierOf(c, analyze(c.frame, Object.values(c.tokens), content, Object.keys(c.tokens).length), content)?.id;
+    const graded = d180.chimeras.map((c) => ({ c, t: letter(c) }));
+    const top = graded.find((g) => g.t === 'S');
+    const low = graded.find((g) => g.t && g.t !== 'S');
+    assert.ok(top && low, `the walk's stable has an S and something below (${graded.map((g) => g.t).join('')})`);
+    st.chimeras = [structuredClone(top.c), structuredClone(low.c)];
+    assert.ok(W.toggleWear(st, content, top.c.id, 'crown').ok, `an S wears the crown (${top.c.name})`);
+    assert.equal(W.toggleWear(st, content, low.c.id, 'crown').ok, false, `a ${low.t} does not (${low.c.name})`);
+    assert.ok(!earned().includes('crown'), 'and the crown is never the lab\'s, only a creature\'s');
+    // Dyes, from graduation.
+    assert.equal(W.setDye(st, content, top.c.id, 'tiger').ok, false, 'no dye before a graduation');
+    const ranch = { ...newGameState(), seed: 3 };
+    ranch.starterLab = d180.starterLab ?? Object.keys(content.starters?.labs ?? {})[0] ?? null;
+    ensureRanchSeeded(ranch, content, t0);
+    const animal = ranch.ranch.stock[0];
+    assert.ok(animal, 'a seeded ranch has an animal to graduate');
+    extractAnimal(ranch, animal.id, content, t0 + 400 * HOUR);
+    assert.deepEqual(ranch.wardrobe.dyes, [animal.species], 'a graduation makes its species a dye');
+    const again = ranch.ranch.stock.find((a) => a.species === animal.species);
+    if (again) { extractAnimal(ranch, again.id, content, t0 + 400 * HOUR); assert.deepEqual(ranch.wardrobe.dyes, [animal.species], 'once'); }
+    st.wardrobe.dyes = [animal.species];
+    assert.ok(W.setDye(st, content, top.c.id, animal.species).ok && st.chimeras[0].look.dye === animal.species, 'and a graduated species dyes');
+    assert.ok(W.setDye(st, content, top.c.id, null).ok, 'natural colours again');
+  }
+
+  // 5. NOT ONE NUMBER. Nothing but the wardrobe, the drawing and the Pens
+  //    reads a look, and the harness fights every sampled build dressed and
+  //    undressed and finds every number the same.
+  {
+    const readers = [];
+    for (const file of moduleFiles(root).map((f) => relative(root, f)).filter((f) => !f.startsWith('tools/'))) {
+      if (/\.look\b/.test(stripComments(readFileSync(join(root, file), 'utf8')))) readers.push(file);
+    }
+    assert.deepEqual(readers.sort(), ['render/cosmetics.js', 'splice/pens-ui.js', 'splice/wardrobe.js'], 'only the wardrobe, its drawing and the Pens read a look');
+    const proof = cosmeticsBench(content);
+    assert.ok(proof.battles > 1000 && proof.builds >= Object.keys(content.species).length - 10, `the harness dressed ${proof.builds} builds and fought ${proof.battles} battles`);
+    assert.deepEqual(proof.differences, [], 'cosmetics change no number');
+  }
+
+  // 6. THE SAVE. v66 -> v67 brings a wardrobe from what the lab holds; a
+  //    dressed lab reads back dressed.
+  {
+    const v66 = await migrate(JSON.parse(readFileSync(join(root, 'tools/saves/v66.json'), 'utf8')));
+    assert.ok(Array.isArray(v66.wardrobe?.dyes) && Array.isArray(v66.wardrobe?.unlocked), 'a v66 save arrives with a wardrobe');
+    const held = await migrate({ ...JSON.parse(readFileSync(join(root, 'tools/saves/v66.json'), 'utf8')),
+      inventory: { vials: [{ id: 'v1', species: 'otter' }], parts: [{ id: 't1', partId: 'bear_head', donor: { species: 'bear' } }, { id: 't2', partId: 'mandate_horn', donor: { species: 'salvage' } }], tokenCount: 2 } });
+    assert.deepEqual(held.wardrobe.dyes.sort(), ['bear', 'otter'], 'with a dye for every species it holds, salvage aside');
+    const v67 = JSON.parse(readFileSync(join(root, 'tools/saves/v67.json'), 'utf8'));
+    assert.equal(v67.saveVersion, 67, 'the v67 fixture is a v67 save');
+    const st = await migrate(v67);
+    st.chimeras = [{ ...structuredClone(base), look: { dye: 'otter', wear: ['top_hat', 'cape'] } }];
+    st.wardrobe = { dyes: ['otter'], unlocked: ['top_hat', 'cape'] };
+    const back = await migrate(JSON.parse(JSON.stringify(st)));
+    assert.deepEqual([back.chimeras[0].look, back.wardrobe], [st.chimeras[0].look, st.wardrobe], 'and wears it after a reload');
+  }
+
+  // 7. THE PENS. An open card carries the wardrobe; a chip puts it on, and
+  //    the portrait above it is wearing it.
+  {
+    const st = structuredClone(d180);
+    st.campaign.notorietyPeak = 600;
+    const ch = st.chimeras[0];
+    delete ch.look;
+    st.ui = { ...(st.ui ?? {}), collapsed: { ...(st.ui?.collapsed ?? {}), [`pen-${ch.id}`]: false } };
+    const pens = recordingRoot();
+    const restore = installDom({ overlay: recordingRoot(), storage: memoryStorage() });
+    try {
+      const ctx = { state: st, content, now: () => now, save() {}, goto() {}, refreshTicker() {}, pushNews() {}, tick() {}, takeSubtab: () => null };
+      renderPensScreen(pens.host, ctx);
+      const html = pens.host.innerHTML;
+      assert.ok(html.includes(`data-dye="${ch.id}"`) && count(html, `data-wear="${ch.id}|`) === rows.length, 'the card has a dye and a chip per accessory');
+      const chip = [...pens.bound].reverse().find((b) => b.el?.dataset?.wear === `${ch.id}|monocle`);
+      chip.fn({ preventDefault() {}, stopPropagation() {}, target: chip.el, currentTarget: chip.el });
+      assert.deepEqual(st.chimeras[0].look?.wear, ['monocle'], 'a chip puts it on');
+      assert.ok(pens.host.innerHTML.includes('wear-monocle'), 'and the portrait is wearing it');
+    } finally {
+      restore();
+    }
+  }
+
+  // 8. THE WALK GRADUATES ANIMALS, so its lab owns dyes.
+  assert.ok(d180.wardrobe?.dyes?.length > 0, `the 180-day walk graduates its way to ${d180.wardrobe?.dyes?.length} dyes`);
+  console.log(`   R214 wardrobe: ${rows.length} accessories, ${heads.length} heads anchored, ${d180.wardrobe.dyes.length} dyes by day 180; cosmetics change no number`);
 }
 
 // R71, second half: save slots. Multiple independent labs on one device —

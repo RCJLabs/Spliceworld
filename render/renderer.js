@@ -294,10 +294,12 @@ export function attachShapes(content, raw) {
     const table = raw?.[key]?.shapes;
     if (!table) continue;
     for (const [id, shapes] of Object.entries(table)) {
-      if (into[id]) into[id].shapes = shapes;
+      if (!into[id]) continue;
+      into[id].shapes = shapes;
+      if (raw[key].anchors?.[id]) into[id].anchors = raw[key].anchors[id];
     }
   }
-  for (const key of ['arena', 'pasture', 'commissions', 'fair']) if (raw?.[key]) content[key] = raw[key];
+  for (const key of ['arena', 'pasture', 'commissions', 'fair', 'cosmetics']) if (raw?.[key]) content[key] = raw[key];
   return content;
 }
 
@@ -559,7 +561,7 @@ function developingPortrait() {
 export function renderCreatureSVG(
   genome, content,
   { idPrefix = 'cw', condition = null, extraScale = 1, posture = null, scarMarks = '', idle = false,
-    ghost = false, viewBox = '-230 -230 460 440', arrive = null } = {}
+    ghost = false, viewBox = '-230 -230 460 440', arrive = null, dye = null, wear = null } = {}
 ) {
   const errors = validateGenome(genome, content);
   if (errors.length) throw new Error('Bad genome: ' + errors.join('; '));
@@ -569,11 +571,14 @@ export function renderCreatureSVG(
 
   // Torso wears the hide species' palette; bare frames read as lab-gray.
   const hidePart = genome.parts.hide ? content.parts[genome.parts.hide] : null;
-  const torsoPalette = hidePart ? partPalette(hidePart, content) : NEUTRAL_PALETTE;
+  // R214 — `dye` and `wear`: render/cosmetics.js.
+  const torsoPalette = dye ?? (hidePart ? partPalette(hidePart, content) : NEUTRAL_PALETTE);
 
   const layers = [];
   // R208 — `ghost`, `viewBox` and `arrive`: see ROADMAP R208.
   const lay = (slot, g) => layers.push(slot === arrive ? `<g class="sw-arrive">${g}</g>` : g);
+  const head = frame.sockets.head;
+  if (wear?.back && head) layers.push(`<g transform="${posture?.head ?? ''}"><g transform="${socketTransform(head)}">${wear.back}</g></g>`);
   for (const [slot, socketName] of LAYERS) {
     if (slot === 'torso') {
       layers.push(`<g${ghost ? ' opacity=".2"' : ''}>${shapesToSVG(frame.torso, torsoPalette)}</g>`);
@@ -592,7 +597,7 @@ export function renderCreatureSVG(
     const partId = genome.parts[slot];
     if (!partId) continue;
     const part = content.parts[partId];
-    const palette = partPalette(part, content);
+    const palette = dye ?? partPalette(part, content);
 
     if (slot === 'hide') {
       // Hide overlays draw in torso space, clipped to the torso silhouette.
@@ -604,7 +609,7 @@ export function renderCreatureSVG(
     const shade = socket.shade ? ' style="filter:brightness(0.8)"' : '';
     // Wraps the socket rather than editing it: far and near limb move together.
     const stance = posture?.[slot] ?? '';
-    const body = `<g transform="${socketTransform(socket)}"${shade}>${shapesToSVG(part.shapes ?? [], palette)}</g>`;
+    const body = `<g transform="${socketTransform(socket)}"${shade}>${shapesToSVG(part.shapes ?? [], palette)}${slot === 'head' ? wear?.front ?? '' : ''}</g>`;
     lay(slot, stance ? `<g transform="${stance}">${body}</g>` : body);
   }
 
