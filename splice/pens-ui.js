@@ -670,7 +670,7 @@ export function renderPensScreen(root, ctx) {
       });
       openPicker({
         title: esc(copy(content, 'wardrobe.title', { name: ch.name })),
-        subtitle: copy(content, dyes.length ? 'wardrobe.sub' : 'wardrobe.none'),
+        subtitle: dyes.length ? copy(content, 'wardrobe.sub') : copy(content, 'wardrobe.none'),
         groups: [{ label: null, options: [natural, ...dyes] }],
         selectedId: ch.look?.dye ?? 'natural',
         onPick: (value) => {

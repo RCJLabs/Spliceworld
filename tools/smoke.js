@@ -26606,7 +26606,22 @@ if (inShard('wire')) {
 // row's hint counts hours rather than naming the season, and the fair rides
 // the renderer's one LATE attach loop (8 bytes). PROSE_CAP stays where it
 // was: R106's essay on the assault row became a pointer to ROADMAP R106.
-const KB_CAP = 340;        // CODE only, measured at 339.74
+// R214 — 340 -> 341, measured at 340.28 on a tree that read 339.74 before
+// it. A look has to be drawn by the renderer, which is eager, because only
+// the renderer knows where the head is after a posture moves it:
+// `render/renderer.js` +369 bytes (a dye in place of each part's own palette,
+// the back layer under the torso in the head's own transform and posture,
+// the front layer inside the head's group, and each head's anchors attached
+// as the geometry lands), `splice/extract.js` +114 (a graduation makes its
+// species a dye), `save/save.js` +54 (the wardrobe in a new game) and
+// `data/loader.js` +13 (cosmetics.json rides the second round). Everything
+// else — the anchors' arithmetic, the unlocks, the wardrobe and the Pens
+// row — is lazy in `render/cosmetics.js` and `splice/wardrobe.js`.
+//
+// Paid down before it was raised: the renderer reads one `head` socket for
+// both layers, the dye is one `??` at each palette, and cosmetics.json rides
+// the existing LATE attach loop. PROSE_CAP holds (260.74 under 261).
+const KB_CAP = 341;        // CODE only, measured at 340.28
 
 // R171 — WHAT THE REPO SPENDS ON EXPLAINING ITSELF, and the first budget in it
 // that is allowed to be spent deliberately.
