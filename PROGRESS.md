@@ -57,10 +57,46 @@ census of 240.**
   - **The Ranch chrome (one Infirmary chip) and the Vault's open half (all
     52 species on the shelf)** grew by exactly what this save shows.
   - **The lifetime counter and its Yearbook row went.**
+- **A reward part's donor was a client's whole sentence**, longer than the
+  40 characters a save keeps a name to. It is "A satisfied client" now.
+- **The handlers fixture's extra creature cost twenty seconds**, so the hurt
+  Patient wears the witness body instead, and a body's facts are memoised.
+- **Break 299 had rotted on `main`** and was re-aimed at the defect its name
+  describes.
 
 ### Verification
 
-VERIFICATION_HERE
+- **Done when, at 380px:**
+  - the census of 240 commissions is green;
+  - fill, deadlines, agenda and War Room are covered in smoke's R212 block
+    (shard d);
+  - a real press filled a commission and survived a reload;
+  - a fresh save and a v64 save migrated to v65 opened with zero console
+    errors.
+- **`npm test`, run alone:** 2,103 of 2,145 CPU-s cold (20 walks rebuilt)
+  and 1,384 of 1,425 warm; `main` read 1,390 and 1,397 warm on the same box.
+- **Budgets:** eager code 338.85 KB (cap 339, itemised), prose 260.84
+  (cap 261), first paint 1,195 KB (budget 1,197).
+- **`--anchors`:** 606 of 606.
+- **Full battery** (the rot check): 606 of 606 caught, none CRASHED or
+  ELSEWHERE.
+  - It ran in eleven chunks (30, 114, 115, 116, 50, 62, 58, 63, 49, 103 and
+    39 minutes; 799 in all, with eleven baselines).
+  - Break 299 had rotted on `main`; it was re-aimed and caught.
+  - Chunk 2b1's baseline went red once on the offline cold open (1,005ms
+    under load; ~500ms alone, as on `main`), and was green in the other
+    ten.
+
+### Known issues
+
+- **The walk's day-180 save is a different campaign, and four single-seed
+  rules on it were knife edges** (Tier III, vat, the War Room's facility
+  card, the Ranch chrome). Each was settled with a census or a stated
+  measurement, but other single-seed readings in the height gate may flip
+  the next time the walker plays differently.
+- **The full battery no longer fits CLAUDE.md's 4h45m-6h30m range when
+  chunked under the two-hour cap.** Re-measure it before planning an evening
+  on it.
 
 ### Next session
 

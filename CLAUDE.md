@@ -79,7 +79,15 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (4h45m to 6h30m. R207 is the SEVENTEENTH reading and is
+**The full battery (4h45m to 6h30m. R212 is the EIGHTEENTH reading and,
+like R207, is not comparable: eleven chunks, because chunks of 198 and 48
+breaks each took 114-116 minutes against the two-hour cap. They sum to 799
+minutes with eleven baselines, ten green; chunk 2b1's went red once on the
+offline cold open (1,005ms under load, ~500ms alone, as on `main`). 606 of
+606 caught, none CRASHED or ELSEWHERE, after 299 was re-aimed: it had rotted
+on `main` (166.9 KB of dead code against a 170 budget on both trees). The
+range below is two milestones stale; re-measure before planning on it.
+R207 is the SEVENTEENTH reading and is
 not comparable: two container restarts, one onto a host that walked at half
 speed, cost two runs and pushed it to TWELVE chunks of at most 104 minutes
 (a background command stops at two hours, and chunk 3 overran it). The

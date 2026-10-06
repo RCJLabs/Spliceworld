@@ -8669,7 +8669,63 @@ written so that it has something on screen when it ships.
   * **There is no lifetime counter.** Its Yearbook row put the Yearbook six
     words over its budget, and the filled list already answers the guide.
 
-VERIFICATION_R212
+  * **Found by the gates, and fixed:**
+    - **A reward part's donor was the client's whole sentence.** A save
+      keeps a name to 40 characters, so the untrusted-input gate repaired
+      real played saves. The donor is "A satisfied client" now, and smoke
+      checks that it survives the sanitizer.
+    - **The handlers fixture's fourth creature cost twenty seconds** (381
+      more presses) for no control it lacked. The fixture's hurt Patient
+      wears the commission's witness body instead, and `fits` memoises a
+      body's facts, because the War Room paints every tab on every render.
+    - **Break 299 had rotted on `main`.** Taking the two boots' union away
+      read 166.9 KB of dead code on both trees, under a budget that fires
+      from 9.7 KB of growth. It now stops the herd boot counting at all,
+      which is what its name says: five modules read idle and 213.9 KB
+      reads dead.
+
+  **Budgets:**
+  * Eager code 337.93 -> 338.85 KB, under a cap raised 338 -> 339 with
+    itemised reasons.
+  * Prose 260.90 -> 260.84 KB under 261.
+  * First paint 1,196 -> 1,195 KB under 1,197.
+  * `npm test`, run alone, green both ways: 2,103 of 2,145 CPU-seconds cold
+    (20 walks rebuilt) and 1,384 of 1,425 warm. `main` read 1,390 and 1,397
+    warm on the same box.
+
+  **Done when, checked:**
+  * **Generated from content, every one satisfiable:** smoke's census of 240
+    commissions over four saves. Every witness splices at its tier from
+    catalogue parts and answers its own request. A grown copy of the
+    content (a sixth frame, a newt with a new tag) is asked for by name.
+  * **Fulfilling pays and closes:** cash, notoriety and a part are each
+    paid in full, and a full Vault renders the part. The commission leaves
+    the board and cannot be filled twice. A creature that does not fit, or
+    is away, is refused.
+  * **Deadlines settle on load:** a save opened past the soonest deadline
+    has lost that client and kept the rest, and a week away is a fresh
+    board.
+  * **The Ranch's agenda and the War Room:** the row counts the board, and
+    the War Room card lists every client with Show buttons. At 380px a
+    press filled one and the fill survived a reload. A fresh save and a v64
+    save migrated to v65 open with zero console errors and no sideways
+    scroll.
+  * **SAVE_VERSION 65:** a migration and a v65 fixture. `tools/saves.js`
+    migrates every version v1-v65.
+  * **The 180-day walk fills commissions:** 208 on the prime-part draft;
+    the shipped tree's walk leaves a non-empty filled list, which smoke
+    asserts.
+
+  **The full battery (the rot check due at R212):** 606 of 606 caught, none
+  CRASHED or ELSEWHERE, in eleven chunks, because two of them nearly hit the
+  two-hour cap. Two notes:
+  * **Break 299 MISSED** and was fixed as above. It was re-run caught behind
+    chunk 3's green baseline.
+  * **One baseline went red once.** In chunk 2b1 the offline cold open read
+    1,005ms against 1,000 while four gates shared the box. It was green in
+    the other ten baselines, and run alone it reads 445-542ms (`main`
+    454-572). The one break that gate judges was caught behind a green
+    baseline.
 
 - **R213 — The County Fair.** The calendar turns four 28-day seasons. Each
   one nudges decay, incubation or the odds of a variant, but the turn itself
