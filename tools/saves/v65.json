@@ -188,8 +188,7 @@
     "leviedTotal": 0,
     "notorietyCapped": false,
     "notorietyPeak": 0,
-    "commissionsDone": [],
-    "commissionCount": 0
+    "commissionsDone": []
   },
   "staff": {
     "hired": [],

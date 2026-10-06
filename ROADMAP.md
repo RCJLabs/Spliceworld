@@ -8617,24 +8617,57 @@ written so that it has something on screen when it ships.
     week away is a week of clients who came and went.
   * **Showing a creature pays and closes.** The creature must be home (not on
     a job, an expedition or a mission) and must fit. The client pays cash,
-    notoriety or a prime part for the Vault; a part for a full shelf is
-    rendered at the door and paid for. The creature stays home.
+    notoriety or a standard-grade part for the Vault; a part for a full
+    shelf is rendered at the door and paid for. The creature stays home.
   * **Where it shows:**
     - a War Room card on the jobs tab lists each client, the request, the
       reward, the clock, and a Show button for up to three creatures that
       fit;
     - a Ranch agenda row counts the clients waiting, once there is a creature
       to show;
-    - a field guide teaches it, and the Yearbook counts the fills.
+    - a field guide teaches it.
   * **`data/commissions.json`** holds the clock, the kinds, the rewards, the
     clients and the anatomy nouns, and rides the second load round. It is
     documented in `data/notes/commissions.md`. A new species, part, tag or
     frame makes new commissions without a line of it changing.
-  * **SAVE_VERSION 64 -> 65:** `campaign.commissionsDone` (ids of open
-    windows only, bounded in tools/vault.js) and `campaign.commissionCount`,
-    with a migration and a v65 fixture.
+  * **SAVE_VERSION 64 -> 65:** `campaign.commissionsDone`, with a migration
+    and a v65 fixture. It holds the ids of open windows only (bounded in
+    tools/vault.js). A fill adds its own id, so the list is never empty again
+    once anything has been filled, and the field guide reads that.
   * **The walker shows a client the first creature at home that fits.** It
     never builds to order, so what it fills is the floor of the verb.
+
+  **The walk became a different campaign, and five knife edges showed.**
+  Commissions change the walker's money, parts and notoriety, so seed
+  2026's 180 days reshuffle. Each gate below read a single campaign with
+  almost no margin:
+  * **The part reward is standard grade, by measurement.** Prime parts left
+    Tier III unbought on seed 2026, and dropped the share of battle beats a
+    walk can send to 57% (floor 60). Over eight 180-day campaigns:
+    - no board: Tier III on 7 of 8, 64% sendable;
+    - prime parts: 7 of 8, 57%;
+    - standard parts: 8 of 8, 65%.
+
+    The numbers are in `data/notes/commissions.md`.
+  * **The vat is judged on the census.** `main` ran it once on seed 2026, so
+    "did it run at all" was a coin. The diet gate now asks R207's majority of
+    the seven campaigns it already walks. `main` reads 7 of 7, this tree 5 of
+    7, and break 154 (no vat at all) 0 of 7.
+  * **Beaten exhibitions drop their pitch.** With dominion and an exhibition
+    still open, the War Room's facility card sat 6px past its two-screen
+    bound; `main`'s save was 4px inside it. The bound did not move. The
+    trophy and BEATEN tag say what the blurb said.
+  * **Two height readings grew by exactly what this save shows:**
+    - the Ranch's chrome by one spend chip (an Infirmary patient), 1224 ->
+      1270;
+    - the Vault's open half by fifteen bays, 4600 -> 5045, because a part
+      reward can be any species the catalogue sells, so the shelf holds all
+      52.
+
+    R187's worst-case shut bound already covers 52 species, and break 199
+    was re-aimed at the new line.
+  * **There is no lifetime counter.** Its Yearbook row put the Yearbook six
+    words over its budget, and the filled list already answers the guide.
 
 VERIFICATION_R212
 

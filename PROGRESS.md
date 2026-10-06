@@ -22,9 +22,8 @@ census of 240.**
 - **The War Room card** lists each client, the request, the reward, the
   clock, and Show buttons for the creatures at home that fit. **The Ranch
   agenda row** counts the clients waiting.
-- **SAVE_VERSION 65:** `campaign.commissionsDone` and
-  `campaign.commissionCount`, with a migration, a v65 fixture and a vault
-  bound.
+- **SAVE_VERSION 65:** `campaign.commissionsDone`, with a migration, a v65
+  fixture and a vault bound.
 - **The walker** shows a client the first creature at home that fits.
 - **Gates:** an R212 smoke block in shard d covering the census, the clock,
   the fill, the deadlines on load, the agenda, the War Room press, the
@@ -45,6 +44,19 @@ census of 240.**
   so it splices one from a commission's own witness.
 - **The reward line read "…forelimbs. pays $140"**, lowercase after a full
   stop. Rewards are noun phrases now, placed in the sentence by the copy.
+- **The walk became a different campaign, and the first baseline went red
+  three ways.** Seed 2026's day-180 save stopped buying Tier III, the
+  sendable share of battle beats fell to 57% (floor 60), and the height gate
+  measured new states. The fixes, each written up in ROADMAP R212:
+  - **Part rewards are standard grade.** Prime parts read 7 of 8 Tier III
+    and 57%; standard parts read 8 of 8 and 65%.
+  - **The vat is judged on the diet gate's seven-campaign census.** `main`
+    ran it exactly once on seed 2026.
+  - **Beaten exhibitions drop their pitch**, so the War Room's facility card
+    stays inside two screens.
+  - **The Ranch chrome (one Infirmary chip) and the Vault's open half (all
+    52 species on the shelf)** grew by exactly what this save shows.
+  - **The lifetime counter and its Yearbook row went.**
 
 ### Verification
 
