@@ -144,7 +144,7 @@ Screens: **Ranch** (stock) · **Pens** (chimeras) · **Extractor** · **Surgery 
 - enemy units: 42
 - encounters: 26
 - rivals: 5
-- save version: 64
+- save version: 65
 - settle minutes at instability 0: 22.5
 - settle hours at instability 100: 3
 - feral bond floor: 40
@@ -284,7 +284,7 @@ Every entry from §9.1 onward carries a ✅ in its title or it does not, and thi
 is exactly the list that does not — so a session picks its next milestone from
 one place instead of from a sentence written nine audits ago.
 
-**3 entries queued.** R212, R213, R214.
+**2 entries queued.** R213, R214.
 
 R166 wrote this block because the sentence it replaces was wrong in three ways
 at once. §9.18 announced **35 entries already queued**, then enumerated **34**,
@@ -8578,7 +8578,8 @@ written so that it has something on screen when it ships.
     and 6px and every word the contrast floor, in every theme, on fresh and
     day-180 saves. Nothing scrolls sideways at any width.
 
-- **R212 — Commissions.** A heist already likes a creature that fits (Camo
+- **R212 — Commissions.** ✅
+  A heist already likes a creature that fits (Camo
   for the petting zoo, Armored for the fair's livestock tent), but a fit only
   improves the odds, and no one in the county asks for a creature built a
   particular way. A commissions board: shady clients ask for a creature by
@@ -8593,6 +8594,138 @@ written so that it has something on screen when it ships.
   pays and closes it; deadlines are timestamps settled on load; the board
   shows on the Ranch's agenda and in the War Room; SAVE_VERSION moves with a
   migration and a fixture; and the 180-day walk fulfils commissions.*
+
+  **Shipped: a commissions board on the War Room's jobs tab and the Ranch's
+  agenda, where showing a client a creature that fits pays and closes the
+  commission.**
+  * **Every request is satisfiable by construction.** A commission starts as
+    a WITNESS: a body built from parts of species the catalogue sells, on a
+    frame, in the bays the lowest Theater tier that builds that frame opens.
+    The request is read off what that body turned out to be, through the
+    same `analyze` the battle reads. There are four kinds:
+    - two parts by slot and tag ("wings and a venom organ");
+    - a class and a move tag, never the tag that names the class;
+    - a chassis and a mass ceiling;
+    - a species count, with one species named.
+
+    Every kind but the chassis one is built on a frame the first tier grants,
+    so a new lab can answer it.
+  * **The board is the seed, the clock and the filled ids.** One commission
+    is posted per eight-hour window, on the save's own phase, and each client
+    waits 32 hours, so four are open at once. Nothing about a commission is
+    stored until it is filled, so a deadline settles on load by being read: a
+    week away is a week of clients who came and went.
+  * **Showing a creature pays and closes.** The creature must be home (not on
+    a job, an expedition or a mission) and must fit. The client pays cash,
+    notoriety or a standard-grade part for the Vault; a part for a full
+    shelf is rendered at the door and paid for. The creature stays home.
+  * **Where it shows:**
+    - a War Room card on the jobs tab lists each client, the request, the
+      reward, the clock, and a Show button for up to three creatures that
+      fit;
+    - a Ranch agenda row counts the clients waiting, once there is a creature
+      to show;
+    - a field guide teaches it.
+  * **`data/commissions.json`** holds the clock, the kinds, the rewards, the
+    clients and the anatomy nouns, and rides the second load round. It is
+    documented in `data/notes/commissions.md`. A new species, part, tag or
+    frame makes new commissions without a line of it changing.
+  * **SAVE_VERSION 64 -> 65:** `campaign.commissionsDone`, with a migration
+    and a v65 fixture. It holds the ids of open windows only (bounded in
+    tools/vault.js). A fill adds its own id, so the list is never empty again
+    once anything has been filled, and the field guide reads that.
+  * **The walker shows a client the first creature at home that fits.** It
+    never builds to order, so what it fills is the floor of the verb.
+
+  **The walk became a different campaign, and five knife edges showed.**
+  Commissions change the walker's money, parts and notoriety, so seed
+  2026's 180 days reshuffle. Each gate below read a single campaign with
+  almost no margin:
+  * **The part reward is standard grade, by measurement.** Prime parts left
+    Tier III unbought on seed 2026, and dropped the share of battle beats a
+    walk can send to 57% (floor 60). Over eight 180-day campaigns:
+    - no board: Tier III on 7 of 8, 64% sendable;
+    - prime parts: 7 of 8, 57%;
+    - standard parts: 8 of 8, 65%.
+
+    The numbers are in `data/notes/commissions.md`.
+  * **The vat is judged on the census.** `main` ran it once on seed 2026, so
+    "did it run at all" was a coin. The diet gate now asks R207's majority of
+    the seven campaigns it already walks. `main` reads 7 of 7, this tree 5 of
+    7, and break 154 (no vat at all) 0 of 7.
+  * **Beaten exhibitions drop their pitch.** With dominion and an exhibition
+    still open, the War Room's facility card sat 6px past its two-screen
+    bound; `main`'s save was 4px inside it. The bound did not move. The
+    trophy and BEATEN tag say what the blurb said.
+  * **Two height readings grew by exactly what this save shows:**
+    - the Ranch's chrome by one spend chip (an Infirmary patient), 1224 ->
+      1270;
+    - the Vault's open half by fifteen bays, 4600 -> 5045, because a part
+      reward can be any species the catalogue sells, so the shelf holds all
+      52.
+
+    R187's worst-case shut bound already covers 52 species, and break 199
+    was re-aimed at the new line.
+  * **There is no lifetime counter.** Its Yearbook row put the Yearbook six
+    words over its budget, and the filled list already answers the guide.
+
+  * **Found by the gates, and fixed:**
+    - **A reward part's donor was the client's whole sentence.** A save
+      keeps a name to 40 characters, so the untrusted-input gate repaired
+      real played saves. The donor is "A satisfied client" now, and smoke
+      checks that it survives the sanitizer.
+    - **The handlers fixture's fourth creature cost twenty seconds** (381
+      more presses) for no control it lacked. The fixture's hurt Patient
+      wears the commission's witness body instead, and `fits` memoises a
+      body's facts, because the War Room paints every tab on every render.
+    - **Break 299 had rotted on `main`.** Taking the two boots' union away
+      read 166.9 KB of dead code on both trees, under a budget that fires
+      from 9.7 KB of growth. It now stops the herd boot counting at all,
+      which is what its name says: five modules read idle and 213.9 KB
+      reads dead.
+
+  **Budgets:**
+  * Eager code 337.93 -> 338.85 KB, under a cap raised 338 -> 339 with
+    itemised reasons.
+  * Prose 260.90 -> 260.84 KB under 261.
+  * First paint 1,196 -> 1,195 KB under 1,197.
+  * `npm test`, run alone, green both ways: 2,103 of 2,145 CPU-seconds cold
+    (20 walks rebuilt) and 1,384 of 1,425 warm. `main` read 1,390 and 1,397
+    warm on the same box.
+
+  **Done when, checked:**
+  * **Generated from content, every one satisfiable:** smoke's census of 240
+    commissions over four saves. Every witness splices at its tier from
+    catalogue parts and answers its own request. A grown copy of the
+    content (a sixth frame, a newt with a new tag) is asked for by name.
+  * **Fulfilling pays and closes:** cash, notoriety and a part are each
+    paid in full, and a full Vault renders the part. The commission leaves
+    the board and cannot be filled twice. A creature that does not fit, or
+    is away, is refused.
+  * **Deadlines settle on load:** a save opened past the soonest deadline
+    has lost that client and kept the rest, and a week away is a fresh
+    board.
+  * **The Ranch's agenda and the War Room:** the row counts the board, and
+    the War Room card lists every client with Show buttons. At 380px a
+    press filled one and the fill survived a reload. A fresh save and a v64
+    save migrated to v65 open with zero console errors and no sideways
+    scroll.
+  * **SAVE_VERSION 65:** a migration and a v65 fixture. `tools/saves.js`
+    migrates every version v1-v65.
+  * **The 180-day walk fills commissions:** 208 on the prime-part draft;
+    the shipped tree's walk leaves a non-empty filled list, which smoke
+    asserts.
+
+  **The full battery (the rot check due at R212):** 606 of 606 caught, none
+  CRASHED or ELSEWHERE, in eleven chunks, because two of them nearly hit the
+  two-hour cap. Two notes:
+  * **Break 299 MISSED** and was fixed as above. It was re-run caught behind
+    chunk 3's green baseline.
+  * **One baseline went red once.** In chunk 2b1 the offline cold open read
+    1,005ms against 1,000 while four gates shared the box. It was green in
+    the other ten baselines, and run alone it reads 445-542ms (`main`
+    454-572). The one break that gate judges was caught behind a green
+    baseline.
 
 - **R213 — The County Fair.** The calendar turns four 28-day seasons. Each
   one nudges decay, incubation or the odds of a variant, but the turn itself

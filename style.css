@@ -81,10 +81,7 @@
   --ink: #101a2e; --panel: #17253d; --panel-2: #1f3050; --well: #0a1220;
   --line: #2f4a72; --text: #eaf4ff; --muted: #8fa8c9;
   --accent: #2ee6c8; --on-accent: #04241f; --accent-dim: #0d4a41;
-  /* Lifted from #ff4fa3 by R122's contrast floor: the field-note title is
-     accent-2 on panel-2, which was 4.32:1 — under 4.5 and the only theme
-     where it was. This clears 4.73 there and 4.64 on accent-2-dim, and dark
-     text over the fill goes 6.09 -> 6.67, so it is better in both directions. */
+  /* R122 contrast floor: docs/STYLE.md. */
   --accent-2: #ff61ac; --on-accent-2: #2b0417; --accent-2-dim: #5c1440;
   --danger: #ff6b8f; --danger-2: #e8305f; --danger-soft: #ff9ab2;
   --warn: #ffd93d; --warn-dim: #5c4c10;
@@ -385,11 +382,7 @@ main {
    width from its neighbours: at full conquest "+$2,385/day" pushed the
    Threat Gen column narrow enough to break its own label in half. */
 .econ-row > div { min-width: 0; }
-/* Two columns well before 360px. Four fitted while the numbers were small,
-   but a fully conquered map reads "+$2385/day" beside "128W-12L" and at
-   380px those two collide into each other mid-glyph — which every
-   assertion in the suite happily reported as four cells of equal height.
-   Screenshots catch what getBoundingClientRect does not. */
+/* Two columns before 360px: docs/STYLE.md. */
 @media (max-width: 430px) {
   .econ-row { grid-template-columns: repeat(2, 1fr); gap: 8px 6px; }
 }
@@ -578,11 +571,7 @@ main {
 .slot-actions { display: flex; gap: 6px; flex: 0 0 auto; }
 .slot-actions .care-train, .slot-actions .pen-dismantle { margin: 0; padding: 5px 8px; font-size: 0.75rem; }
 
-/* R75 — was `infinite`. The element is replaced by the poof at 0.55 ×
-   CEREMONY_MS (1155 ms), so nine iterations of 0.14 s cover the whole window
-   with room to spare and the animation can no longer outlive the thing it
-   decorates — an infinite animation that happens to be cut short by a
-   setTimeout is a bounded animation with the bound written somewhere else. */
+/* R75: docs/STYLE.md. */
 .grad-shake { animation: grad-shake 0.14s linear 9; }
 @keyframes grad-shake {
   0% { transform: translate(0, 0) rotate(-2deg); }
@@ -668,11 +657,7 @@ main {
   color: var(--goo);
 }
 
-/* R73 — every disabled opacity above was raised to 0.6. A disabled control
-   is exempt from WCAG contrast, but its LABEL is usually the sentence that
-   explains why it is disabled ("None in the vault", "the pens are full"),
-   which is precisely the moment a player needs to read it. Measured: the
-   primary button sat at 2.35:1 against its own surface. */
+/* R73: docs/STYLE.md. */
 .big-btn:disabled { opacity: 0.6; cursor: default; }
 
 /* --- Battle (M4) --- */
@@ -736,11 +721,7 @@ body.in-battle .ticker { font-size: 0.75rem; }
 
 .stage {
   position: relative;
-  /* R113 - `flex: 1 1 auto` -> `1 1 0`. A flexible element in a height-locked
-     column should take what the others leave, and with an `auto` basis this
-     one took its CONTENT height instead. It was not what pinned the stage at
-     280px - the `min-height: 760px` query below was - but it is the rule that
-     makes the column shrink predictably now that the floor has room. */
+  /* R113: docs/STYLE.md. */
   flex: 1 1 0;
   min-height: 210px;
   /* R184 — the slots below size by this box's height as well as its width. */
@@ -883,10 +864,7 @@ body.in-battle .ticker { font-size: 0.75rem; }
 }
 .cls-chip.class-ground { border-color: var(--cls-ground); }
 .cls-chip.class-water { border-color: var(--cls-water); }
-/* R73 follow-up: was `var(--accent-2)` while `--cls-air` sits defined and
-   unused in all five theme blocks — its two neighbours use their own class
-   colour and Air borrowed the amber accent, so the one class the triangle
-   makes hardest to read was also the one drawn in another role's colour. */
+/* R73: docs/STYLE.md. */
 .cls-chip.class-air { border-color: var(--cls-air); }
 
 .hp-pips { display: flex; gap: 3px; flex: 0 0 auto; }
@@ -1152,11 +1130,7 @@ body.in-battle .ticker { font-size: 0.75rem; }
 
 @media (prefers-reduced-motion: reduce) {
   .meter-fill { transition: none; }
-  /* R75 — the graduation ceremony's three were missing: a player who has
-     asked their OS to stop moving things still got a shaking portrait, a
-     flashing card and an expanding puff. Safe to disable outright because
-     the ceremony advances on setTimeout, not on animationend, so the results
-     still arrive on time with nothing moving. */
+  /* R75: docs/STYLE.md. */
   .float, .anim-lunge-fwd, .anim-hit, .anim-ko,
   .anim-wavein, .anim-buff, .anim-debuff,
   .grad-shake, .grad-flash, .poof { animation: none; }
@@ -1174,21 +1148,12 @@ body.in-battle .ticker { font-size: 0.75rem; }
 }
 
 /* Taller phones get a roomier field; short ones keep the menu reachable. */
-/* R113 - 280px -> 260px. THIS is the floor the arena was resting on, not the
-   base rule: the gate measures at 780dvh, so this query applies and pinned the
-   stage at exactly 280px through three fixes aimed at the wrong number. With
-   12px type the chrome above and below is taller, and 280 is 14px more than a
-   780px phone has left to give. */
+/* R113: docs/STYLE.md. */
 @media (min-height: 760px) { .stage { min-height: 260px; } .mv { min-height: 54px; } }
 @media (max-height: 640px) {
   .msg-box { min-height: 44px; }
   .mv { min-height: 40px; padding: 5px 8px; }
-  /* R103 — the telegraph is a line the arena did not used to carry, and the
-     arena is height-locked (`body.in-battle` is 100dvh with overflow hidden),
-     so on the shortest phone the space has to come from somewhere. It comes
-     from the stage, which is the one part of the fight that scales: the
-     creatures get smaller, nothing gets cut off. Measured at 380x640, the
-     line costs 38px and this gives back 40. */
+  /* R103: docs/STYLE.md. */
   .stage { min-height: 130px; }
 }
 
@@ -1561,11 +1526,7 @@ body.in-battle .ticker { font-size: 0.75rem; }
 .dex-cell strong { display: block; margin-top: 2px; }
 .dex-cell .fine-print { display: block; }
 .dex-unknown { opacity: 0.55; }
-/* R51 — the third state of a field-guide cell. "Logged" is a sighting and a
-   unit logs itself just as readily while beating you, so a beaten one is
-   marked rather than merely present. The border carries it: the grid is
-   100px cells at 380px and a badge would cost a row of height across all
-   forty. */
+/* R51: docs/STYLE.md. */
 .dex-beaten {
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent-dim);
@@ -1727,12 +1688,7 @@ footer {
 .vault-species > .bay-head {
   display: flex;
   align-items: center;
-  /* R99 found this leak on `.lab-pick` and called it the only instance in
-     the game; it was the only instance until this row became a button.
-     R73's global `button { justify-content: center }` centres a
-     shrink-wrapped label inside its 40px target, and a full-width flex row
-     inherits it — the a11y gate measured this one starting 98px into its own
-     348px line. A ragged left edge on a list you scan by name. */
+  /* R99: docs/STYLE.md. */
   justify-content: flex-start;
   /* R116 — wraps at 150% text, so a PRISMATIC badge drops a line instead
      of leaving the card. Not free on its own: see `.lineage` below. */
@@ -1754,12 +1710,7 @@ footer {
 .vault-species > .bay-head .lineage { flex: 1 1 0; min-width: 0; }
 .vault-species .token-list { margin-top: 0; }
 .vault-species .token-list li { background: var(--panel); font-size: 0.75rem; }
-/* R182 — a part's own render control. Pushed to the row's far end so the
-   price lines up down a bay; muted, because it is the quiet way out and not
-   the thing the row is about. The row does not wrap and gives up its block
-   padding to the button, whose 40px floor is then the row's height: a
-   wrapping row put the button on a line of its own and cost an open bay
-   ~200px, which the height gate caught at 4,361 against 4,200. */
+/* R182: docs/STYLE.md. */
 .token-list li:has(> .render-one) { flex-wrap: nowrap; padding-block: 0; }
 /* …which puts a bay's first render button 1px under the bay's own header
    button, and the a11y gate's 6px gutter between controls caught it. */
@@ -2233,6 +2184,9 @@ footer {
 }
 .job-report.is-win { border-color: var(--goo); }
 .job-report.is-bust { border-color: var(--warn-dim); }
+/* R212 — a client's request, and the creatures at home that would do. */
+.commission > div:first-child { flex: 1 1 14rem; }
+.commission-fits { display: flex; flex-wrap: wrap; gap: 6px; }
 .heat-high { color: var(--danger-soft); }
 
 /* --- Your dossier (§3.8) -------------------------------------------------
@@ -2798,11 +2752,7 @@ button.dex-cell:focus-visible {
 .suggest-btn:hover, .suggest-btn:focus-visible { border-color: var(--accent); }
 .suggest-why { margin: 0 0 8px; line-height: 1.4; color: var(--accent); }
 
-/* R88 — "Send them without me". Deliberately NOT a second big-btn: Launch
-   is the decision, this is the shortcut past a decision already made, and a
-   briefing with two equally loud buttons on it is a briefing that has stopped
-   recommending anything. Full width so a thumb cannot miss it, quieter ink
-   so the eye still lands on Launch first. */
+/* R88: docs/STYLE.md. */
 .send-btn {
   display: flex;
   width: 100%;

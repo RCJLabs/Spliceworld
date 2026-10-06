@@ -1,5 +1,107 @@
 # PROGRESS
 
+## Session 236 — R212: commissions ✅
+
+**Clients post commissions on the War Room's jobs tab ("wings and a venom
+organ", "a Water-class creature with an Electric move", "something under 60
+mass on the Scamper Frame"), each with a real-time deadline. Showing one a
+creature that fits pays cash, notoriety or a part for the Vault, and the
+creature stays home. Every request is read off a body built from parts the
+catalogue sells, so every one can be answered, and smoke proves it across a
+census of 240.**
+
+### What shipped
+
+- **`campaign/commissions.js`** (lazy, with the War Room and the walker):
+  the witness, the request, the fit, the board and the fill.
+  `commissionWindows` in `campaign/mission.js` is the eager clock the
+  agenda counts from.
+- **`data/commissions.json`** (second load round) holds the clock, the
+  kinds, the rewards, the clients and the anatomy nouns. It is documented
+  in `data/notes/commissions.md`, with a field guide and a Yearbook row.
+- **The War Room card** lists each client, the request, the reward, the
+  clock, and Show buttons for the creatures at home that fit. **The Ranch
+  agenda row** counts the clients waiting.
+- **SAVE_VERSION 65:** `campaign.commissionsDone`, with a migration, a v65
+  fixture and a vault bound.
+- **The walker** shows a client the first creature at home that fits.
+- **Gates:** an R212 smoke block in shard d covering the census, the clock,
+  the fill, the deadlines on load, the agenda, the War Room press, the
+  walk, and new content making new commissions. **Breaks 598-615.**
+
+### Found on the way
+
+- **The eager code cap moved 338 -> 339** (measured 338.87). The clock and
+  the agenda row are about 0.9 KB and have to be eager; everything else is
+  lazy. Paid down first:
+  - the window math lost its hash;
+  - the row's label is a literal;
+  - the renderer's LATE attach became one loop.
+- **The prose cap held:** R133's essay in the agenda became a pointer to
+  ROADMAP R133. **First paint went down** 1,196 -> 1,195 KB, because
+  thirteen more `style.css` essays (4.4 KB) moved to `docs/STYLE.md`.
+- **The handlers fixture** needed a creature that fits a live commission,
+  so it splices one from a commission's own witness.
+- **The reward line read "…forelimbs. pays $140"**, lowercase after a full
+  stop. Rewards are noun phrases now, placed in the sentence by the copy.
+- **The walk became a different campaign, and the first baseline went red
+  three ways.** Seed 2026's day-180 save stopped buying Tier III, the
+  sendable share of battle beats fell to 57% (floor 60), and the height gate
+  measured new states. The fixes, each written up in ROADMAP R212:
+  - **Part rewards are standard grade.** Prime parts read 7 of 8 Tier III
+    and 57%; standard parts read 8 of 8 and 65%.
+  - **The vat is judged on the diet gate's seven-campaign census.** `main`
+    ran it exactly once on seed 2026.
+  - **Beaten exhibitions drop their pitch**, so the War Room's facility card
+    stays inside two screens.
+  - **The Ranch chrome (one Infirmary chip) and the Vault's open half (all
+    52 species on the shelf)** grew by exactly what this save shows.
+  - **The lifetime counter and its Yearbook row went.**
+- **A reward part's donor was a client's whole sentence**, longer than the
+  40 characters a save keeps a name to. It is "A satisfied client" now.
+- **The handlers fixture's extra creature cost twenty seconds**, so the hurt
+  Patient wears the witness body instead, and a body's facts are memoised.
+- **Break 299 had rotted on `main`** and was re-aimed at the defect its name
+  describes.
+
+### Verification
+
+- **Done when, at 380px:**
+  - the census of 240 commissions is green;
+  - fill, deadlines, agenda and War Room are covered in smoke's R212 block
+    (shard d);
+  - a real press filled a commission and survived a reload;
+  - a fresh save and a v64 save migrated to v65 opened with zero console
+    errors.
+- **`npm test`, run alone:** 2,103 of 2,145 CPU-s cold (20 walks rebuilt)
+  and 1,384 of 1,425 warm; `main` read 1,390 and 1,397 warm on the same box.
+- **Budgets:** eager code 338.85 KB (cap 339, itemised), prose 260.84
+  (cap 261), first paint 1,195 KB (budget 1,197).
+- **`--anchors`:** 606 of 606.
+- **Full battery** (the rot check): 606 of 606 caught, none CRASHED or
+  ELSEWHERE.
+  - It ran in eleven chunks (30, 114, 115, 116, 50, 62, 58, 63, 49, 103 and
+    39 minutes; 799 in all, with eleven baselines).
+  - Break 299 had rotted on `main`; it was re-aimed and caught.
+  - Chunk 2b1's baseline went red once on the offline cold open (1,005ms
+    under load; ~500ms alone, as on `main`), and was green in the other
+    ten.
+
+### Known issues
+
+- **The walk's day-180 save is a different campaign, and four single-seed
+  rules on it were knife edges** (Tier III, vat, the War Room's facility
+  card, the Ranch chrome). Each was settled with a census or a stated
+  measurement, but other single-seed readings in the height gate may flip
+  the next time the walker plays differently.
+- **The full battery no longer fits CLAUDE.md's 4h45m-6h30m range when
+  chunked under the two-hour cap.** Re-measure it before planning an evening
+  on it.
+
+### Next session
+
+R213: the County Fair.
+
 ## Session 235 — R211: the county on a map ✅
 
 **The War Room's map tab opens on a drawn county: five region outlines, the

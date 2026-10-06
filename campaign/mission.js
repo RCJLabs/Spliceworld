@@ -55,6 +55,17 @@ export function conscriptsOf(state, rivalId) {
   return Array.isArray(c) ? c : [];   // R114: `?? []` does not guard a string
 }
 
+// R212 — the commissions board's clock: data/notes/commissions.md, `board`.
+export function commissionWindows(state, content, now) {
+  const b = content.commissions?.board, every = b?.everyHours * HOUR_MS, out = [];
+  if (!(every > 0)) return out;
+  const phase = (+state.seed || 0) % every;
+  for (let k = Math.floor((now - phase) / every), at; out.length < 12 && (at = phase + k * every + b.lastsHours * HOUR_MS) > now; k--) {
+    out.push({ id: `k${k}`, k, deadline: at, done: (state.campaign?.commissionsDone ?? []).includes(`k${k}`) });
+  }
+  return out;
+}
+
 // Elapsed, like every other timer here. Stamped `run.until`, never `now`.
 // Reads the outcome sealed at launch; R114 says a save is untrusted input,
 // so every field of it is read defensively.

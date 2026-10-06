@@ -929,6 +929,28 @@
       ]
     },
     {
+      "id": "commissions",
+      "screen": "battle",
+      "order": 72,
+      "icon": "document",
+      "title": "Built to order, no questions asked",
+      "body": "Clients with specific tastes post commissions on the jobs board: wings and a venom organ, a Water-class creature with an Electric move, something light on the Scamper Frame. Show them a creature that fits and they pay, in cash, notoriety or a part for the Vault, and the creature stays home. Every request can be built from parts the catalogue sells, on a chassis your Theater can earn. Each client waits a day and a bit, then takes the business elsewhere.",
+      "reachable": [
+        {
+          "path": "chimeras",
+          "min": 1,
+          "default": 0
+        }
+      ],
+      "done": [
+        {
+          "path": "campaign.commissionsDone",
+          "min": 1,
+          "default": 0
+        }
+      ]
+    },
+    {
       "id": "henchmen",
       "screen": "battle",
       "order": 75,

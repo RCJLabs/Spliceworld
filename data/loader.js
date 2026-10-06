@@ -26,8 +26,9 @@ export const POOLS = ['voice-pools'];
 // creature never needs it.
 export const TIMBRE = ['voice'];
 
-// Everything the second round fetches, whatever it is for.
-export const LATE = [...GEOMETRY, ...POOLS, ...TIMBRE];
+// Everything the second round fetches, whatever it is for. R212 — and the
+// commissions board, which nothing on the first frame reads.
+export const LATE = [...GEOMETRY, ...POOLS, ...TIMBRE, 'commissions'];
 
 // R85 — and both halves together, for the Node tools.
 //

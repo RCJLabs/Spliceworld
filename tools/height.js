@@ -190,7 +190,14 @@ const BUDGET = {
   // move by exactly its height, and why a Ranch that grows past them is
   // still something else growing. Tallest moves with them for the same
   // reason; it is far under (3,248), and the pasture is in it too.
-  ranch:          { folded: 2154,  tallest: 4624, opens: 20, chrome: 1224 },
+  // R212 — chrome 1224 -> 1270, measured 1,243 against `main`'s 1,197, and
+  // it is ONE SPEND CHIP: the commissions walk is a different campaign and
+  // its day-180 save has a creature in the Infirmary, so "Buy someone out"
+  // joins Train, Order and Expand. At 380px the chips stack one to a line,
+  // 40px and a 6px gap, so the budget grows by exactly one of them; the rest
+  // of the preamble is the same pixels as `main`'s. A fifth chip (a lab
+  // upgrade on sale) is a state this save does not reach and will go red.
+  ranch:          { folded: 2154,  tallest: 4624, opens: 20, chrome: 1270 },
   // R154 — THE PENS' SHUT HEIGHT IS DERIVED TOO, for R92's reason and
   // R131's cause. This screen is the multiplication R131 named — one folded
   // card per chimera — and, alone among the screens R131 paged, it never got
@@ -323,7 +330,14 @@ const BUDGET = {
   // reached-every-state check: at 52 species the tight level-1 shelf holds
   // 51 parts, so the vials now go first to the species the parts missed,
   // and the `spares` shelf opens on one duplicate so it still has a spare.
-  vault:          { folded: 3816,  tallest: 4600, opens: 20 },
+  // R212 — 4600 -> 5045 open, measured at 4,952 against `main`'s 4,133, and
+  // it is Session 216's mechanism again with a cause this time: a commission
+  // that pays a part pays one from any species the catalogue sells, so the
+  // day-180 shelf holds all 52 species where `main`'s held 37. Fifteen more
+  // bays are 819px (54.6 a bay); raised to the reading plus Session 216's
+  // 93px of headroom. The shut half is R187's worst-case bound, already built
+  // at 52 species, and did not move (3,319 against 3,816).
+  vault:          { folded: 3816,  tallest: 5045, opens: 20 },
   // R204 — 3100 -> 3150, and the first reading since R104 of the roster a
   // player sees. R89 set 3100 against a fully drawn grid. R104 then held 28
   // of its portraits back until scrolled to, and this walk does not scroll,

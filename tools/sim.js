@@ -1193,6 +1193,7 @@ import {
 import { findsFor, expeditionOdds, startExpedition } from '../campaign/outfit.js';
 import { activeMission, missionCandidates, missionCooldownMs } from '../campaign/mission.js';
 import { missionsFor, missionHours, missionTargets, missionAptitude, startMission, missionCommitted, missionAgents, missionOdds } from '../campaign/caper.js';
+import { commissionBoard, homeChimeras, fits, fulfilCommission } from '../campaign/commissions.js';
 import { hireRoster, slotsOf, hiredOf, hire, letGo, wageNow } from '../campaign/staff.js';
 import { guideStates } from '../ranch/onboarding.js';
 
@@ -2482,6 +2483,14 @@ function walkAct(state, content, now, open, opts = {}) {
         ...(pick.agent ? { wage: wageNow(state, content, pick.agent.rec.id) } : {}),
       });
     }
+  }
+  // R212 — COMMISSIONS. The walker shows a client the first creature at home
+  // that fits and never builds to order, so what it fills is what a stable
+  // answers without trying: the floor of the verb, not its ceiling.
+  for (const job of commissionBoard(state, content, now)) {
+    const who = homeChimeras(state).find((c) => fits(content, job.ask, c));
+    const res = who && fulfilCommission(state, content, now, job.id, who.id);
+    if (res?.ok) did('commission', { ask: job.ask.kind, reward: job.reward.kind, amount: job.reward.amount ?? 0 });
   }
   if (opts.hire) walkHire(state, content, now, did, opts.payrollOpen);
   // The ring. The hardest garrison you hold pays the most xp per charge.

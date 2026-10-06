@@ -4396,12 +4396,20 @@ const BREAKS = [
   {
     // The two boots are a union, not a sequence: `splice/extract.js` runs
     // ten of its fourteen functions drawing a herd and none at all for a
-    // player who has none yet, so a function live in EITHER is live. Take
-    // the merge away and the fresh boot's idle half is counted as dead.
+    // player who has none yet, so a function live in EITHER is live.
+    // R212 — RE-AIMED, BECAUSE IT HAD ROTTED ON `main`. It used to take the
+    // merge away, and since the herd boot is harvested SECOND that let it
+    // overwrite the fresh one: the herd's modules stayed live and only the
+    // fresh boot's idle half read dead. That was 6.6 KB on R211's tree
+    // (160.3 -> 166.9) against a budget that fires from 9.7 up, so it went
+    // MISSED on both trees. What the name describes is the herd boot not
+    // counting at all, which this is: five modules read as running nothing,
+    // and the dead bytes go 160.3 -> 213.9.
     n: 299, gate: BOOT, name: 'the second first paint stops counting, so a module that only runs for a player with a herd reads dead',
     file: 'tools/boot.js',
-    anchor: "          mine.set(key, { start: at.startOffset, end: at.endOffset, ran: (mine.get(key)?.ran ?? false) || lit });",
-    to: "          mine.set(key, { start: at.startOffset, end: at.endOffset, ran: lit });",
+    anchor: "    await send('Page.navigate', { url });\n    await sleep(3500);\n    await harvest();",
+    to: "    await send('Page.navigate', { url });\n    await sleep(3500);",
+    expect: 'splice/extract.js',
   },
 
   // R96 — a creature that shows what it is. Three breaks, one per rule the
@@ -5461,8 +5469,8 @@ const BREAKS = [
     // 3586 -> 3816). What the break aims at is `opens`, which is untouched.
     n: 199, gate: HEIGHT, name: 'the height gate stops asking whether a folding screen still opens',
     file: 'tools/height.js',
-    anchor: '  vault:          { folded: 3816,  tallest: 4600, opens: 20 },',
-    to: '  vault:          { folded: 3816,  tallest: 4600 },',
+    anchor: '  vault:          { folded: 3816,  tallest: 5045, opens: 20 },',
+    to: '  vault:          { folded: 3816,  tallest: 5045 },',
   },
   {
     // R137 — the five rows that point at the Ranch go back to navigating to
@@ -8254,6 +8262,156 @@ const BREAKS = [
     anchor: '.county { width: 100%; max-width: 560px; margin: 0 auto; }',
     to: '.county { width: 420px; max-width: 560px; margin: 0 auto; }',
     expect: 'scrolls sideways at 380px',
+  },
+  {
+    // R212 — A WITNESS FROM THE WRONG SHELF. A commission built from parts no
+    // catalogue sells is a request the player cannot answer.
+    n: 598, gate: SHARD_D, name: "a commission's witness uses parts nobody sells",
+    file: 'campaign/commissions.js',
+    anchor: 'const stocked = (content) => Object.values(content.parts).filter((p) => speciesOf(content, p.species).mailOrderPrice);',
+    to: 'const stocked = (content) => Object.values(content.parts);',
+    expect: 'is a part the catalogue sells',
+  },
+  {
+    // R212 — A CHASSIS NOBODY ASKED FOR. A request that names no frame is
+    // built on one a new lab cannot have.
+    n: 599, gate: SHARD_D, name: 'a request that names no frame needs a Theater a new lab lacks',
+    file: 'campaign/commissions.js',
+    anchor: "  const frames = (kind === 'frame' || !first ? Object.keys(content.frames) : first)",
+    to: '  const frames = Object.keys(content.frames)',
+    expect: 'can be answered by a new lab',
+  },
+  {
+    // R212 — A CEILING UNDER THE FLOOR. The mass ceiling rounds DOWN, so the
+    // body the request was read off no longer answers it.
+    n: 600, gate: SHARD_D, name: "a frame request's mass ceiling sits under its own witness",
+    file: 'campaign/commissions.js',
+    anchor: '    return { kind, frame: w.frame, under: (Math.floor(report.mass / step) + 1) * step };',
+    to: '    return { kind, frame: w.frame, under: Math.floor(report.mass / step) * step };',
+    expect: 'the witness answers its own request',
+  },
+  {
+    // R212 — A DESCRIPTION, NOT A REQUEST. A Ground creature with a Ground move.
+    n: 601, gate: SHARD_D, name: 'a class request asks for the move that names the class',
+    file: 'campaign/commissions.js',
+    anchor: '      .filter((t) => t.toLowerCase() !== report.creatureClass);',
+    to: ';',
+    expect: 'never asks for the move that names the class',
+  },
+  {
+    // R212 — ANY CHASSIS WILL DO. The fit stops reading the frame.
+    n: 602, gate: SHARD_D, name: 'a frame request is answered on any chassis',
+    file: 'campaign/commissions.js',
+    anchor: "  if (ask.kind === 'frame') return chimera.frame === ask.frame && body.mass < ask.under;",
+    to: "  if (ask.kind === 'frame') return body.mass < ask.under;",
+    expect: 'is not answered on another chassis',
+  },
+  {
+    // R212 — PAID AND STILL OPEN. The fill pays and the client never leaves.
+    n: 603, gate: SHARD_D, name: 'a filled commission stays on the board',
+    file: 'campaign/commissions.js',
+    anchor: '  cam.commissionsDone = [...(cam.commissionsDone ?? []).filter((d) => live.has(d)), id];\n',
+    to: '',
+    expect: 'a filled commission closes',
+  },
+  {
+    // R212 — SHOWN FROM THE FIELD. A creature on an expedition is not home.
+    n: 604, gate: SHARD_D, name: 'a creature away from home can be shown to a client',
+    file: 'campaign/commissions.js',
+    anchor: '  return (state.chimeras ?? []).filter((c) => !away.has(c.id));',
+    to: '  return state.chimeras ?? [];',
+    expect: 'cannot be shown',
+  },
+  {
+    // R212 — ANY CREATURE WILL DO. The fill stops asking whether it fits.
+    n: 605, gate: SHARD_D, name: 'a creature that does not fit fills a commission',
+    file: 'campaign/commissions.js',
+    anchor: '  if (!chimera || !fits(content, job.ask, chimera)) return',
+    to: '  if (!chimera) return',
+    expect: 'a creature that does not fit is refused',
+  },
+  {
+    // R212 — A CLIENT WHO NEVER LEAVES. The board keeps windows a week past
+    // their deadline.
+    n: 606, gate: SHARD_D, name: 'a commission outlives its deadline',
+    file: 'campaign/mission.js',
+    anchor: '(at = phase + k * every + b.lastsHours * HOUR_MS) > now; k--) {',
+    to: '(at = phase + k * every + b.lastsHours * HOUR_MS) > now - 7 * 24 * HOUR_MS; k--) {',
+    expect: 'the board holds one window per shift a client waits',
+  },
+  {
+    // R212 — A ROW FOR NOBODY. The agenda offers the board to a lab with
+    // nothing to show.
+    n: 607, gate: SHARD_D, name: 'the agenda offers commissions with no creature to show',
+    file: 'ranch/agenda.js',
+    anchor: '    ready: (state, content, now) => state.chimeras?.length > 0\n      && commissionWindows',
+    to: '    ready: (state, content, now) => commissionWindows',
+    expect: 'no row before there is a creature to show',
+  },
+  {
+    // R212 — A BOARD NOBODY CAN SEE. The jobs tab stops drawing it.
+    n: 608, gate: SHARD_D, name: 'the War Room stops showing the commissions board',
+    file: 'campaign/ui.js',
+    anchor: '${commissionCard(state, ctx, t)}${jobsCard(state, ctx, t)}',
+    to: '${jobsCard(state, ctx, t)}',
+    expect: 'the War Room lists',
+  },
+  {
+    // R212 — A WALK THAT NEVER ANSWERS THE DOOR.
+    n: 609, gate: SHARD_D, name: 'the 180-day walk fills no commissions',
+    file: 'tools/sim.js',
+    anchor: '    const res = who && fulfilCommission(state, content, now, job.id, who.id);',
+    to: '    const res = null;',
+    expect: 'the 180-day walk fills commissions',
+  },
+  {
+    // R212 — A HAND-TYPED CHASSIS LIST. A sixth frame is never asked for.
+    n: 610, gate: SHARD_D, name: 'a new frame never appears in a commission',
+    file: 'campaign/commissions.js',
+    anchor: "  const frames = (kind === 'frame' || !first ? Object.keys(content.frames) : first)",
+    to: "  const frames = (kind === 'frame' || !first ? ['A', 'S', 'M', 'L', 'H'] : first)",
+    expect: 'a new frame is asked for by name',
+  },
+  {
+    // R212 — A TAG WITH NO WORDS. Without the slot phrasing a new tag is
+    // printed as its id.
+    n: 611, gate: SHARD_D, name: 'a new tag is asked for as its bare id',
+    file: 'campaign/commissions.js',
+    anchor: '    ? fill(content.commissions.slots[slot], { a: an(tag), tag: tag.toLowerCase() })',
+    to: '    ? tag',
+    expect: 'asked for in the words the slots give it',
+  },
+  {
+    // R212 — PAID IN THANKS. Cash rewards stop arriving.
+    n: 612, gate: SHARD_D, name: "a commission's cash never arrives",
+    file: 'campaign/commissions.js',
+    anchor: "  if (reward.kind === 'funds') state.funds += reward.amount;",
+    to: "  if (reward.kind === 'funds') state.funds += 0;",
+    expect: 'cash is paid in full',
+  },
+  {
+    // R212 — A SHOW BUTTON THAT DOES NOTHING.
+    n: 613, gate: HANDLERS, name: "the board's Show button is never bound",
+    file: 'campaign/ui.js',
+    anchor: "  root.querySelectorAll('button[data-commission]').forEach((btn) => {",
+    to: "  [].forEach((btn) => {",
+    expect: 'data-commission is painted and nothing ever fired',
+  },
+  {
+    // R212 — A MIGRATION THAT FORGETS THE BOARD.
+    n: 614, gate: SAVES, name: 'the v65 migration forgets the filled commissions',
+    file: 'save/migrations.js',
+    anchor: '    save.campaign.commissionsDone ??= [];\n',
+    to: '',
+    expect: 'campaign.commissionsDone',
+  },
+  {
+    // R212 — A LIST WITH NO CEILING. A fill keeps every id it ever filled.
+    n: 615, gate: VAULT, name: 'filled commissions pile up in the save',
+    file: 'campaign/commissions.js',
+    anchor: '[...(cam.commissionsDone ?? []).filter((d) => live.has(d)), id]',
+    to: '[...(cam.commissionsDone ?? []), id]',
+    expect: 'commissionsDone` holds',
   },
 ];
 

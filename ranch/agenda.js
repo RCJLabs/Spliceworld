@@ -42,7 +42,7 @@ import {
 } from '../campaign/operations.js';
 import { reachableEncounterIds, regionStates } from '../campaign/map.js';
 import { expeditionRegions, expeditionReady, expeditionCandidates } from '../campaign/expedition.js';
-import { activeMission, missionCandidates, missionTuning } from '../campaign/mission.js';
+import { activeMission, missionCandidates, missionTuning, commissionWindows } from '../campaign/mission.js';
 import { enemyOf, speciesOf } from '../data/catalog.js';
 import { contestRemainingMs } from '../campaign/contest.js';
 import { isInjured, fitToFight } from '../battle/statblock.js';
@@ -385,6 +385,14 @@ export const AGENDA = [
       && missionTuning(content).cooldownHours > 0,
   },
   {
+    // R212 — counted from the clock; the lazy half says what each client wants.
+    id: 'commission', kind: 'campaign', screen: 'battle', subtab: 'jobs', label: 'Answer a commission',
+    hint: (state, content, now) => fill(content.copy?.commission?.agenda_hint,
+      { n: commissionWindows(state, content, now).filter((w) => !w.done).length }),
+    ready: (state, content, now) => state.chimeras?.length > 0
+      && commissionWindows(state, content, now).some((w) => !w.done),
+  },
+  {
     id: 'assault', kind: 'campaign', screen: 'battle', label: 'Take a node',
     // R106 — the row stays when the odds are hopeless, and says so. It is
     // not removed, because `battle/forecast.js` settles that out loud: a
@@ -396,13 +404,8 @@ export const AGENDA = [
     // opening walking a new player into the one wall A1 designed around, in
     // the voice of a hint about how well it pays.
     hint: (state, content, now) => {
-      // R133 — the no-wall branch used to be the standing lesson ("Holding it
-      // pays every day and puts its fauna in the catalog"), and it is the
-      // branch that renders for most of a campaign: `assaultWall` returns
-      // null the moment your team outnumbers the front, which is every day
-      // after the opening. So the row spent the whole game saying the one
-      // thing on it that was not a number. The catalogue guide teaches that
-      // sentence already; this says how many doors are open.
+      // R133 — the no-wall branch is most of a campaign, so it says how many
+      // doors are open rather than a lesson; the story is ROADMAP R133.
       const wall = assaultWall(state, content, now);
       const open = reachableEncounterIds(state, content).length;
       if (!wall) return `${open} node${open === 1 ? '' : 's'} you can take right now.`;

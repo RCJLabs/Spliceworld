@@ -79,7 +79,15 @@ instruction to distrust it.)
   there was never a saving to collect. (R154's own "940 CPU-s / ~8 min" was the
   contended reading; it is ~900 and ~4 min clean.) Filed as R159.
 
-**The full battery (4h45m to 6h30m. R207 is the SEVENTEENTH reading and is
+**The full battery (4h45m to 6h30m. R212 is the EIGHTEENTH reading and,
+like R207, is not comparable: eleven chunks, because chunks of 198 and 48
+breaks each took 114-116 minutes against the two-hour cap. They sum to 799
+minutes with eleven baselines, ten green; chunk 2b1's went red once on the
+offline cold open (1,005ms under load, ~500ms alone, as on `main`). 606 of
+606 caught, none CRASHED or ELSEWHERE, after 299 was re-aimed: it had rotted
+on `main` (166.9 KB of dead code against a 170 budget on both trees). The
+range below is two milestones stale; re-measure before planning on it.
+R207 is the SEVENTEENTH reading and is
 not comparable: two container restarts, one onto a host that walked at half
 speed, cost two runs and pushed it to TWELVE chunks of at most 104 minutes
 (a background command stops at two hours, and chunk 3 overran it). The
@@ -163,7 +171,7 @@ R116 before chunking: one to a tree edited underneath it, one to a restart
 twenty-five minutes in. Build the id list from the file, because break
 numbers are NOT contiguous (157, 164, 208, 250, 256, 257, 298, 327, 347
 are retired) and `seq` makes the run refuse with "no break numbered". THE LIST IS
-588 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
+606 NOW — R117 added 390-394 for the width gate, R118 added 395-398 for the
 gene probe, R183 added 399-401 for the job headline, R185 added 402-404 for
 the Dex tab list, R176 added 405-407 for the lazy synth, R179 added 408-412
 for the expedition, R180 added 413-422 for the mission board, R181 added
@@ -189,9 +197,10 @@ added 538-540 for the cuttlefish's coat holding still when asked, and R207
 added 541-548 for the Hexapod's middle pair, and R208 added 549-560 for
 the Theater you can see, and R209 added 561-573 for the arena's effects,
 scenery and exits, and R210 added 574-584 for the pasture, and R211 added
-585-597 for the county on a map.
+585-597 for the county on a map, and R212 added 598-615 for the
+commissions board.
 The count and the top id have
-not agreed since the retirements: 588 breaks, numbered to 597. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
+not agreed since the retirements: 606 breaks, numbered to 615. THIS LINE WAS WRONG BY SIX BEFORE R180 TOUCHED IT — it read 404
 against a tree carrying 410, because a milestone that adds breaks has to
 remember to come back here and nobody had. Trust `--anchors`, which prints
 the real total, over this sentence. Count with `--anchors`, which

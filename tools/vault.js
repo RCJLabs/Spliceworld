@@ -188,6 +188,8 @@ const BOUNDS = {
   // after), and the carried list is trimmed at the boundary to LEGENDS_KEPT.
   'campaign.legendsFound': { max: (c) => Object.values(c.species ?? {}).filter((s) => s.rarity === 'unique').length, by: 'one per unique species, once per run' },
   'legends':              { max: 12, by: '`LEGENDS_KEPT` in save/slots.js — trimmed at every relocation' },
+  // R212 — one id per open window; `fulfilCommission` drops the lapsed ones.
+  'campaign.commissionsDone': { max: (c) => Math.ceil((c.commissions?.board?.lastsHours ?? 32) / (c.commissions?.board?.everyHours ?? 8)) + 1, by: 'the open windows; lapsed ids are dropped on the next fill' },
   'campaign.faunaGranted': { max: (c) => Object.keys(c.species ?? {}).length, by: 'the species list' },
   'directorStats.dissections': { max: 40, by: 'one per captive, and captives are capped' },
   'directorStats.announced':   { max: 40, by: 'one per countermeasure the director has' },
