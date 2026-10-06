@@ -49,7 +49,7 @@ import {
 import { findsFor, findsBeyond, expeditionOdds, startExpedition } from './outfit.js';
 import { missionTuning, activeMission, missionCandidates } from './mission.js';
 import { commissionBoard, homeChimeras, fits, askText, rewardText, fulfilCommission } from './commissions.js';
-import { fairCandidates, courseOf, enterFair, prizeLine } from './fair.js';
+import { fairCandidates, courseOf, enterFair, prizeLine, localName } from './fair.js';
 import { fairWindow, seasonOf } from './calendar.js';
 import { chimeraPortrait } from '../render/ribbons.js';
 import { stockGenome } from '../ranch/ranch.js';
@@ -1323,7 +1323,7 @@ function fairCard(state, ctx, t) {
   const pick = `<span class="locked-tag">${copy(content, 'fair.pick')}</span>`;
   const results = (event, result) => `<ol class="fair-results">${result.field.map((r) => `<li${r.id ? ' class="is-mine"' : ''}>
         <span class="fair-dot" aria-hidden="true" style="background:${places[r.place]?.color ?? 'transparent'};border-color:${places[r.place]?.edge ?? 'transparent'}"></span>
-        ${esc(r.name)}${r.id ? ` <span class="lineage">${copy(content, 'fair.yours')}</span>` : ''}
+        ${esc(r.id ? r.name : localName(content, r))}${r.id ? ` <span class="lineage">${copy(content, 'fair.yours')}</span>` : ''}
         <span class="fine-print">${event === 'race' ? copy(content, 'fair.time', { time: r.time.toFixed(2) }) : copy(content, 'fair.points', { points: r.score.toFixed(1) })}</span></li>`).join('')}</ol>
       <p class="ranch-msg">${esc(prizeLine(content, state, result))}</p>`;
   const track = (result) => {

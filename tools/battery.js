@@ -8413,6 +8413,185 @@ const BREAKS = [
     to: '[...(cam.commissionsDone ?? []), id]',
     expect: 'commissionsDone` holds',
   },
+  {
+    // R213 — A FAIR ON OPENING DAY. The window forgets that the first turn
+    // is the lab's birthday, not a season's.
+    n: 616, gate: SHARD_B, name: 'the fair is in town the day the lab opens',
+    file: 'campaign/calendar.js',
+    anchor: '  return { k, opensAt, closesAt, open: k > 0 && now < closesAt };',
+    to: '  return { k, opensAt, closesAt, open: now < closesAt };',
+    expect: 'no fair the day the lab opens',
+  },
+  {
+    // R213 — A FAIR THAT NEVER PACKS UP. Nine times as long is a month.
+    n: 617, gate: SHARD_B, name: 'the fair stays the whole season',
+    file: 'campaign/calendar.js',
+    anchor: 'closesAt = opensAt + (content.fair?.days ?? 0) * DAY;',
+    to: 'closesAt = opensAt + 9 * (content.fair?.days ?? 0) * DAY;',
+    expect: 'numbered by its turn',
+  },
+  {
+    // R213 — LUCK BY LANE. Rolled by position, the same two entrants entered
+    // the other way round run a different race.
+    n: 618, gate: SHARD_B, name: "a runner's luck depends on the order it was entered",
+    file: 'campaign/fair.js',
+    anchor: "mine.length)].map((e) => {\n    const body = bodyOf(content, e, e.chimera);\n    const roll = rollFor(state, k, event, e);",
+    to: "mine.length)].map((e, lane) => {\n    const body = bodyOf(content, e, e.chimera);\n    const roll = rollFor(state, k, event, { local: lane });",
+    expect: 'in another order run the same',
+  },
+  {
+    // R213 — A ROSETTE AND NO MONEY.
+    n: 619, gate: SHARD_B, name: "the fair's prize money never arrives",
+    file: 'campaign/fair.js',
+    anchor: '    state.funds += prize.funds ?? 0;',
+    to: '    state.funds += 0;',
+    expect: 'by place',
+  },
+  {
+    // R213 — FIRST PLACE, NO PART.
+    n: 620, gate: SHARD_B, name: 'first place is never paid its part',
+    file: 'campaign/fair.js',
+    anchor: '    if (prize.part) {',
+    to: '    if (false) {',
+    expect: 'a part for first',
+  },
+  {
+    // R213 — PAID AND UNDECORATED. The winner goes home with nothing to wear.
+    n: 621, gate: SHARD_B, name: 'a winner is never ribboned',
+    file: 'campaign/fair.js',
+    anchor: '    chimera.ribbons = [{ k: w.k, event, place: row.place }, ...(Array.isArray(chimera.ribbons) ? chimera.ribbons : [])].slice(0, keep);\n',
+    to: '',
+    expect: 'wears what it won',
+  },
+  {
+    // R213 — A SASH WITH NO END. Every ribbon ever won rides in the save.
+    n: 622, gate: SHARD_B, name: 'ribbons pile up on a chimera',
+    file: 'campaign/fair.js',
+    anchor: '(Array.isArray(chimera.ribbons) ? chimera.ribbons : [])].slice(0, keep);',
+    to: '(Array.isArray(chimera.ribbons) ? chimera.ribbons : [])];',
+    expect: 'a full sash keeps the newest',
+  },
+  {
+    // R213 — ENTER UNTIL YOU WIN. One shot per event stops being one.
+    n: 623, gate: SHARD_B, name: 'an event can be entered twice at one fair',
+    file: 'campaign/fair.js',
+    anchor: "  if (cam.fair?.k === w.k && cam.fair[event]) return { ok: false, msg: copy(content, 'fair.already') };\n",
+    to: '',
+    expect: 'entered once',
+  },
+  {
+    // R213 — A CAST ON THE START LINE. The Infirmary stops keeping anyone home.
+    n: 624, gate: SHARD_B, name: 'an injured creature can be entered at the fair',
+    file: 'campaign/fair.js',
+    anchor: '  return homeChimeras(state).filter((c) => !isInjured(c, now));',
+    to: '  return homeChimeras(state);',
+    expect: 'a creature in the Infirmary stays home',
+  },
+  {
+    // R213 — THE WHOLE STABLE IN ONE RACE.
+    n: 625, gate: SHARD_B, name: 'a lab enters every creature it has',
+    file: 'campaign/fair.js',
+    anchor: '.filter((id) => able.has(id)).slice(0, spec.entries ?? 2);',
+    to: '.filter((id) => able.has(id));',
+    expect: 'entries capped at',
+  },
+  {
+    // R213 — A SECOND DOOR. One screen draws the chimera bare again, and its
+    // ribbons stay home.
+    n: 626, gate: SHARD_B, name: 'the fair draws its runners without their ribbons',
+    file: 'campaign/ui.js',
+    anchor: 'const art = chimera ? chimeraPortrait(chimera, content, {',
+    to: 'const art = chimera ? creaturePortrait(chimeraGenome(chimera, content), content, {',
+    expect: 'drawn through chimeraPortrait',
+  },
+  {
+    // R213 — AN EMPTY RIBBON BOX on every creature that never won anything.
+    n: 627, gate: SHARD_B, name: 'a creature with no ribbons draws differently',
+    file: 'render/ribbons.js',
+    anchor: '  if (!ribbons.length) return svg;\n',
+    to: '',
+    expect: 'the portrait it always was',
+  },
+  {
+    // R213 — A PORTRAIT BURIED IN ROSETTES. Every one it keeps is pinned.
+    n: 628, gate: SHARD_B, name: 'the portrait pins every ribbon it keeps',
+    file: 'render/ribbons.js',
+    anchor: '  const ribbons = ribbonsOf(chimera).slice(0, 3);',
+    to: '  const ribbons = ribbonsOf(chimera).slice(0, 9);',
+    expect: 'the newest three are pinned',
+  },
+  {
+    // R213 — A RACE ON A LOOP. The flag that plays it is never put down.
+    n: 629, gate: SHARD_B, name: 'the race replays on every redraw',
+    file: 'campaign/ui.js',
+    anchor: '    const animate = raceShown === w.k;\n    raceShown = null;\n',
+    to: '    const animate = raceShown === w.k;\n',
+    expect: 'plays once and then holds its finish',
+  },
+  {
+    // R213 — MOTION FOR THOSE WHO ASKED FOR NONE. The track stays drawn.
+    n: 630, gate: SHARD_B, name: 'the race track is drawn under reduced motion',
+    file: 'style.css',
+    anchor: '  .fair-track, .fair-replay { display: none; }',
+    to: '  .fair-replay { display: none; }',
+    expect: 'under reduced motion the track is not drawn',
+  },
+  {
+    // R213 — A ROW THAT NEVER STANDS DOWN.
+    n: 631, gate: SHARD_B, name: 'the agenda offers a fair already entered',
+    file: 'ranch/agenda.js',
+    anchor: '      return w.open && state.chimeras?.length > 0 && !(f?.k === w.k && f.race && f.show);',
+    to: '      return w.open && state.chimeras?.length > 0;',
+    expect: 'both entered, it stands down',
+  },
+  {
+    // R213 — A WALK THAT STAYS HOME FROM THE FAIR.
+    n: 632, gate: SHARD_B, name: 'the 180-day walk enters no fairs',
+    file: 'tools/sim.js',
+    anchor: '    const res = best.length && enterFair(state, content, now, event, best.map((c) => c.id));',
+    to: '    const res = null;',
+    expect: 'the walk entered both events at its last fair',
+  },
+  {
+    // R213 — A JUDGE WHO NEVER ARRIVES.
+    n: 633, gate: HANDLERS, name: "the fair's Judge button is never bound",
+    file: 'campaign/ui.js',
+    anchor: "[['button[data-fair-race]', 'race'], ['button[data-fair-show]', 'show']]) {",
+    to: "[['button[data-fair-race]', 'race']]) {",
+    expect: 'data-fair-show is painted and nothing ever fired',
+  },
+  {
+    // R213 — A MIGRATION THAT FORGETS THE FAIR.
+    n: 634, gate: SAVES, name: 'the v66 migration forgets the fair',
+    file: 'save/migrations.js',
+    anchor: '    save.campaign.fair ??= null;\n',
+    to: '',
+    expect: 'campaign.fair',
+  },
+  {
+    // R213 — EVERY COURSE IS THE OVAL. The terrain stops reading the class.
+    n: 635, gate: SHARD_B, name: 'the course ignores what kind of animal is on it',
+    file: 'campaign/fair.js',
+    anchor: '  const terrain = (course.class ?? {})[report.creatureClass] ?? 1;',
+    to: '  const terrain = 1;',
+    expect: "the course's terrain against its class",
+  },
+  {
+    // R213 — NOBODY TIRES. Stamina stops reaching the finish line.
+    n: 636, gate: SHARD_B, name: 'a long course never outlasts a runner',
+    file: 'campaign/fair.js',
+    anchor: '  const legs = Math.sqrt(Math.min(1, (report.stats.stamina ?? 0) / (course.stamina || 1)));',
+    to: '  const legs = 1;',
+    expect: 'a course longer than its legs',
+  },
+  {
+    // R213 — A JUDGE WHO LIKES SCARS FINE.
+    n: 637, gate: SHARD_B, name: 'scars cost nothing at Best in Show',
+    file: 'campaign/fair.js',
+    anchor: ' - (w.scar ?? 2) * body.scars',
+    to: ' - 0 * body.scars',
+    expect: 'scars count against',
+  },
 ];
 
 const pristine = {};

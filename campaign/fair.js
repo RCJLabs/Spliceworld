@@ -11,7 +11,7 @@
 // fair and the runner, so the same entries at the same fair replay the same
 // result in any order. data/notes/fair.md has the rules and the tuning.
 
-import { fairWindow, seasonOf } from './calendar.js';
+import { fairWindow } from './calendar.js';
 import { homeChimeras } from './commissions.js';
 import { analyze } from '../splice/physiology.js';
 import { isInjured } from '../battle/statblock.js';
@@ -43,7 +43,7 @@ export function localsFor(state, content, k, event, count) {
   const rng = rngStream(state.seed, `fair:${event}:locals`, k);
   const species = Object.values(content.species).filter((s) => s.mailOrderPrice);
   const t = content.fair?.locals ?? {};
-  const owners = t.owners ?? ['A neighbour’s'];
+  const owners = t.owners ?? [''];
   const grades = t.grades ?? ['standard'];
   const grade = grades[Math.min(Math.max(0, k - 1), grades.length - 1)];
   const course = courseOf(state, content, k);
@@ -54,8 +54,15 @@ export function localsFor(state, content, k, event, count) {
   return Array.from({ length: Math.max(0, count) }, (_, i) => {
     const sp = Array.from({ length: Math.max(1, t.picks ?? 1) }, () => pick(rng, species))
       .map((s) => ({ s, v: rate(s) })).sort((a, b) => b.v - a.v)[0].s;
-    return { id: null, local: i, species: sp.id, name: `${pick(rng, owners)} ${sp.name}`, grade };
+    return { id: null, local: i, species: sp.id, owner: Math.floor(rng() * owners.length), grade };
   });
+}
+
+// A local's name, built where it is drawn: the save keeps an owner's index
+// and a species rather than the sentence, a third of a stored field's weight.
+export function localName(content, row) {
+  const owners = content.fair?.locals?.owners ?? [];
+  return `${owners[row.owner] ?? owners[0] ?? ''} ${content.species[row.species]?.name ?? row.species}`.trim();
 }
 
 // A runner's body, chimera or local, as the physiology reads it.
@@ -102,12 +109,15 @@ export function fairField(state, content, k, event, ids) {
   const course = event === 'race' ? courseOf(state, content, k) : null;
   const mine = ids.map((id) => state.chimeras.find((c) => c.id === id)).filter(Boolean)
     .map((c) => ({ id: c.id, name: c.name, chimera: c }));
+  // A row keeps who ran (a chimera's id and name, or a local's owner and
+  // species) and what it did; nothing else, because the save carries it.
   const field = [...mine, ...localsFor(state, content, k, event, (spec.lanes ?? 6) - mine.length)].map((e) => {
     const body = bodyOf(content, e, e.chimera);
     const roll = rollFor(state, k, event, e);
+    const who = e.id ? { id: e.id, name: e.name } : { owner: e.owner, species: e.species };
     return event === 'race'
-      ? { id: e.id, name: e.name, species: e.species ?? null, time: Math.round(raceTime(content, course, body, roll) * 100) / 100 }
-      : { id: e.id, name: e.name, species: e.species ?? null, score: showScore(content, body, roll) };
+      ? { ...who, time: Math.round(raceTime(content, course, body, roll) * 100) / 100 }
+      : { ...who, score: showScore(content, body, roll) };
   });
   field.sort(event === 'race' ? (a, b) => a.time - b.time : (a, b) => b.score - a.score);
   return { course: course?.id ?? null, field: field.map((e, i) => ({ ...e, place: i + 1 })) };
@@ -133,7 +143,6 @@ export function enterFair(state, content, now, event, ids) {
   const entries = [...new Set(ids)].filter((id) => able.has(id)).slice(0, spec.entries ?? 2);
   if (!entries.length) return { ok: false, msg: copy(content, 'fair.pick') };
   const result = fairField(state, content, w.k, event, entries);
-  const season = seasonOf(state, content, w.opensAt).id;
   const keep = content.fair?.ribbons?.keep ?? 6;
   const prizes = [];
   for (const row of result.field) {
@@ -150,10 +159,10 @@ export function enterFair(state, content, now, event, ids) {
           donor: { name: copy(content, 'fair.donor'), species: content.parts[partId].species, stars: 4, extractedAt: now } }]);
       }
     }
-    chimera.ribbons = [{ k: w.k, season, event, place: row.place }, ...(Array.isArray(chimera.ribbons) ? chimera.ribbons : [])].slice(0, keep);
+    chimera.ribbons = [{ k: w.k, event, place: row.place }, ...(Array.isArray(chimera.ribbons) ? chimera.ribbons : [])].slice(0, keep);
     prizes.push({ id: row.id, place: row.place, funds: prize.funds ?? 0, partId });
   }
-  cam.fair = { ...(cam.fair?.k === w.k ? cam.fair : { race: null, show: null }), k: w.k, season, [event]: { ...result, prizes } };
+  cam.fair = { ...(cam.fair?.k === w.k ? cam.fair : { race: null, show: null }), k: w.k, [event]: { ...result, prizes } };
   return { ok: true, result: cam.fair[event], msg: prizeLine(content, state, cam.fair[event]) };
 }
 

@@ -307,6 +307,11 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
     for (const key of ['frame', 'tokens', 'instability', 'moveset']) patient[key] = made[key];
     s.theater = keep.table;
     s.facility.theater = keep.tier;
+    // R213 — a lab a season and an hour old, so the County Fair is in town
+    // and the Jobs tab paints its pickers. `newGameState` is born on the wall
+    // clock, which is years after this fixture's `now`, so without this the
+    // fair never opens and every `data-fair-*` control is painted by nobody.
+    s.createdAt = now - (content.calendar?.seasonDays ?? 28) * 24 * HOUR - HOUR;
     return s;
   };
 
@@ -357,6 +362,14 @@ export async function walkSurfaces(content = loadContent(), { report = false } =
   // the live run with the recall on it.
   SURFACES.push({ name: 'battle:caper-running', file: 'campaign/ui.js', fn: 'renderWarRoomScreen',
     subtab: 'jobs', path: [{ sel: '[data-cap-who]' }, { sel: '[data-cap-go]' }] });
+  // R213 — THE FAIR CARD HAS THREE FACES: the pickers, the Run and Judge
+  // buttons that a pick paints, and the finished race with its Watch again.
+  // Walked for the reason two entries up: the result is written by entering,
+  // and a hand-written `campaign.fair` keeps passing after a rename.
+  SURFACES.push({ name: 'battle:fair-picked', file: 'campaign/ui.js', fn: 'renderWarRoomScreen',
+    subtab: 'jobs', path: [{ sel: '[data-fair-runner]' }, { sel: '[data-fair-entrant]' }] });
+  SURFACES.push({ name: 'battle:fair-raced', file: 'campaign/ui.js', fn: 'renderWarRoomScreen',
+    subtab: 'jobs', path: [{ sel: '[data-fair-runner]' }, { sel: '[data-fair-race]' }] });
   // R89 — the creature card's four tabs. The card is shut until pressed and
   // its Moves and Anatomy tabs are shut behind the bar inside it, so
   // `data-moves` and `data-dossier` are painted on a surface no earlier
