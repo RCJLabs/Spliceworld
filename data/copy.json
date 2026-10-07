@@ -292,5 +292,12 @@
     "closed": "The fair has packed up and left town.",
     "already": "That event has already been run at this fair.",
     "donor": "The County Fair"
+  },
+  "wardrobe": {
+    "heading": "Wardrobe — strictly for show. Nothing here changes a number.",
+    "title": "Dye {name}",
+    "sub": "Every species you have graduated lends its colours. The anatomy underneath stays exactly what it was.",
+    "none": "Graduate an animal from the Ranch and its colours turn up here.",
+    "locked": "{name}: {hint}"
   }
 }

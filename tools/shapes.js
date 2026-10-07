@@ -654,4 +654,30 @@ const GLYPHS = {
 
 export { TAILS, HIDES, organ, GLYPHS };
 
-export { HEADS, LIMBS, el, ci, pa, li, po, rc, sheen, eye, P, S, A, O, W };
+// R214 — WHERE A HEAD WEARS THINGS, declared beside the drawing that makes
+// it true: same parameters, same defaults. In head space (neck at the
+// origin, face toward +x), each template names three points:
+//   crown — the top of the skull and its half-width, for a hat;
+//   eye   — the near eye and its radius, for a monocle or a patch;
+//   neck  — under the jaw, for a bow tie, and where a cape hangs from.
+// Written into data/parts-shapes.json as `anchors` by tools/gen-parts.js;
+// see data/notes/parts-shapes.md.
+const mammalAnchors = ({ eyeR = 11, skull = 37 }) => ({
+  crown: [20, -16 - skull, skull], eye: [22, -24, eyeR], neck: [8, Math.round(-16 + skull * 0.85)],
+});
+const HEAD_ANCHORS = {
+  mammal: mammalAnchors,
+  horned: ({ horn, ...rest }) => mammalAnchors({ eyeR: 10.5, skull: 26, ...rest }),
+  bird: ({ eyeR = 10.5, bald = false }) => ({ crown: [20, bald ? -48 : -51, bald ? 28 : 31], eye: [27, -24, eyeR], neck: [10, 8] }),
+  reptile: ({ eyeR = 10, hood = false }) => ({ crown: hood ? [29, -86, 30] : [22, -42, 30], eye: [26, -26, eyeR], neck: [12, 6] }),
+  fish: ({ eyeR = 12 }) => ({ crown: [34, -56, 30], eye: [38, -22, eyeR], neck: [10, 14] }),
+  bug: ({ eyeR = 15 }) => ({ crown: [24, -44, 32], eye: [24, -22, eyeR], neck: [10, 8] }),
+  moth: ({ eyeR = 15 }) => ({ crown: [22, -48, 30], eye: [24, -22, eyeR], neck: [10, 10] }),
+  bell: ({ eyeR = 14 }) => ({ crown: [38, -58, 34], eye: [29, -23, eyeR], neck: [12, 6] }),
+  blob: ({ eyeR = 16 }) => ({ crown: [40, -66, 34], eye: [26, -26, eyeR], neck: [14, 12] }),
+  amphib: ({ eyeR = 13 }) => ({ crown: [16, -30 - eyeR, eyeR + 4], eye: [16, -26, eyeR], neck: [16, 18] }),
+  trunk: ({ eyeR = 9 }) => ({ crown: [26, -60, 34], eye: [44, -30, eyeR], neck: [20, 8] }),
+  bill: ({ eyeR = 9 }) => ({ crown: [20, -38, 30], eye: [30, -26, eyeR], neck: [12, 10] }),
+};
+
+export { HEADS, HEAD_ANCHORS, LIMBS, el, ci, pa, li, po, rc, sheen, eye, P, S, A, O, W };

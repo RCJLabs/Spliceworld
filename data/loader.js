@@ -28,7 +28,7 @@ export const TIMBRE = ['voice'];
 
 // Everything the second round fetches, whatever it is for. R212 — and the
 // commissions board, and R213 the fair, which nothing on the first frame reads.
-export const LATE = [...GEOMETRY, ...POOLS, ...TIMBRE, 'commissions', 'fair'];
+export const LATE = [...GEOMETRY, ...POOLS, ...TIMBRE, 'commissions', 'fair', 'cosmetics'];
 
 // R85 — and both halves together, for the Node tools.
 //

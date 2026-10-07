@@ -18,6 +18,9 @@ import { activeRaid, raidEncounter } from '../campaign/taskforce.js';
 import { gauntletState, gauntletEncounter } from '../campaign/gauntlet.js';
 import { treatInjury, treatmentCost } from '../splice/scars.js';
 import { analyze } from '../splice/physiology.js';
+import { tierOf } from '../splice/tier.js';
+import { slotOf } from '../render/cosmetics.js';
+import { chimeraUpkeep } from '../ranch/ranch.js';
 import { step, playerActions, playerActive, TURN_LIMIT } from '../battle/engine.js';
 // R170 — counted, not bare. See tools/flown.js.
 import { createBattle } from './flown.js';
@@ -187,6 +190,61 @@ export function scriptedBattle(chimera, encounter, content, seed, teamSize = 1) 
         : 0,
     },
   };
+}
+
+// R214 — COSMETICS CHANGE NO NUMBER, and this is the proof the entry asks
+// the harness for. Every sampled build fights every encounter twice on the
+// same seed: once as it came, and once dyed and wearing an accessory in every
+// slot — the crown included, which the wardrobe would only allow an S. The
+// battle's whole state is compared after every step with the look left out,
+// and so are the creature's physiology, its letter and its upkeep. A single
+// difference anywhere is returned with where it happened.
+export function cosmeticsBench(content, { builds = 6, seedsPer = 1, seed = 2026 } = {}) {
+  // One accessory in every slot, and in its slot the one only an S may wear.
+  const bySlot = new Map();
+  for (const r of content.cosmetics?.accessories ?? []) {
+    if (!bySlot.has(slotOf(r)) || r.unlock?.kind === 'tier') bySlot.set(slotOf(r), r.id);
+  }
+  const wear = [...bySlot.values()];
+  const dyes = Object.values(content.species).filter((sp) => sp.palette).map((sp) => sp.id);
+  const strip = (k, v) => (k === 'look' ? undefined : v);
+  const digest = (battle) => JSON.stringify(battle, strip);
+  const differences = [];
+  let battles = 0;
+  const encounters = Object.keys(content.encounters);
+  // The sampler hands back every species' purebred as well as `builds`
+  // random bodies, so every animal in the catalogue is dressed at least once.
+  const sampled = sampleBuilds(content, builds, seed);
+  sampled.forEach((b, i) => {
+    const plain = { ...makeSimChimera(b.frame, b.partIds, 'prime', content), id: `cos${i}`, name: `Build ${i}` };
+    const dressed = { ...structuredClone(plain), look: { dye: dyes[i % dyes.length], wear } };
+    const label = buildLabel(b.frame, b.partIds, 'prime');
+    const tokens = Object.values(plain.tokens);
+    const report = (c) => JSON.stringify(analyze(c.frame, Object.values(c.tokens), content, tokens.length));
+    if (report(plain) !== report(dressed)) differences.push(`${label}: physiology`);
+    const letter = (c) => JSON.stringify(tierOf(c, analyze(c.frame, Object.values(c.tokens), content, tokens.length), content));
+    if (letter(plain) !== letter(dressed)) differences.push(`${label}: letter grade`);
+    if (chimeraUpkeep(plain, content) !== chimeraUpkeep(dressed, content)) differences.push(`${label}: upkeep`);
+    for (const enc of encounters) {
+      for (let k = 0; k < seedsPer; k++) {
+        const fights = [plain, dressed].map((c) => {
+          const battle = createBattle([c], content.encounters[enc], content, seed + k, 1);
+          const trail = [digest(battle)];
+          for (let guard = 0; !battle.over && guard < 300; guard++) {
+            const action = pilotAction(battle, content);
+            if (!action) break;
+            step(battle, action, content);
+            trail.push(digest(battle));
+          }
+          return trail;
+        });
+        battles += 2;
+        const at = fights[0].findIndex((d, n) => d !== fights[1][n]);
+        if (at !== -1 || fights[0].length !== fights[1].length) differences.push(`${label} vs ${enc}: step ${at === -1 ? fights[0].length : at}`);
+      }
+    }
+  });
+  return { builds: sampled.length, encounters: encounters.length, seedsPer, battles, wear, differences };
 }
 
 // R145 — HOW LONG IS A FIGHT? The seventh audit measured this once with a
@@ -1088,6 +1146,14 @@ function main() {
     teamSize: Number(args.team ?? 3),
   };
   const t0 = Date.now();
+  // R214 — the cosmetics proof, on request: see `cosmeticsBench`.
+  if (args.cosmetics) {
+    const r = cosmeticsBench(content, { builds: Number(args.builds ?? 6) });
+    console.log(`cosmetics: ${r.builds} builds × ${r.encounters} encounters, as built and dressed in ${r.wear.join(', ')} with a dye — ${r.battles} battles`);
+    console.log(r.differences.length ? `DIFFERENCES:\n  ${r.differences.join('\n  ')}` : 'every number identical: physiology, letter, upkeep, and every battle state after every step');
+    process.exitCode = r.differences.length ? 1 : 0;
+    return;
+  }
   // R103 — the agency table, on request. It flies six pilots over the whole
   // grid, which is six times the work of the balance table, so it is a flag
   // rather than part of every run.

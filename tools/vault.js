@@ -17,7 +17,7 @@
 //
 // So this gate asks three questions of one seeded 180-day walk.
 //
-// 1. WEIGHT. Under 200 KB, and under the shared quota at four slots.
+// 1. WEIGHT. Under 210 KB (R214), and under the shared quota at four slots.
 // 2. BOUNDS. Every array in the save is named in `BOUNDS` below with the
 //    thing that caps it, and is under that cap. An array path the table does
 //    not know about FAILS — R50's declare-yourself, so the next unbounded
@@ -50,7 +50,16 @@ import { TUNING } from '../ranch/ranch.js';
 
 const REPORT = process.argv.includes('--report');
 const KB = 1024;
-const BUDGET_KB = 200;
+// R214 — 200 -> 210, measured at 200.11 on a tree whose own new data is 559
+// bytes (the wardrobe's fifty-one dyes; the walk graduates every species).
+// The rest of the climb was not code: R213 measured `main`'s day-180 save at
+// 186.94 KB and its own at 199.54, of which the fair was 1.5 KB and the
+// walk's different trajectory 10.2 (fuller containment bays). A budget a
+// kilobyte above the reading fails on which seed happened to capture what,
+// which R169 learned for first paint, so this leaves one such swing of
+// slack. The hard limit is the next rule down, four slots inside the quota,
+// and it does not move.
+const BUDGET_KB = 210;
 const QUOTA_KB = 5 * 1024;      // what every browser gives localStorage
 const MEDIAN_LIFE_DAYS = 5;
 
@@ -188,6 +197,12 @@ const BOUNDS = {
   // after), and the carried list is trimmed at the boundary to LEGENDS_KEPT.
   'campaign.legendsFound': { max: (c) => Object.values(c.species ?? {}).filter((s) => s.rarity === 'unique').length, by: 'one per unique species, once per run' },
   'legends':              { max: 12, by: '`LEGENDS_KEPT` in save/slots.js — trimmed at every relocation' },
+  // R214 — one dye per species that has a palette, one record per accessory,
+  // and one accessory per slot on a creature.
+  'wardrobe.dyes':        { max: (c) => Object.keys(c.species ?? {}).length, by: 'a species graduates once' },
+  'wardrobe.unlocked':    { max: (c) => c.cosmetics?.accessories?.length ?? 0, by: 'each accessory is earned once' },
+  'chimeras[].look.wear': { max: (c) => new Set((c.cosmetics?.accessories ?? []).map((r) => `${r.anchor}:${r.layer ?? 'front'}`)).size,
+                            by: 'one accessory per anchor and layer' },
   // R213 — a chimera wears at most `keep` ribbons; `enterFair` trims as it pins.
   'chimeras[].ribbons':   { max: (c) => c.fair?.ribbons?.keep ?? 6, by: '`ribbons.keep` in fair.json' },
   // R213 — one fair's field and its prizes, by its lanes.

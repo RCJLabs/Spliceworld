@@ -8595,6 +8595,158 @@ const BREAKS = [
     to: ' - 0 * body.scars',
     expect: 'scars count against',
   },
+  {
+    // R214 — A MONOCLE WITH A BONUS. A row grows a stat.
+    n: 638, gate: SHARD_D, name: "a cosmetic carries a stat",
+    file: "data/cosmetics.json",
+    anchor: "      \"id\": \"monocle\",\n      \"name\": \"Monocle\",",
+    to: "      \"id\": \"monocle\",\n      \"name\": \"Monocle\",\n      \"power\": 5,",
+    expect: "a look and nothing else",
+  },
+  {
+    // R214 — DRESSED FOR SUCCESS. The battle reads the look by a name the static check cannot see, so only the harness can catch it.
+    n: 639, gate: SHARD_D, name: "the engine reads a creature's look",
+    file: "battle/engine.js",
+    anchor: "    maxHp: Math.round(report.stats.hp * vet),",
+    to: "    maxHp: Math.round(report.stats.hp * vet) + (chimera['look'] ? 1 : 0),",
+    expect: "cosmetics change no number",
+  },
+  {
+    // R214 — A MONOCLE ON THE CHEEK. An anchor drifts from the drawing it names.
+    n: 640, gate: SHARD_D, name: "a head's eye anchor misses its eye",
+    file: "data/parts-shapes.json",
+    anchor: "    \"bear_head\": {\n      \"crown\": [20, -53, 37],\n      \"eye\": [22, -24, 11],",
+    to: "    \"bear_head\": {\n      \"crown\": [20, -53, 37],\n      \"eye\": [20, -24, 11],",
+    expect: "its eye anchor is an eye it draws",
+  },
+  {
+    // R214 — PAINT THAT DOES NOT STICK. The parts keep their own palette.
+    n: 641, gate: SHARD_D, name: "a dye re-tints nothing",
+    file: "render/renderer.js",
+    anchor: "    const palette = dye ?? partPalette(part, content);",
+    to: "    const palette = partPalette(part, content);",
+    expect: "a dye re-tints every part",
+  },
+  {
+    // R214 — A HAT ON NOTHING. The head's group stops carrying what it wears.
+    n: 642, gate: SHARD_D, name: "accessories in front of the head are never drawn",
+    file: "render/renderer.js",
+    anchor: "${slot === 'head' ? wear?.front ?? '' : ''}",
+    to: "",
+    expect: "is drawn",
+  },
+  {
+    // R214 — A CAPE OVER THE FACE. The back layer is forgotten.
+    n: 643, gate: SHARD_D, name: "a cape is drawn in front of the creature",
+    file: "render/cosmetics.js",
+    anchor: "    out[row.layer === 'back' ? 'back' : 'front'] +=",
+    to: "    out.front +=",
+    expect: "a cape hangs behind",
+  },
+  {
+    // R214 — A STACK OF HATS. A save's look is trusted for its slots.
+    n: 644, gate: SHARD_D, name: "two hats on one head",
+    file: "render/cosmetics.js",
+    anchor: "    if (row && !taken.has(slotOf(row))) { taken.add(slotOf(row)); wear.push(row); }",
+    to: "    if (row) wear.push(row);",
+    expect: "one hat to a head",
+  },
+  {
+    // R214 — A MONOCLE ON THE HAT. Every accessory hangs off one anchor.
+    n: 645, gate: SHARD_D, name: "every accessory sits at the crown",
+    file: "render/cosmetics.js",
+    anchor: "    const p = at[row.anchor];",
+    to: "    const p = at.crown;",
+    expect: "the monocle sits on the eye it was drawn for",
+  },
+  {
+    // R214 — A BOW TIE ON LOAN. What was earned is read again, not remembered.
+    n: 646, gate: SHARD_D, name: "an earned accessory leaves with its ribbon",
+    file: "splice/wardrobe.js",
+    anchor: "    const earned = u.kind !== 'tier' && (w.unlocked.includes(row.id) || (PROGRESS[u.kind]?.(state) ?? -1) >= (u.min ?? 1));",
+    to: "    const earned = u.kind !== 'tier' && (PROGRESS[u.kind]?.(state) ?? -1) >= (u.min ?? 1);",
+    expect: "the bow tie stays when the ribbon leaves",
+  },
+  {
+    // R214 — A CROWN FOR EVERY HEAD. The letter stops being asked.
+    n: 647, gate: SHARD_D, name: "anyone may wear the crown",
+    file: "splice/wardrobe.js",
+    anchor: "ok: row.unlock?.kind === 'tier' ? meets(row.unlock.tier) : row.earned",
+    to: "ok: row.unlock?.kind === 'tier' ? true : row.earned",
+    expect: "does not (",
+  },
+  {
+    // R214 — GOGGLES UNDER THE EYEPATCH. Putting one on stops taking the other off.
+    n: 648, gate: SHARD_D, name: "accessories pile up in one slot",
+    file: "splice/wardrobe.js",
+    anchor: "wear: [...worn.filter((x) => slotOf(rows.find((r) => r.id === x) ?? {}) !== slotOf(row)), id]",
+    to: "wear: [...worn, id]",
+    expect: "one to a slot",
+  },
+  {
+    // R214 — DRESSING UP IN SOMEBODY ELSE'S HAT. The wardrobe stops asking what was earned.
+    n: 649, gate: SHARD_D, name: "an unearned accessory can be worn",
+    file: "splice/wardrobe.js",
+    anchor: "    if (!row.ok) return { ok: false };\n",
+    to: "",
+    expect: "cannot wear what it has not earned",
+  },
+  {
+    // R214 — A GRADUATE WITH NO COLOURS. The species is never written down.
+    n: 650, gate: SHARD_D, name: "a graduation makes no dye",
+    file: "splice/extract.js",
+    anchor: "  if (dyes && !dyes.includes(animal.species)) dyes.push(animal.species);\n",
+    to: "",
+    expect: "a graduation makes its species a dye",
+  },
+  {
+    // R214 — A TIGER COAT FROM NOWHERE. The dye stops asking for a graduation.
+    n: 651, gate: SHARD_D, name: "any species dyes before it graduates",
+    file: "splice/wardrobe.js",
+    anchor: "  if (speciesId && !dyesOf(state, content).includes(speciesId)) return { ok: false };\n",
+    to: "",
+    expect: "no dye before a graduation",
+  },
+  {
+    // R214 — A MIGRATION THAT FORGETS THE WARDROBE.
+    n: 652, gate: SAVES, name: "the v67 migration forgets the wardrobe",
+    file: "save/migrations.js",
+    anchor: "    save.wardrobe ??= { dyes: [...new Set(held.filter((id) => typeof id === 'string' && id !== 'salvage'))], unlocked: [] };\n",
+    to: "",
+    expect: "save.wardrobe",
+  },
+  {
+    // R214 — A DYE BUTTON THAT DOES NOTHING.
+    n: 653, gate: HANDLERS, name: "the wardrobe's dye button is never bound",
+    file: "splice/pens-ui.js",
+    anchor: "  unbound(root, 'button[data-dye]').forEach((btn) => {",
+    to: "  [].forEach((btn) => {",
+    expect: "data-dye is painted and nothing ever fired",
+  },
+  {
+    // R214 — A PROOF IN THE NUDE. The harness compares a creature with itself.
+    n: 654, gate: SHARD_D, name: "the harness proves cosmetics change nothing by wearing none",
+    file: "tools/sim.js",
+    anchor: "  const wear = [...bySlot.values()];",
+    to: "  const wear = [];",
+    expect: "the harness dresses every slot",
+  },
+  {
+    // R214 — NOTHING TO WEAR. The Pens stop drawing the wardrobe.
+    n: 655, gate: SHARD_D, name: "the Pens card loses its wardrobe",
+    file: "splice/pens-ui.js",
+    anchor: "            ${wardrobeRow(state, content, ch, tier?.id ?? null)}\n",
+    to: "",
+    expect: "the card has a dye and a chip per accessory",
+  },
+  {
+    // R214 — A CAPE IN THE WASH. The layer under the torso is dropped.
+    n: 656, gate: SHARD_D, name: "a cape is never drawn",
+    file: "render/renderer.js",
+    anchor: "  if (wear?.back && head) layers.push(`<g transform=\"${posture?.head ?? ''}\"><g transform=\"${socketTransform(head)}\">${wear.back}</g></g>`);\n",
+    to: "",
+    expect: "cape is drawn",
+  },
 ];
 
 const pristine = {};

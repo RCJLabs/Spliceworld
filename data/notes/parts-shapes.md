@@ -19,3 +19,14 @@ the chain from the data end: every `anim` a part names has an animation in the
 stylesheet and an off-switch under reduced motion, and the renderer writes it.
 `tools/a11y.js` checks the same off-switch from the stylesheet end.
 
+
+## anchors
+
+R214 — where each generated head wears things, keyed by part id: `crown` (the
+top of the skull and its half-width), `eye` (the near eye and its radius) and
+`neck` (under the jaw), each in the head's own space. They come from
+`HEAD_ANCHORS` in tools/shapes.js, declared beside the template that draws
+the head, with the same parameters and defaults, so a new species' head gets
+anchors from its template and a template change moves them with it. Salvage
+heads are hand-made and have none; the wardrobe hangs everything off their
+near eye. Read only by render/cosmetics.js (data/notes/cosmetics.md).
