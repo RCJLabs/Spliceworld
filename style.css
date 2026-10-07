@@ -2017,6 +2017,8 @@ footer {
 .wear-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .dye-btn { display: inline-flex; align-items: center; gap: 6px; }
 .dye-swatch { width: 34px; height: 12px; flex: none; }
+/* A chip not yet earned: R73's legible disabled ink, and a dashed edge. */
+.wear-chip:disabled { color: var(--muted); border-style: dashed; cursor: default; }
 .pen-dismantle {
   background: var(--panel);
   color: var(--muted);
