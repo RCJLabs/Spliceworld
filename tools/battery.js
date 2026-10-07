@@ -8671,7 +8671,7 @@ const BREAKS = [
     // R214 — A CROWN FOR EVERY HEAD. The letter stops being asked.
     n: 647, gate: SHARD_D, name: "anyone may wear the crown",
     file: "splice/wardrobe.js",
-    anchor: "ok: row.unlock?.kind === 'tier' ? meetsTier(chimera, content, row.unlock.tier) : row.earned",
+    anchor: "ok: row.unlock?.kind === 'tier' ? meets(row.unlock.tier) : row.earned",
     to: "ok: row.unlock?.kind === 'tier' ? true : row.earned",
     expect: "does not (",
   },
@@ -8735,7 +8735,7 @@ const BREAKS = [
     // R214 — NOTHING TO WEAR. The Pens stop drawing the wardrobe.
     n: 655, gate: SHARD_D, name: "the Pens card loses its wardrobe",
     file: "splice/pens-ui.js",
-    anchor: "            ${wardrobeRow(state, content, ch)}\n",
+    anchor: "            ${wardrobeRow(state, content, ch, tier?.id ?? null)}\n",
     to: "",
     expect: "the card has a dye and a chip per accessory",
   },

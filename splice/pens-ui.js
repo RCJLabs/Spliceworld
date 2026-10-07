@@ -69,9 +69,9 @@ const swatch = (p) => `<svg class="dye-swatch" viewBox="0 0 34 12" aria-hidden="
 // R214 — THE WARDROBE: a dye from a picker and an accessory per chip, under
 // the card's actions. A chip the creature cannot wear yet is shown off, with
 // what earns it written out, because a tooltip is invisible on a phone.
-function wardrobeRow(state, content, ch) {
+function wardrobeRow(state, content, ch, letter) {
   if (!content.cosmetics) return '';
-  const rows = wearable(state, content, ch);
+  const rows = wearable(state, content, ch, letter);
   const worn = Array.isArray(ch.look?.wear) ? ch.look.wear : [];
   const dye = typeof ch.look?.dye === 'string' ? content.species[ch.look.dye] : null;
   const chips = rows.map((r) => {
@@ -494,7 +494,7 @@ export function renderPensScreen(root, ctx) {
               <button type="button" data-card="${ch.id}">${renderIcon('document')} Specimen card</button>
               <button type="button" class="pen-dismantle" data-dismantle="${ch.id}">${renderIcon('wrench')} Dismantle</button>
             </div>
-            ${wardrobeRow(state, content, ch)}
+            ${wardrobeRow(state, content, ch, tier?.id ?? null)}
             ${'<!--R89:ALERTS-->'}
             ${isExhausted(ch, t) ? `<p class="settle">${renderIcon('test-tube')} Recovering from the vat — ${fmtDuration(ch.exhaustedUntil - t)} left.</p>` : ''}
             ${ch.vatBorn?.parents?.length

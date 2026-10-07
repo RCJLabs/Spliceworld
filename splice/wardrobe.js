@@ -38,18 +38,24 @@ export function accessories(state, content) {
   });
 }
 
-// A creature's letter against a row's: "S" is the top of data/tiers.json.
-function meetsTier(chimera, content, tier) {
-  const order = (content.tiers?.tiers ?? []).map((t) => t.id);
+// A creature's letter, as the Pens show it on the fold.
+function letterOf(chimera, content) {
   const tokens = Object.values(chimera.tokens ?? {}).filter((t) => content.parts[t.partId]);
-  const got = tierOf(chimera, analyze(chimera.frame, tokens, content, tokens.length), content)?.id;
-  return got != null && order.indexOf(got) >= order.indexOf(tier) && order.includes(tier);
+  return tierOf(chimera, analyze(chimera.frame, tokens, content, tokens.length), content)?.id ?? null;
 }
 
-// Which accessories this creature may put on.
-export function wearable(state, content, chimera) {
+// Which accessories this creature may put on. `letter` is its tier id when
+// the caller already has it (the Pens card does, for its fold), so a stable
+// of open cards is not graded twice; otherwise it is read here, once.
+export function wearable(state, content, chimera, letter) {
+  const order = (content.tiers?.tiers ?? []).map((t) => t.id);
+  let got = letter;
+  const meets = (tier) => {
+    if (got === undefined) got = letterOf(chimera, content);
+    return got != null && order.includes(tier) && order.indexOf(got) >= order.indexOf(tier);
+  };
   return accessories(state, content)
-    .map((row) => ({ ...row, ok: row.unlock?.kind === 'tier' ? meetsTier(chimera, content, row.unlock.tier) : row.earned }));
+    .map((row) => ({ ...row, ok: row.unlock?.kind === 'tier' ? meets(row.unlock.tier) : row.earned }));
 }
 
 // The dyes the lab owns: every species that has graduated, if it still has a
