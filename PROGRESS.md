@@ -48,6 +48,22 @@ arena included, and the harness proves it changes no number.**
   it (the walk alone moved this save 10.2 KB in R213); the four-slot quota
   check is unchanged.
 
+- **A locked chip read 2.69:1** (the browser's disabled ink); it takes R73's
+  muted ink and a dashed edge.
+- **Each open card graded its creature twice**; the card now passes the letter
+  its fold already shows (an all-open Pens render 43.9 -> 37.8ms, `main` 38.7).
+
+### Verified
+
+- `--anchors` 647 of 647; breaks 638-656 caught for their named checks, and
+  the ten vault breaks still caught under 210 KB; the final baseline green
+  (`BATTERY_EXIT 0`). Two container restarts cost two runs.
+- `npm test` red on SECONDS on this host **and on `main`**: 1,700 warm here,
+  1,591 and 1,598 on `main` in the same hour. The extra is the handlers walk
+  pressing the wardrobe's controls; shares and battles (1,217,864) green.
+- In Chromium at 380px: the wardrobe, a chip, the dye picker, a reload, and
+  the arena all show the look, with zero console errors.
+
 ### Known issues
 
 - A dye covers every part in one palette; there is no per-part dye.

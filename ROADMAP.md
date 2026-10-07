@@ -8975,6 +8975,47 @@ written so that it has something on screen when it ships.
       KB, so a budget a kilobyte above the reading fails on the seed rather
       than the code. Four slots inside the quota is the hard limit and did
       not move.
+  * **A locked chip read 2.69:1** against the contrast floor: a disabled
+    button with no ink of its own falls back to the browser's 30% white. It
+    takes R73's muted ink and a dashed edge.
+  * **Each open card graded its creature twice,** once for the fold and once
+    for the crown, so an all-open Pens render cost 43.9ms against `main`'s
+    38.7. The card passes the letter it already has: 37.8ms.
+
+  **Verification:**
+  * `--anchors` 647 of 647. Breaks 638-656: 19 of 19 caught for the check
+    each is named for, and the ten vault breaks re-run under the 210 KB
+    budget all still caught. Two container restarts cost two runs; the one
+    that completed found the contrast fault above, and the next baseline,
+    and the one on the final tree, were green: `BATTERY_EXIT 0`.
+  * **`npm test` was red on seconds, and so is `main` on this host.** Warm,
+    in the same hour: this tree 1,700 CPU-seconds, `main` 1,591 and 1,598
+    (budget 1,425). The 6.6% is the handlers walk pressing the wardrobe's new
+    controls (handlers +23s, and smoke:c's own walk of the same surfaces
+    +55s), and the proof's 4,680 battles in smoke:d. No share left its band
+    (handlers 6.3 -> 7.3%), and the suite flies 1,217,864 battles, under
+    the 1,255,000 ceiling.
+
+  **Done when, checked:**
+  * **Dyed and accessorised from the Pens:** in Chromium at 380px a dressed
+    creature's card shows the wardrobe; a chip swapped the monocle for
+    goggles, the picker listed Natural colours and 51 dyes, Natural took the
+    dye off, and the look survived a reload. Smoke presses a chip on a
+    stubbed Pens and finds the portrait wearing it.
+  * **Shows in the arena and the Pens at 380px:** the arena drew the same
+    creature dyed and in its hat, monocle, bow tie and cape, with no
+    sideways scroll and no console errors; smoke holds every chimera portrait
+    to the one door.
+  * **A new accessory is a JSON row:** smoke adds a party hat to a copy of
+    the data and it is earned, worn and drawn with no code; a row with a kind
+    nobody reads earns nothing.
+  * **The harness proves cosmetics change no number:** `node tools/sim.js
+    --cosmetics`, 90 builds, 4,680 battles, every battle state after every
+    step identical; break 639 (the engine reading a look by a name the
+    static check cannot see) is caught by the proof alone.
+  * **SAVE_VERSION 67, a migration and a fixture:** `tools/saves.js`
+    migrates every version v1-v67, and a dressed lab round-trips through a
+    reload.
 
 ### 9.31 A vault full of treasure has no exit (R182) — found closing R116
 
